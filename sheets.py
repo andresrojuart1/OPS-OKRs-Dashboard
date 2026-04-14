@@ -1,0 +1,291 @@
+"""Google Sheets helpers — init, seed, CRUD via gspread + service account."""
+
+import json
+import os
+import uuid
+from datetime import datetime, timezone
+from typing import Any
+
+import gspread
+import pandas as pd
+import streamlit as st
+from dotenv import load_dotenv
+from google.oauth2.service_account import Credentials
+
+load_dotenv(override=True)
+
+SPREADSHEET_ID = os.getenv("GSPREAD_SPREADSHEET_ID", "")
+SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+_here = os.path.dirname(os.path.abspath(__file__))
+SERVICE_ACCOUNT_FILE = os.path.join(
+    _here, os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
+)
+
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+
+# ---------------------------------------------------------------------------
+# Connection
+# ---------------------------------------------------------------------------
+
+@st.cache_resource
+def get_gspread_client() -> gspread.Client:
+    if SERVICE_ACCOUNT_JSON:
+        creds = Credentials.from_service_account_info(
+            json.loads(SERVICE_ACCOUNT_JSON), scopes=SCOPES
+        )
+    elif os.path.isfile(SERVICE_ACCOUNT_FILE):
+        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    else:
+        raise EnvironmentError(
+            "No service account credentials found. Set GOOGLE_SERVICE_ACCOUNT_JSON "
+            "or place service_account.json in the project directory."
+        )
+    return gspread.authorize(creds)
+
+
+@st.cache_resource
+def get_spreadsheet() -> gspread.Spreadsheet:
+    return get_gspread_client().open_by_key(SPREADSHEET_ID)
+
+
+# ---------------------------------------------------------------------------
+# Seed data
+# ---------------------------------------------------------------------------
+
+SEED_OBJECTIVES = [
+    {
+        "id": "O1",
+        "title": "Scale Financial Products into Reliable ARR Contributors, Building a Second Revenue Engine Alongside Payroll",
+        "sub_team": "New Initiatives",
+        "quarter": "Q2 2026",
+        "company_vision": "",
+    },
+    {
+        "id": "O2",
+        "title": "Close the Margin Gap and Ensure Every Payment Rail Operates at Target Profitability",
+        "sub_team": "FinOps",
+        "quarter": "Q2 2026",
+        "company_vision": "",
+    },
+    {
+        "id": "O3",
+        "title": "Eliminate Human Intervention as Default in Support, with AI Resolving Most Volume at High CSAT",
+        "sub_team": "AI Experience",
+        "quarter": "Q2 2026",
+        "company_vision": "",
+    },
+    {
+        "id": "O4",
+        "title": "Launch Revenue-Generating AI Products That Create a New Direct Monetization Layer",
+        "sub_team": "AI Monetization",
+        "quarter": "Q2 2026",
+        "company_vision": "",
+    },
+    {
+        "id": "O5",
+        "title": "Empower the Entire Ontop Organization with the AI Agentic Workflow Framework to Transform Operational Excellence",
+        "sub_team": "AI Monetization",
+        "quarter": "Q2 2026",
+        "company_vision": "",
+    },
+    {
+        "id": "O6",
+        "title": "Achieve ISO 27001 Readiness and Pass Pre-Audit to Unlock Enterprise and Regulated Markets",
+        "sub_team": "Security & Compliance Ops",
+        "quarter": "Q2 2026",
+        "company_vision": "",
+    },
+]
+
+SEED_KEY_RESULTS = [
+    # O1 — New Initiatives
+    {"id": "KR1",  "objective_id": "O1", "title": "Revenue from new initiatives reaches $20K/month",                               "target": 20000,   "unit": "$",           "current_value": 0},
+    {"id": "KR2",  "objective_id": "O1", "title": "Quick monthly disbursement volume reaches $500K/month",                          "target": 500000,  "unit": "$/month",     "current_value": 0},
+    {"id": "KR3",  "objective_id": "O1", "title": "Future Fund AUM reaches $8M between CD and MMF vault",                           "target": 9000000, "unit": "$",           "current_value": 0},
+    # O2 — FinOps
+    {"id": "KR4",  "objective_id": "O2", "title": "Pay-ins gross margin reaches 20%",                                               "target": 20,      "unit": "%",           "current_value": 0},
+    {"id": "KR5",  "objective_id": "O2", "title": "Payouts net margin reaches 85% range",                                           "target": 85,      "unit": "%",           "current_value": 0},
+    {"id": "KR6",  "objective_id": "O2", "title": "JPM integration live and processing volume by Q2 close",                         "target": 1,       "unit": "binary",      "current_value": 0},
+    # O3 — AI Experience
+    {"id": "KR7",  "objective_id": "O3", "title": "AI-resolved tickets reach 250 per month",                                        "target": 250,     "unit": "tickets/month","current_value": 0},
+    {"id": "KR8",  "objective_id": "O3", "title": "Automated CX resolution rate reaches 55%",                                       "target": 55,      "unit": "%",           "current_value": 0},
+    {"id": "KR9",  "objective_id": "O3", "title": "Aura CSAT score reaches at least 80%",                                           "target": 80,      "unit": "%",           "current_value": 0},
+    # O4 — AI Monetization
+    {"id": "KR10", "objective_id": "O4", "title": "AI Lead Scraper MQL-to-SQL conversion rate reaches 50%",                         "target": 50,      "unit": "%",           "current_value": 0},
+    {"id": "KR11", "objective_id": "O4", "title": "AI Money Manager reaches $10K MRR by Dec 2026",                                  "target": 10000,   "unit": "$/month",     "current_value": 0},
+    # O5 — AI Monetization
+    {"id": "KR12", "objective_id": "O5", "title": "Core operational workflows migrated to AI Agentic Workflow framework and live in production", "target": 5, "unit": "workflows", "current_value": 0},
+    # O6 — Security & Compliance Ops
+    {"id": "KR13", "objective_id": "O6", "title": "ISO 27001 pre-audit completed with PASS result",                                 "target": 1,       "unit": "binary",      "current_value": 0},
+]
+
+OBJ_HEADERS = ["id", "title", "sub_team", "quarter", "company_vision"]
+KR_HEADERS  = ["id", "objective_id", "title", "target", "unit", "current_value"]
+UPD_HEADERS = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at"]
+
+
+def _ensure_worksheet(spreadsheet, title, headers):
+    try:
+        ws = spreadsheet.worksheet(title)
+    except gspread.WorksheetNotFound:
+        ws = spreadsheet.add_worksheet(title=title, rows=1000, cols=len(headers))
+        ws.append_row(headers, value_input_option="RAW")
+    return ws
+
+
+def _needs_migration(spreadsheet) -> bool:
+    """Return True if the objectives sheet uses the old schema (no sub_team column)."""
+    try:
+        ws = spreadsheet.worksheet("objectives")
+        headers = ws.row_values(1)
+        return "sub_team" not in headers
+    except gspread.WorksheetNotFound:
+        return False
+
+
+def _wipe_worksheets(spreadsheet) -> None:
+    for name in ["objectives", "key_results", "kr_updates"]:
+        try:
+            ws = spreadsheet.worksheet(name)
+            spreadsheet.del_worksheet(ws)
+        except gspread.WorksheetNotFound:
+            pass
+
+
+def seed_if_empty() -> None:
+    spreadsheet = get_spreadsheet()
+
+    if _needs_migration(spreadsheet):
+        _wipe_worksheets(spreadsheet)
+
+    obj_ws = _ensure_worksheet(spreadsheet, "objectives",  OBJ_HEADERS)
+    kr_ws  = _ensure_worksheet(spreadsheet, "key_results", KR_HEADERS)
+    _ensure_worksheet(spreadsheet, "kr_updates", UPD_HEADERS)
+
+    if not obj_ws.get_all_records():
+        obj_ws.append_rows(
+            [[o["id"], o["title"], o["sub_team"], o["quarter"], o["company_vision"]]
+             for o in SEED_OBJECTIVES],
+            value_input_option="RAW",
+        )
+
+    if not kr_ws.get_all_records():
+        kr_ws.append_rows(
+            [[kr["id"], kr["objective_id"], kr["title"], kr["target"], kr["unit"], kr["current_value"]]
+             for kr in SEED_KEY_RESULTS],
+            value_input_option="RAW",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Read helpers (cached 30 s)
+# ---------------------------------------------------------------------------
+
+@st.cache_data(ttl=30)
+def load_objectives() -> pd.DataFrame:
+    ws = get_spreadsheet().worksheet("objectives")
+    records = ws.get_all_records()
+    return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
+
+
+@st.cache_data(ttl=30)
+def load_key_results() -> pd.DataFrame:
+    ws = get_spreadsheet().worksheet("key_results")
+    records = ws.get_all_records()
+    if not records:
+        return pd.DataFrame(columns=KR_HEADERS)
+    df = pd.DataFrame(records)
+    for col in ["target", "current_value"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+    return df
+
+
+@st.cache_data(ttl=30)
+def load_updates() -> pd.DataFrame:
+    ws = get_spreadsheet().worksheet("kr_updates")
+    records = ws.get_all_records()
+    return pd.DataFrame(records) if records else pd.DataFrame(columns=UPD_HEADERS)
+
+
+def load_updates_for_kr(kr_id: str) -> pd.DataFrame:
+    df = load_updates()
+    if df.empty:
+        return df
+    filtered = df[df["kr_id"] == kr_id].copy()
+    return filtered.sort_values("updated_at", ascending=False) if not filtered.empty else filtered
+
+
+# ---------------------------------------------------------------------------
+# Write
+# ---------------------------------------------------------------------------
+
+def update_kr_value(
+    kr_id: str,
+    new_value: float,
+    week_notes: str,
+    blockers: str,
+    confidence: int,
+    updated_by: str,
+) -> None:
+    """Atomically append update log row and update current_value in key_results."""
+    spreadsheet = get_spreadsheet()
+    kr_ws  = spreadsheet.worksheet("key_results")
+    upd_ws = spreadsheet.worksheet("kr_updates")
+
+    all_krs = kr_ws.get_all_records()
+    row_index = None
+    for i, row in enumerate(all_krs, start=2):
+        if str(row.get("id", "")) == str(kr_id):
+            row_index = i
+            break
+
+    if row_index is None:
+        raise ValueError(f"KR '{kr_id}' not found in sheet.")
+
+    headers = kr_ws.row_values(1)
+    col_index = headers.index("current_value") + 1
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    update_id = str(uuid.uuid4())[:8]
+
+    upd_ws.append_row(
+        [update_id, kr_id, new_value, week_notes, blockers, confidence, updated_by, now],
+        value_input_option="RAW",
+    )
+    kr_ws.update_cell(row_index, col_index, new_value)
+
+    load_key_results.clear()
+    load_updates.clear()
+
+
+# ---------------------------------------------------------------------------
+# Progress
+# ---------------------------------------------------------------------------
+
+def compute_progress(row: Any) -> float:
+    target  = float(row.get("target", 0) or 0)
+    current = float(row.get("current_value", 0) or 0)
+    if target == 0:
+        return 100.0 if current > 0 else 0.0
+    return max(0.0, min(100.0, current / target * 100))
+
+
+def format_value(current: float, target: float, unit: str) -> str:
+    u = unit.lower().strip()
+    if u == "binary":
+        return "✓ Done" if current >= 1 else "Pending"
+    if u == "$" or u == "$/month":
+        sym = "$"
+        def fmt(v):
+            if v >= 1_000_000:
+                return f"{sym}{v/1_000_000:.1f}M"
+            if v >= 1_000:
+                return f"{sym}{v/1_000:.0f}K"
+            return f"{sym}{v:,.0f}"
+        return f"{fmt(current)} / {fmt(target)}"
+    if u == "%":
+        return f"{current:.1f}% / {target:.0f}%"
+    return f"{current:g} / {target:g} {unit}"
