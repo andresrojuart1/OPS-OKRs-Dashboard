@@ -20,6 +20,73 @@ TEXT2  = "#B8B8C8"
 MUTED  = "#6B6B7E"
 AMBER  = "#F59E0B"
 
+_CARD_CSS_INJECTED = False
+
+def _inject_card_css() -> None:
+    global _CARD_CSS_INJECTED
+    if _CARD_CSS_INJECTED:
+        return
+    st.markdown("""
+<style>
+.obj-toggle-card {
+    cursor: pointer;
+    position: relative;
+    background: radial-gradient(circle at top right, rgba(227,82,118,0.10), transparent 35%),
+                linear-gradient(180deg, rgba(26,26,36,.92), rgba(6,6,9,.92));
+    border: 1px solid #2A2A3E;
+    border-radius: 20px;
+    padding: 1.1rem 1.25rem .9rem;
+    margin-bottom: .75rem;
+    transition: border-color 0.2s ease;
+}
+.obj-toggle-card:hover { border-color: #3a3f6e; }
+.obj-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.obj-badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+.obj-badge-coral {
+    background: rgba(227,82,118,.12);
+    color: #ff9ab0;
+    border: 1px solid rgba(227,82,118,.32);
+}
+.obj-badge-amber {
+    background: rgba(245,158,11,.12);
+    color: #f8c56a;
+    border: 1px solid rgba(245,158,11,.28);
+}
+.obj-badge-green {
+    background: rgba(34,197,94,.12);
+    color: #7ee2a8;
+    border: 1px solid rgba(34,197,94,.30);
+}
+.obj-subteam { color: #6B6B7E; font-size: 13px; }
+.obj-chevron { margin-left: auto; color: #6B6B7E; font-size: 12px; }
+.obj-title { color: #FFFFFF; font-size: 16px; font-weight: 700; line-height: 1.35; }
+
+/* Invisible Streamlit toggle button stretched over the card */
+div[data-testid="stButton"].obj-toggle-btn > button {
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important; height: 100% !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    z-index: 10 !important;
+    border-radius: 20px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+    _CARD_CSS_INJECTED = True
+
 
 # ---------------------------------------------------------------------------
 # Dialogs
@@ -119,16 +186,6 @@ def _confirm_delete_update_dialog(update_id: str) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _pct_badge(pct: float) -> str:
-    if pct >= 70:
-        cls, label = "status-green", "On Track"
-    elif pct >= 40:
-        cls, label = "status-amber", "At Risk"
-    else:
-        cls, label = "status-coral", "Off Track"
-    return f'<span class="ontop-status-badge {cls}">{pct:.0f}% · {label}</span>'
-
-
 def _progress_bar(pct: float) -> str:
     return f"""
     <div class="progress-track">
@@ -141,6 +198,8 @@ def _progress_bar(pct: float) -> str:
 # ---------------------------------------------------------------------------
 
 def render_objective_card(obj_row, krs_df, active_kr: str, show_sub_team: bool = False) -> None:
+    _inject_card_css()
+
     obj_id    = str(obj_row["id"])
     obj_title = obj_row["title"]
     sub_team  = obj_row.get("sub_team", "")
@@ -149,35 +208,47 @@ def render_objective_card(obj_row, krs_df, active_kr: str, show_sub_team: bool =
     avg_pct = obj_krs.apply(compute_progress, axis=1).mean() if not obj_krs.empty else 0.0
 
     if avg_pct >= 70:
-        status_label = "On Track"
+        status_label, badge_cls = "On Track",  "obj-badge-green"
     elif avg_pct >= 40:
-        status_label = "At Risk"
+        status_label, badge_cls = "At Risk",   "obj-badge-amber"
     else:
-        status_label = "Off Track"
+        status_label, badge_cls = "Off Track", "obj-badge-coral"
 
-    if show_sub_team and sub_team:
-        expander_label = f"{sub_team}  ·  {avg_pct:.0f}% · {status_label}  |  {obj_title}"
-    else:
-        expander_label = f"{avg_pct:.0f}% · {status_label}  |  {obj_title}"
+    exp_key   = f"obj_expanded_{obj_id}"
+    if exp_key not in st.session_state:
+        st.session_state[exp_key] = False
+    is_expanded = st.session_state[exp_key]
+    chevron     = "▲" if is_expanded else "▼"
 
-    with st.expander(expander_label, expanded=False):
-        st.markdown(f"""
-        <div class="okr-card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    {_pct_badge(avg_pct)}
-                    <span style="font-size:11px;color:{MUTED};">{sub_team}</span>
-                </div>
-            </div>
-            <div style="font-size:16px;font-weight:700;color:{TEXT1};line-height:1.35;">
-                {obj_title}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    subteam_html = (
+        f'<span class="obj-subteam">{sub_team}</span>'
+        if (show_sub_team and sub_team) else ""
+    )
 
+    # Card HTML — the visible toggle
+    st.markdown(f"""
+<div class="obj-toggle-card" style="position:relative;">
+    <div class="obj-badge-row">
+        <span class="obj-badge {badge_cls}">{avg_pct:.0f}% · {status_label}</span>
+        {subteam_html}
+        <span class="obj-chevron">{chevron}</span>
+    </div>
+    <div class="obj-title">{obj_title}</div>
+</div>
+""", unsafe_allow_html=True)
+
+    # Invisible button that captures the click — CSS stretches it over the card
+    st.markdown('<div class="obj-toggle-btn">', unsafe_allow_html=True)
+    if st.button("toggle", key=f"toggle_{obj_id}", label_visibility="collapsed"):
+        st.session_state[exp_key] = not is_expanded
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # KRs — only when expanded
+    if is_expanded:
         if obj_krs.empty:
             st.markdown(
-                f'<div style="padding:10px 0;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>',
+                f'<div style="padding:10px 0 4px 8px;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>',
                 unsafe_allow_html=True,
             )
         else:
@@ -189,7 +260,7 @@ def render_objective_card(obj_row, krs_df, active_kr: str, show_sub_team: bool =
             if st.button("+ Add KR", key=f"add_kr_{obj_id}", type="tertiary"):
                 add_kr_dialog(obj_id, str(obj_title))
 
-    st.markdown("<div style='margin-bottom:18px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
