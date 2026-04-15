@@ -14,11 +14,20 @@ from google.oauth2.service_account import Credentials
 
 load_dotenv(override=True)
 
-SPREADSHEET_ID = os.getenv("GSPREAD_SPREADSHEET_ID", "")
-SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
+
+def _secret(key: str, default: str = "") -> str:
+    """Read from st.secrets first (Streamlit Cloud), then os.getenv (local)."""
+    try:
+        return str(st.secrets[key])
+    except (KeyError, FileNotFoundError):
+        return os.getenv(key, default)
+
+
+SPREADSHEET_ID = _secret("GSPREAD_SPREADSHEET_ID")
+SERVICE_ACCOUNT_JSON = _secret("GOOGLE_SERVICE_ACCOUNT_JSON")
 _here = os.path.dirname(os.path.abspath(__file__))
 SERVICE_ACCOUNT_FILE = os.path.join(
-    _here, os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
+    _here, _secret("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
 )
 
 SCOPES = [
