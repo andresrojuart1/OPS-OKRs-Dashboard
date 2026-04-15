@@ -1,26 +1,30 @@
 """
-Ontop OPS OKRs Dashboard — Q2 2026
+Ontop OPS OKRs Dashboard
 Entry point: streamlit run app.py
 """
 
+import io
 import os
 
+import openai
+import openpyxl
 import streamlit as st
 from dotenv import load_dotenv
+from openpyxl.styles import Alignment, Font, PatternFill
 
 load_dotenv(override=True)
 
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 st.set_page_config(
-    page_title="Ontop OKRs — Q2 2026",
+    page_title="Ontop OKRs — Operations",
     page_icon="🔺",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ---------------------------------------------------------------------------
-# Ontop global theme (ported from shared.py)
+# Theme CSS
 # ---------------------------------------------------------------------------
 
 st.markdown("""
@@ -89,18 +93,46 @@ p, li, label, .stMarkdown, .stCaption { color: var(--text-secondary); }
 }
 .stButton > button:hover { filter: brightness(1.07); }
 
-/* Secondary button */
+/* Secondary button — glassmorphism */
 .stButton > button[kind="secondary"] {
-    background: rgba(255,255,255,0.04) !important;
-    border: 1px solid rgba(124,115,247,0.28) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    color: #FFFFFF !important;
+    border-radius: 12px !important;
     box-shadow: none !important;
+    transition: all 0.2s ease !important;
+}
+.stButton > button[kind="secondary"]:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.30) !important;
+    filter: none !important;
 }
 
-/* Tertiary */
+/* Tertiary — pill style */
 .stButton > button[kind="tertiary"] {
     background: transparent !important;
     border: 1px solid rgba(255,255,255,0.10) !important;
     box-shadow: none !important;
+    border-radius: 20px !important;
+    padding: 6px 16px !important;
+}
+
+/* Download button — match secondary glassmorphism */
+[data-testid="stDownloadButton"] button {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(10px) !important;
+    color: #FFFFFF !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+    width: 100% !important;
+}
+[data-testid="stDownloadButton"] button:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: rgba(255, 255, 255, 0.30) !important;
 }
 
 /* Metrics */
@@ -252,20 +284,157 @@ hr { border-color: var(--border-color) !important; }
 
 # ---------------------------------------------------------------------------
 from auth import require_login, get_user, logout
-from sheets import seed_if_empty, load_objectives, load_key_results, compute_progress
+from sheets import (
+    seed_if_empty, load_objectives, load_key_results, load_updates,
+    compute_progress,
+)
 from components.sidebar import render_sidebar
 from components.objective_card import render_objective_card
 
 # ---------------------------------------------------------------------------
 for key, default in [
-    ("updating_kr",   None),
-    ("selected_team", "All"),
+    ("updating_kr",       None),
+    ("selected_team",     "All"),
+    ("selected_quarter",  "Q2 2026"),
+    ("ai_dialog_stale",   True),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
 
+QUARTERS = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"]
+
 # ---------------------------------------------------------------------------
-# Login
+# Excel template
+# ---------------------------------------------------------------------------
+
+def _generate_template_excel(quarter: str) -> bytes:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = quarter
+
+    headers = [
+        "Objective",
+        "Key Result",
+        "Target",
+        "Current Value",
+        "Confidence (1–5)",
+        "What happened this week?",
+        "Blockers / Dependencies",
+    ]
+
+    hdr_fill = PatternFill(start_color="1E2140", end_color="1E2140", fill_type="solid")
+    hdr_font = Font(color="FFFFFF", bold=True)
+
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.fill = hdr_fill
+        cell.font = hdr_font
+        cell.alignment = Alignment(wrap_text=False)
+
+    rows = [
+        ["Scale Financial Products into Reliable ARR Contributors, Building a Second Revenue Engine Alongside Payroll",
+         "Revenue from new initiatives reaches $20K/month", "20000 $", "", "", "", ""],
+        ["", "Quick monthly disbursement volume reaches $500K/month", "500000 $/month", "", "", "", ""],
+        ["", "Future Fund AUM reaches $8M between CD and MMF vault", "9000000 $", "", "", "", ""],
+        ["Close the Margin Gap and Ensure Every Payment Rail Operates at Target Profitability",
+         "Pay-ins gross margin reaches 20%", "20 %", "", "", "", ""],
+        ["", "Payouts net margin reaches 85% range", "85 %", "", "", "", ""],
+        ["", "JPM integration live and processing volume by Q2 close", "1 Launched", "", "", "", ""],
+        ["Eliminate Human Intervention as Default in Support, with AI Resolving Most Volume at High CSAT",
+         "AI-resolved tickets reach 250 per month", "250 tickets/month", "", "", "", ""],
+        ["", "Automated CX resolution rate reaches 55%", "55 %", "", "", "", ""],
+        ["", "Aura CSAT score reaches at least 80%", "80 %", "", "", "", ""],
+        ["Achieve ISO 27001 Readiness and Pass Pre-Audit to Unlock Enterprise and Regulated Markets",
+         "ISO 27001 pre-audit completed with PASS result", "1 PASS (binary)", "", "", "", ""],
+        ["Launch Revenue-Generating AI Products That Create a New Direct Monetization Layer",
+         "AI Lead Scraper MQL-to-SQL conversion rate reaches 50%", "50 %", "", "", "", ""],
+        ["", "AI Money Manager reaches $10K MRR by Dec 2026", "10000 $/month", "", "", "", ""],
+        ["Empower the Entire Ontop Organization with the AI Agentic Workflow Framework",
+         "Core operational workflows migrated to AI Agentic Workflow framework and live in production",
+         "5 workflows", "", "", "", ""],
+    ]
+
+    fill_a = PatternFill(start_color="13152A", end_color="13152A", fill_type="solid")
+    fill_b = PatternFill(start_color="0D0E1A", end_color="0D0E1A", fill_type="solid")
+    body_font = Font(color="FFFFFF")
+
+    for i, row in enumerate(rows):
+        ws.append(row)
+        fill = fill_a if i % 2 == 0 else fill_b
+        for cell in ws[ws.max_row]:
+            cell.fill = fill
+            cell.font = body_font
+
+    for col in ws.columns:
+        max_len = max((len(str(c.value or "")) for c in col), default=0)
+        ws.column_dimensions[col[0].column_letter].width = max(12, min(max_len + 2, 60))
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# AI Update dialog (OpenAI)
+# ---------------------------------------------------------------------------
+
+@st.dialog("AI Weekly Update")
+def _ai_update_dialog() -> None:
+    quarter   = st.session_state.get("selected_quarter", "Q2 2026")
+    sub_team  = st.session_state.get("selected_team",    "All")
+    krs_info  = st.session_state.get("_krs_for_ai",      [])
+    cache_key = f"_ai_text_{quarter}_{sub_team}"
+
+    if st.session_state.get("ai_dialog_stale", True) or cache_key not in st.session_state:
+        team_label = sub_team if sub_team != "All" else "Operations (todos los equipos)"
+
+        lines = []
+        for kr in krs_info:
+            lines.append(
+                f"- {kr['title']}: {kr['current_value']}/{kr['target']} {kr['unit']} "
+                f"({kr['pct']:.0f}%)"
+            )
+            if kr.get("last_notes"):
+                lines.append(f"  Última semana: {kr['last_notes']}")
+            if kr.get("last_blockers"):
+                lines.append(f"  Bloqueos: {kr['last_blockers']}")
+            if kr.get("last_confidence"):
+                lines.append(f"  Confianza: {kr['last_confidence']}/5")
+        krs_text = "\n".join(lines) or "No hay KRs disponibles."
+
+        prompt = (
+            f"Eres un asistente de operaciones de Ontop. Con base en el estado actual de los OKRs "
+            f"del equipo {team_label} para {quarter}, genera un resumen ejecutivo en español de "
+            f"máximo 300 palabras que incluya: 1) Estado general del quarter, "
+            f"2) Logros destacados, 3) Riesgos y bloqueos críticos, "
+            f"4) Recomendaciones concretas para la siguiente semana.\n\n"
+            f"Datos actuales de los KRs:\n{krs_text}"
+        )
+
+        with st.spinner("Generando resumen con IA..."):
+            try:
+                client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=800,
+                )
+                st.session_state[cache_key] = response.choices[0].message.content
+                st.session_state["ai_dialog_stale"] = False
+            except Exception as exc:
+                st.error(f"Error al llamar OpenAI API: {exc}")
+                return
+
+    text = st.session_state.get(cache_key, "")
+    st.markdown(text)
+    st.divider()
+    st.caption("Copiar texto completo:")
+    st.code(text, language=None)
+
+
+# ---------------------------------------------------------------------------
+# Login page
 # ---------------------------------------------------------------------------
 
 def render_login_page() -> None:
@@ -276,12 +445,9 @@ def render_login_page() -> None:
             <div style="margin-bottom:24px;">
                 <span style="font-size:38px;">🔺</span>
                 <span style="font-size:38px;font-weight:900;color:#fff;letter-spacing:-1px;"> ontop</span>
-                <span style="font-size:11px;font-weight:700;
-                             background:linear-gradient(135deg,#261C94,#E35276);
-                             padding:3px 9px;border-radius:999px;color:#fff;margin-left:6px;">AI</span>
             </div>
             <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px;">
-                Q2 2026 — Operations OKRs
+                Operations OKRs
             </div>
             <div style="font-size:14px;color:#6B6B7E;margin-bottom:44px;">
                 Sign in with your @getontop.com account
@@ -308,44 +474,63 @@ def render_login_page() -> None:
 # Header
 # ---------------------------------------------------------------------------
 
-def render_header(krs_df, selected_team: str) -> None:
+def render_header(objectives_df, krs_df, selected_team: str) -> None:
+    selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
+
     col_l, col_r = st.columns([3, 2])
     with col_l:
         sub = f" · {selected_team}" if selected_team != "All" else ""
         st.markdown(f"""
-        <div style="margin-bottom:6px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                <span style="font-size:17px;">🔺</span>
-                <span style="font-size:17px;font-weight:900;color:#fff;letter-spacing:-.5px;">ontop</span>
-                <span style="font-size:9px;font-weight:700;
-                             background:linear-gradient(135deg,#261C94,#E35276);
-                             padding:2px 7px;border-radius:999px;color:#fff;">AI</span>
-                <span style="font-size:11px;color:#6B6B7E;margin-left:2px;">
-                    Global Workforce, powered by AI
-                </span>
-            </div>
+        <div style="margin-bottom:4px;">
             <div style="font-size:24px;font-weight:800;color:#fff;line-height:1.1;">
                 Operations OKRs{sub}
             </div>
-            <div style="font-size:12px;color:#6B6B7E;margin-top:3px;">Q2 2026</div>
         </div>
         """, unsafe_allow_html=True)
+        st.selectbox(
+            "Quarter",
+            QUARTERS,
+            index=QUARTERS.index(selected_quarter) if selected_quarter in QUARTERS else 1,
+            key="selected_quarter",
+            label_visibility="collapsed",
+        )
 
     with col_r:
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         with c1:
-            st.button("⬇ Template",       key="hdr_tmpl",   use_container_width=True, type="secondary")
+            excel_bytes = _generate_template_excel(selected_quarter)
+            st.download_button(
+                label="⬇ Template",
+                data=excel_bytes,
+                file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="hdr_tmpl",
+                use_container_width=True,
+            )
         with c2:
-            st.button("✨ Generate OKRs", key="hdr_gen",    use_container_width=True)
-        with c3:
-            st.button("🤖 AI Update",     key="hdr_ai",     use_container_width=True, type="secondary")
+            if st.button("🤖 AI Update", key="hdr_ai", use_container_width=True, type="secondary"):
+                st.session_state["ai_dialog_stale"] = True
+                _ai_update_dialog()
 
-    if not krs_df.empty:
-        all_pct = krs_df.apply(compute_progress, axis=1)
-        c1,c2,c3,c4,c5 = st.columns(5)
-        c1.metric("Objectives",   len(krs_df["objective_id"].unique()))
-        c2.metric("Key Results",  len(krs_df))
+    # Metrics — filter by quarter + selected team
+    filtered_objs = objectives_df
+    if not objectives_df.empty and "quarter" in objectives_df.columns:
+        filtered_objs = filtered_objs[filtered_objs["quarter"] == selected_quarter]
+    if selected_team != "All" and not filtered_objs.empty and "sub_team" in filtered_objs.columns:
+        filtered_objs = filtered_objs[filtered_objs["sub_team"] == selected_team]
+
+    if not filtered_objs.empty and not krs_df.empty:
+        obj_ids   = set(filtered_objs["id"].astype(str).tolist())
+        team_krs  = krs_df[krs_df["objective_id"].astype(str).isin(obj_ids)]
+    else:
+        team_krs = krs_df.iloc[:0]
+
+    if not team_krs.empty:
+        all_pct = team_krs.apply(compute_progress, axis=1)
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Objectives",   len(team_krs["objective_id"].unique()))
+        c2.metric("Key Results",  len(team_krs))
         c3.metric("Avg Progress", f"{all_pct.mean():.0f}%")
         c4.metric("On Track ✅",  int((all_pct >= 70).sum()))
         c5.metric("At Risk",      int((all_pct < 70).sum()))
@@ -358,7 +543,6 @@ def render_header(krs_df, selected_team: str) -> None:
 # ---------------------------------------------------------------------------
 
 def render_dashboard() -> None:
-    # Populate session user info from st.user (production) or dev bypass
     if not DEV_MODE and "user" not in st.session_state:
         st.session_state["user"] = get_user()
 
@@ -372,16 +556,55 @@ def render_dashboard() -> None:
 
     objectives_df = load_objectives()
     krs_df        = load_key_results()
+    updates_df    = load_updates()
     selected_team = render_sidebar()
+    team_label    = selected_team or "All"
 
-    render_header(krs_df, selected_team or "All")
+    # Pre-compute KRs info for the AI Update dialog
+    selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
+    ai_objs = objectives_df
+    if not objectives_df.empty:
+        if "quarter" in objectives_df.columns:
+            ai_objs = ai_objs[ai_objs["quarter"] == selected_quarter]
+        if team_label != "All" and "sub_team" in ai_objs.columns:
+            ai_objs = ai_objs[ai_objs["sub_team"] == team_label]
 
+    if not ai_objs.empty and not krs_df.empty:
+        ai_obj_ids = set(ai_objs["id"].astype(str).tolist())
+        ai_krs     = krs_df[krs_df["objective_id"].astype(str).isin(ai_obj_ids)]
+    else:
+        ai_krs = krs_df.iloc[:0]
+
+    krs_info = []
+    for _, kr in ai_krs.iterrows():
+        kr_upds = updates_df[updates_df["kr_id"] == str(kr["id"])].sort_values(
+            "updated_at", ascending=False
+        ) if not updates_df.empty else updates_df
+        latest = kr_upds.iloc[0] if not kr_upds.empty else None
+        krs_info.append({
+            "id":             str(kr["id"]),
+            "title":          str(kr["title"]),
+            "target":         float(kr["target"]),
+            "unit":           str(kr["unit"]),
+            "current_value":  float(kr.get("current_value", 0)),
+            "pct":            compute_progress(kr),
+            "last_notes":     str(latest["week_notes"]) if latest is not None and latest.get("week_notes") else "",
+            "last_blockers":  str(latest["blockers"])   if latest is not None and latest.get("blockers")   else "",
+            "last_confidence": int(latest["confidence"]) if latest is not None and latest.get("confidence") else 0,
+        })
+    st.session_state["_krs_for_ai"] = krs_info
+
+    render_header(objectives_df, krs_df, team_label)
+
+    # Filter display objectives by quarter + team
     display_objs = objectives_df
-    if selected_team and not objectives_df.empty and "sub_team" in objectives_df.columns:
-        display_objs = objectives_df[objectives_df["sub_team"] == selected_team]
+    if not objectives_df.empty and "quarter" in objectives_df.columns:
+        display_objs = display_objs[display_objs["quarter"] == selected_quarter]
+    if selected_team and not display_objs.empty and "sub_team" in display_objs.columns:
+        display_objs = display_objs[display_objs["sub_team"] == selected_team]
 
     if display_objs.empty:
-        st.info(f"No objectives for **{selected_team}** yet.")
+        st.info(f"No objectives found for **{team_label}** in **{selected_quarter}**.")
         return
 
     active_kr = st.session_state.get("updating_kr") or ""

@@ -1,7 +1,15 @@
 """Objective card — Ontop design system."""
 
 import streamlit as st
-from sheets import compute_progress, format_value, load_updates_for_kr, update_kr_value
+from sheets import (
+    compute_progress,
+    delete_kr_by_id,
+    delete_update_by_id,
+    format_value,
+    load_updates_for_kr,
+    update_kr_fields,
+    update_kr_value,
+)
 
 CORAL  = "#E35276"
 PURPLE = "#261C94"
@@ -12,6 +20,69 @@ MUTED  = "#6B6B7E"
 AMBER  = "#F59E0B"
 
 
+# ---------------------------------------------------------------------------
+# Dialogs
+# ---------------------------------------------------------------------------
+
+@st.dialog("Editar Key Result")
+def _edit_kr_dialog(kr_id: str, current_title: str, current_target: float, current_unit: str) -> None:
+    new_title  = st.text_input("Título del KR",  value=current_title)
+    new_target = st.number_input("Target", value=float(current_target), min_value=0.0, step=1.0)
+    new_unit   = st.text_input("Unidad",         value=current_unit)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key=f"edit_cancel_{kr_id}"):
+            st.rerun()
+    with c2:
+        if st.button("Guardar", type="primary", use_container_width=True, key=f"edit_save_{kr_id}"):
+            try:
+                update_kr_fields(kr_id, new_title, new_target, new_unit)
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+
+
+@st.dialog("Confirmar eliminación de KR")
+def _confirm_delete_kr_dialog(kr_id: str, kr_title: str) -> None:
+    st.warning(f"¿Eliminar este KR y **todos** sus updates? Esta acción no se puede deshacer.")
+    st.markdown(
+        f'<div style="font-size:13px;color:{TEXT2};padding:6px 0 10px;">{kr_title}</div>',
+        unsafe_allow_html=True,
+    )
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key=f"dkr_cancel_{kr_id}"):
+            st.rerun()
+    with c2:
+        if st.button("Eliminar", type="primary", use_container_width=True, key=f"dkr_ok_{kr_id}"):
+            try:
+                delete_kr_by_id(kr_id)
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+
+
+@st.dialog("Confirmar eliminación de update")
+def _confirm_delete_update_dialog(update_id: str) -> None:
+    st.warning("¿Eliminar este update? El valor del KR se recalculará con el update más reciente restante.")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key=f"du_cancel_{update_id}"):
+            st.rerun()
+    with c2:
+        if st.button("Eliminar", type="primary", use_container_width=True, key=f"du_ok_{update_id}"):
+            try:
+                delete_update_by_id(update_id)
+                st.rerun()
+            except Exception as exc:
+                st.error(str(exc))
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def _pct_badge(pct: float) -> str:
     if pct >= 70:
         cls, label = "status-green", "On Track"
@@ -19,9 +90,7 @@ def _pct_badge(pct: float) -> str:
         cls, label = "status-amber", "At Risk"
     else:
         cls, label = "status-coral", "Off Track"
-    return (
-        f'<span class="ontop-status-badge {cls}">{pct:.0f}% · {label}</span>'
-    )
+    return f'<span class="ontop-status-badge {cls}">{pct:.0f}% · {label}</span>'
 
 
 def _progress_bar(pct: float) -> str:
@@ -30,6 +99,10 @@ def _progress_bar(pct: float) -> str:
         <div class="progress-fill" style="width:{pct:.1f}%;"></div>
     </div>"""
 
+
+# ---------------------------------------------------------------------------
+# Objective card
+# ---------------------------------------------------------------------------
 
 def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
     obj_id    = str(obj_row["id"])
@@ -54,13 +127,20 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
     """, unsafe_allow_html=True)
 
     if obj_krs.empty:
-        st.markdown(f'<div style="padding:10px 0;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="padding:10px 0;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>',
+            unsafe_allow_html=True,
+        )
     else:
-        for i, (_, kr) in enumerate(obj_krs.iterrows()):
+        for _, kr in obj_krs.iterrows():
             _render_kr_row(kr, active_kr)
 
     st.markdown("<div style='margin-bottom:18px;'></div>", unsafe_allow_html=True)
 
+
+# ---------------------------------------------------------------------------
+# KR row
+# ---------------------------------------------------------------------------
 
 def _render_kr_row(kr, active_kr: str) -> None:
     kr_id   = str(kr["id"])
@@ -95,23 +175,29 @@ def _render_kr_row(kr, active_kr: str) -> None:
     c_edit, c_del, c_show, c_gap, c_upd = st.columns([0.5, 0.5, 2, 4, 2])
 
     with c_edit:
-        st.button("✏", key=f"e_{kr_id}", help="Edit KR (TODO)", type="tertiary")
+        if st.button("✏", key=f"e_{kr_id}", help="Editar KR", type="tertiary"):
+            _edit_kr_dialog(kr_id, str(title), float(target), str(unit))
+
     with c_del:
-        st.button("🗑", key=f"d_{kr_id}", help="Delete KR (TODO)", type="tertiary")
+        if st.button("🗑", key=f"d_{kr_id}", help="Eliminar KR", type="tertiary"):
+            _confirm_delete_kr_dialog(kr_id, str(title))
+
     with c_show:
         hist_key  = f"h_{kr_id}"
         hist_open = st.session_state.get(hist_key, False)
         st.button(
             "↑ Hide updates" if hist_open else "→ Show updates",
-            key=f"s_{kr_id}", type="tertiary",
+            key=f"s_{kr_id}",
+            type="tertiary",
             on_click=lambda k=hist_key: st.session_state.update({k: not st.session_state.get(k, False)}),
         )
+
     with c_upd:
         is_upd = active_kr == kr_id
         st.button(
             "✕ Cancel" if is_upd else "Update",
             key=f"u_{kr_id}",
-            type="secondary" if is_upd else "primary",
+            type="secondary",
             use_container_width=True,
             on_click=lambda: st.session_state.update(
                 {"updating_kr": None if active_kr == kr_id else kr_id}
@@ -124,6 +210,10 @@ def _render_kr_row(kr, active_kr: str) -> None:
     if st.session_state.get(f"h_{kr_id}", False):
         _render_history(kr_id)
 
+
+# ---------------------------------------------------------------------------
+# Update form
+# ---------------------------------------------------------------------------
 
 def _render_update_form(kr) -> None:
     kr_id   = str(kr["id"])
@@ -193,37 +283,44 @@ def _render_update_form(kr) -> None:
             st.rerun()
 
 
+# ---------------------------------------------------------------------------
+# Update history
+# ---------------------------------------------------------------------------
+
 def _render_history(kr_id: str) -> None:
     updates = load_updates_for_kr(kr_id)
-    with st.container():
-        st.markdown(f"""
-        <div style="background:rgba(6,6,9,0.9);border:1px solid {BORDER};
-                    border-radius:14px;padding:12px 16px;margin:4px 0 6px;">
-        """, unsafe_allow_html=True)
 
-        if updates.empty:
-            st.markdown(f'<span style="color:{MUTED};font-size:12px;">No updates yet.</span>',
-                        unsafe_allow_html=True)
-        else:
-            for _, row in updates.iterrows():
-                val      = row.get("new_value", "")
-                notes    = str(row.get("week_notes", "") or "")
-                blockers = str(row.get("blockers", "") or "")
-                conf     = int(row.get("confidence", 0) or 0)
-                dots     = "●" * conf + "○" * (5 - conf)
-                st.markdown(f"""
-                <div style="padding:8px 0;border-bottom:1px solid {BORDER};">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                        <span style="font-size:13px;font-weight:600;color:{TEXT1};">→ {val}</span>
-                        <span style="font-size:10px;color:{MUTED};">{row.get('updated_at','')}</span>
-                    </div>
-                    <div style="font-size:11px;color:{TEXT2};">
-                        {row.get('updated_by','')} &nbsp;·&nbsp;
-                        <span style="color:{CORAL};">{dots}</span>
-                    </div>
-                    {"" if not notes    else f'<div style="font-size:12px;color:{TEXT2};margin-top:4px;">📝 {notes}</div>'}
-                    {"" if not blockers else f'<div style="font-size:12px;color:{AMBER};margin-top:2px;">⚠️ {blockers}</div>'}
+    if updates.empty:
+        st.markdown(
+            f'<span style="color:{MUTED};font-size:12px;padding:8px 0;display:block;">No updates yet.</span>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    for _, row in updates.iterrows():
+        update_id = str(row.get("id", ""))
+        val       = row.get("new_value", "")
+        notes     = str(row.get("week_notes", "") or "")
+        blockers  = str(row.get("blockers",   "") or "")
+        conf      = int(row.get("confidence",  0) or 0)
+        dots      = "●" * conf + "○" * (5 - conf)
+
+        col_info, col_del = st.columns([12, 1])
+        with col_info:
+            st.markdown(f"""
+            <div style="padding:8px 0;border-bottom:1px solid {BORDER};">
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                    <span style="font-size:13px;font-weight:600;color:{TEXT1};">→ {val}</span>
+                    <span style="font-size:10px;color:{MUTED};">{row.get('updated_at', '')}</span>
                 </div>
-                """, unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
+                <div style="font-size:11px;color:{TEXT2};">
+                    {row.get('updated_by', '')} &nbsp;·&nbsp;
+                    <span style="color:{CORAL};">{dots}</span>
+                </div>
+                {"" if not notes    else f'<div style="font-size:12px;color:{TEXT2};margin-top:4px;">📝 {notes}</div>'}
+                {"" if not blockers else f'<div style="font-size:12px;color:{AMBER};margin-top:2px;">⚠️ {blockers}</div>'}
+            </div>
+            """, unsafe_allow_html=True)
+        with col_del:
+            if st.button("🗑", key=f"del_upd_{update_id}", help="Eliminar update", type="tertiary"):
+                _confirm_delete_update_dialog(update_id)

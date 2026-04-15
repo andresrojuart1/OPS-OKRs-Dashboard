@@ -281,6 +281,94 @@ def compute_progress(row: Any) -> float:
     return max(0.0, min(100.0, current / target * 100))
 
 
+# ---------------------------------------------------------------------------
+# Delete / Edit
+# ---------------------------------------------------------------------------
+
+def delete_update_by_id(update_id: str) -> None:
+    """Delete a kr_update row by ID and recalculate the parent KR's current_value."""
+    spreadsheet = get_spreadsheet()
+    upd_ws = spreadsheet.worksheet("kr_updates")
+
+    all_updates = upd_ws.get_all_records()
+
+    kr_id = None
+    for row in all_updates:
+        if str(row.get("id", "")) == str(update_id):
+            kr_id = str(row.get("kr_id", ""))
+            break
+
+    if kr_id is None:
+        raise ValueError(f"Update '{update_id}' not found.")
+
+    cell = upd_ws.find(str(update_id), in_column=1)
+    if cell:
+        upd_ws.delete_rows(cell.row)
+
+    remaining = sorted(
+        [r for r in all_updates
+         if str(r.get("kr_id", "")) == kr_id and str(r.get("id", "")) != str(update_id)],
+        key=lambda r: str(r.get("updated_at", "")),
+        reverse=True,
+    )
+    new_value = float(remaining[0].get("new_value", 0) or 0) if remaining else 0.0
+
+    kr_ws = spreadsheet.worksheet("key_results")
+    all_krs = kr_ws.get_all_records()
+    headers = kr_ws.row_values(1)
+    for i, row in enumerate(all_krs, start=2):
+        if str(row.get("id", "")) == kr_id:
+            col_index = headers.index("current_value") + 1
+            kr_ws.update_cell(i, col_index, new_value)
+            break
+
+    load_key_results.clear()
+    load_updates.clear()
+
+
+def delete_kr_by_id(kr_id: str) -> None:
+    """Delete a KR row and all its associated updates."""
+    spreadsheet = get_spreadsheet()
+    kr_ws  = spreadsheet.worksheet("key_results")
+    upd_ws = spreadsheet.worksheet("kr_updates")
+
+    cell = kr_ws.find(str(kr_id), in_column=1)
+    if cell:
+        kr_ws.delete_rows(cell.row)
+
+    all_updates = upd_ws.get_all_records()
+    rows_to_delete = [
+        i for i, row in enumerate(all_updates, start=2)
+        if str(row.get("kr_id", "")) == str(kr_id)
+    ]
+    for row_num in reversed(rows_to_delete):
+        upd_ws.delete_rows(row_num)
+
+    load_key_results.clear()
+    load_updates.clear()
+
+
+def update_kr_fields(kr_id: str, title: str, target: float, unit: str) -> None:
+    """Update a KR's title, target, and unit in Google Sheets."""
+    spreadsheet = get_spreadsheet()
+    kr_ws = spreadsheet.worksheet("key_results")
+    all_krs = kr_ws.get_all_records()
+    headers = kr_ws.row_values(1)
+
+    for i, row in enumerate(all_krs, start=2):
+        if str(row.get("id", "")) == str(kr_id):
+            if "title" in headers:
+                kr_ws.update_cell(i, headers.index("title") + 1, title)
+            if "target" in headers:
+                kr_ws.update_cell(i, headers.index("target") + 1, target)
+            if "unit" in headers:
+                kr_ws.update_cell(i, headers.index("unit") + 1, unit)
+            break
+
+    load_key_results.clear()
+
+
+# ---------------------------------------------------------------------------
 def format_value(current: float, target: float, unit: str) -> str:
     u = unit.lower().strip()
     if u == "binary":
