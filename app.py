@@ -287,9 +287,12 @@ from auth import require_login, get_user, logout
 from sheets import (
     seed_if_empty, load_objectives, load_key_results, load_updates,
     compute_progress, create_objective,
+    get_week_number, get_weekly_note, save_weekly_note,
+    get_weekly_charts, upload_charts_to_drive, delete_chart_from_drive,
 )
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
+from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
 
 # ---------------------------------------------------------------------------
 for key, default in [
@@ -628,6 +631,39 @@ def render_dashboard() -> None:
 
     render_header(objectives_df, krs_df, team_label)
 
+    # PDF import section (sub-team views only)
+    if team_label != "All":
+        _, col_import = st.columns([3, 1])
+        with col_import:
+            if st.button("📄 Import from PDF", use_container_width=True, key="pdf_import_btn"):
+                st.session_state["show_pdf_import"] = True
+
+        if st.session_state.get("show_pdf_import"):
+            with st.container():
+                st.markdown("### 📄 Import OKR Update from PDF")
+                st.caption(
+                    "Upload your OKR PDF report. The system will extract the data "
+                    "and show you a preview before saving anything."
+                )
+                pdf_file = st.file_uploader(
+                    "Upload PDF", type=["pdf"], key=f"pdf_uploader_{team_label}"
+                )
+                if pdf_file:
+                    if st.button("🔍 Parse PDF", type="primary", key=f"parse_pdf_btn_{team_label}"):
+                        with st.spinner("Reading PDF with AI..."):
+                            try:
+                                parsed_data = parse_okr_pdf_with_ai(
+                                    pdf_file, team_label, selected_quarter,
+                                    st.secrets["OPENAI_API_KEY"],
+                                )
+                                st.session_state["parsed_pdf_data"] = parsed_data
+                            except Exception as exc:
+                                st.error(f"Error parsing PDF: {exc}")
+                if st.session_state.get("parsed_pdf_data"):
+                    render_pdf_preview_and_confirm(
+                        st.session_state["parsed_pdf_data"], team_label, selected_quarter,
+                    )
+
     # Filter display objectives by quarter + team
     display_objs = objectives_df
     if not objectives_df.empty and "quarter" in objectives_df.columns:
@@ -643,10 +679,66 @@ def render_dashboard() -> None:
     else:
         active_kr = st.session_state.get("updating_kr") or ""
         for _, obj_row in display_objs.iterrows():
-            render_objective_card(obj_row, krs_df, active_kr=active_kr)
+            render_objective_card(obj_row, krs_df, active_kr=active_kr, show_sub_team=(team_label == "All"))
 
     if st.button("+ Add Objective", key=f"add_obj_{team_label}", type="secondary"):
         add_objective_dialog(team_label, selected_quarter)
+
+    # Weekly Notes + Charts section (sub-team views only)
+    if team_label != "All":
+        st.divider()
+        st.subheader("📝 Additional Weekly Notes")
+        st.caption("Document important updates, decisions or context not tied to specific KRs")
+
+        week_number   = get_week_number()
+        existing_note = get_weekly_note(team_label, selected_quarter, week_number)
+
+        note_text = st.text_area(
+            "Weekly notes",
+            value=existing_note.get("content", ""),
+            height=150,
+            placeholder=(
+                "Ex: Had alignment meeting with Tech on JPM integration timeline. "
+                "Escalated BVNK API issue to leadership..."
+            ),
+            label_visibility="collapsed",
+            key=f"weekly_notes_{team_label}_{selected_quarter}_{week_number}",
+        )
+        col1, col2 = st.columns([4, 1])
+        with col2:
+            if st.button("Save Notes", use_container_width=True, key=f"save_notes_{team_label}_{week_number}"):
+                email = st.session_state.get("user", {}).get("email", "unknown")
+                save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
+                st.success("Notes saved!")
+
+        st.markdown("#### 📊 Charts & Screenshots")
+        st.caption(
+            "Upload dashboard screenshots for this week's session. "
+            "Previous weeks' charts are archived but not shown here."
+        )
+        uploaded_files = st.file_uploader(
+            "Upload charts",
+            type=["png", "jpg", "jpeg"],
+            accept_multiple_files=True,
+            label_visibility="collapsed",
+            key=f"chart_uploader_{team_label}_{week_number}",
+        )
+        if uploaded_files:
+            if st.button("Upload to Drive", type="primary", key=f"upload_charts_{team_label}_{week_number}"):
+                email = st.session_state.get("user", {}).get("email", "unknown")
+                upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
+                st.rerun()
+
+        current_charts = get_weekly_charts(team_label, selected_quarter, week_number)
+        if current_charts:
+            st.markdown("**This week's charts:**")
+            chart_cols = st.columns(min(len(current_charts), 2))
+            for i, chart in enumerate(current_charts):
+                with chart_cols[i % 2]:
+                    st.image(chart["drive_url"], caption=chart["filename"], use_container_width=True)
+                    if st.button("🗑️ Remove", key=f"del_chart_{chart['id']}"):
+                        delete_chart_from_drive(str(chart["id"]))
+                        st.rerun()
 
 
 # ---------------------------------------------------------------------------

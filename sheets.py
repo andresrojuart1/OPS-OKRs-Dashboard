@@ -59,6 +59,21 @@ def get_spreadsheet() -> gspread.Spreadsheet:
     return get_gspread_client().open_by_key(_secret("GSPREAD_SPREADSHEET_ID"))
 
 
+def get_worksheet(name: str) -> gspread.Worksheet:
+    return get_spreadsheet().worksheet(name)
+
+
+def get_service_account_credentials() -> Credentials:
+    """Return raw service account credentials for use with other Google APIs."""
+    sa_json = _secret("GOOGLE_SERVICE_ACCOUNT_JSON")
+    sa_file = os.path.join(_here, _secret("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json"))
+    if sa_json:
+        return Credentials.from_service_account_info(json.loads(sa_json), scopes=SCOPES)
+    elif os.path.isfile(sa_file):
+        return Credentials.from_service_account_file(sa_file, scopes=SCOPES)
+    raise EnvironmentError("No service account credentials found.")
+
+
 # ---------------------------------------------------------------------------
 # Seed data
 # ---------------------------------------------------------------------------
@@ -132,7 +147,9 @@ SEED_KEY_RESULTS = [
 
 OBJ_HEADERS = ["id", "title", "sub_team", "quarter", "company_vision"]
 KR_HEADERS  = ["id", "objective_id", "title", "target", "unit", "current_value"]
-UPD_HEADERS = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at"]
+UPD_HEADERS    = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at"]
+NOTES_HEADERS  = ["id", "sub_team", "quarter", "week_number", "content", "updated_by", "updated_at"]
+CHARTS_HEADERS = ["id", "sub_team", "quarter", "week_number", "filename", "drive_file_id", "drive_url", "uploaded_by", "uploaded_at"]
 
 
 def _ensure_worksheet(spreadsheet, title, headers):
@@ -176,7 +193,9 @@ def seed_if_empty() -> None:
 
     obj_ws = _ensure_worksheet(spreadsheet, "objectives",  OBJ_HEADERS)
     kr_ws  = _ensure_worksheet(spreadsheet, "key_results", KR_HEADERS)
-    _ensure_worksheet(spreadsheet, "kr_updates", UPD_HEADERS)
+    _ensure_worksheet(spreadsheet, "kr_updates",    UPD_HEADERS)
+    _ensure_worksheet(spreadsheet, "weekly_notes",  NOTES_HEADERS)
+    _ensure_worksheet(spreadsheet, "weekly_charts", CHARTS_HEADERS)
 
     if not obj_ws.get_all_records():
         obj_ws.append_rows(
@@ -406,6 +425,200 @@ def create_kr(objective_id: str, title: str, target: float, unit: str) -> None:
     new_id = _next_kr_id()
     ws.append_row([new_id, objective_id, title, target, unit, 0], value_input_option="RAW")
     st.cache_data.clear()
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Weekly Notes
+# ---------------------------------------------------------------------------
+
+def get_week_number() -> int:
+    """Return current ISO week number."""
+    return datetime.now().isocalendar()[1]
+
+
+@st.cache_data(ttl=60)
+def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
+    ws = get_worksheet("weekly_notes")
+    rows = ws.get_all_records()
+    for row in rows:
+        if (row["sub_team"] == sub_team and
+                row["quarter"] == quarter and
+                str(row["week_number"]) == str(week_number)):
+            return row
+    return {}
+
+
+def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str, updated_by: str) -> None:
+    ws = get_worksheet("weekly_notes")
+    rows = ws.get_all_records()
+    for i, row in enumerate(rows, start=2):
+        if (row["sub_team"] == sub_team and
+                row["quarter"] == quarter and
+                str(row["week_number"]) == str(week_number)):
+            ws.update(f"E{i}:G{i}", [[content, updated_by, datetime.now(timezone.utc).isoformat()]])
+            st.cache_data.clear()
+            return
+    all_rows = ws.get_all_values()
+    existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
+    next_id = max(existing_ids) + 1 if existing_ids else 1
+    ws.append_row(
+        [next_id, sub_team, quarter, week_number, content, updated_by,
+         datetime.now(timezone.utc).isoformat()],
+        value_input_option="RAW",
+    )
+    st.cache_data.clear()
+
+
+# ---------------------------------------------------------------------------
+# Weekly Charts (Google Drive)
+# ---------------------------------------------------------------------------
+
+def get_or_create_drive_folder(drive_service: Any, path: str) -> str:
+    """Create folder hierarchy in Drive and return the leaf folder ID."""
+    parts = path.split("/")
+    parent_id = "root"
+    for part in parts:
+        query = (
+            f"name='{part}' and '{parent_id}' in parents "
+            f"and mimeType='application/vnd.google-apps.folder' "
+            f"and trashed=false"
+        )
+        results = drive_service.files().list(q=query, fields="files(id)").execute()
+        files = results.get("files", [])
+        if files:
+            parent_id = files[0]["id"]
+        else:
+            folder = drive_service.files().create(
+                body={"name": part, "parents": [parent_id],
+                      "mimeType": "application/vnd.google-apps.folder"},
+                fields="id",
+            ).execute()
+            parent_id = folder["id"]
+    return parent_id
+
+
+def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number: int, uploaded_by: str) -> None:
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaIoBaseUpload
+    import io as _io
+
+    creds = get_service_account_credentials()
+    drive_service = build("drive", "v3", credentials=creds)
+    folder_id = get_or_create_drive_folder(
+        drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}"
+    )
+
+    charts_ws = get_worksheet("weekly_charts")
+    all_rows = charts_ws.get_all_values()
+    existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
+    next_id = max(existing_ids) + 1 if existing_ids else 1
+
+    for file in files:
+        media = MediaIoBaseUpload(_io.BytesIO(file.read()), mimetype=file.type)
+        drive_file = drive_service.files().create(
+            body={"name": file.name, "parents": [folder_id]},
+            media_body=media,
+            fields="id, webViewLink",
+        ).execute()
+        drive_service.permissions().create(
+            fileId=drive_file["id"],
+            body={"type": "anyone", "role": "reader"},
+        ).execute()
+        direct_url = f"https://drive.google.com/uc?export=view&id={drive_file['id']}"
+        charts_ws.append_row(
+            [next_id, sub_team, quarter, week_number, file.name,
+             drive_file["id"], direct_url, uploaded_by,
+             datetime.now(timezone.utc).isoformat()],
+            value_input_option="RAW",
+        )
+        next_id += 1
+
+    st.cache_data.clear()
+
+
+@st.cache_data(ttl=60)
+def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
+    ws = get_worksheet("weekly_charts")
+    rows = ws.get_all_records()
+    return [r for r in rows if (
+        r["sub_team"] == sub_team and
+        r["quarter"] == quarter and
+        str(r["week_number"]) == str(week_number)
+    )]
+
+
+def delete_chart_from_drive(chart_id: str) -> None:
+    from googleapiclient.discovery import build
+    creds = get_service_account_credentials()
+    drive_service = build("drive", "v3", credentials=creds)
+
+    ws = get_worksheet("weekly_charts")
+    rows = ws.get_all_records()
+    for i, row in enumerate(rows, start=2):
+        if str(row["id"]) == str(chart_id):
+            drive_service.files().delete(fileId=str(row["drive_file_id"])).execute()
+            ws.delete_rows(i)
+            st.cache_data.clear()
+            return
+
+
+# ---------------------------------------------------------------------------
+# PDF import helpers
+# ---------------------------------------------------------------------------
+
+def find_or_create_objective(title: str, sub_team: str, quarter: str) -> str:
+    ws = get_worksheet("objectives")
+    rows = ws.get_all_records()
+    for row in rows:
+        if (str(row["title"]).strip() == title.strip() and
+                row["sub_team"] == sub_team and
+                row["quarter"] == quarter):
+            return str(row["id"])
+    create_objective(title, sub_team, quarter)
+    rows = ws.get_all_records()
+    return str(rows[-1]["id"])
+
+
+def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -> str:
+    ws = get_worksheet("key_results")
+    rows = ws.get_all_records()
+    for row in rows:
+        if (str(row["objective_id"]) == str(objective_id) and
+                str(row["title"]).strip() == title.strip()):
+            return str(row["id"])
+    create_kr(objective_id, title, float(target or 0), unit)
+    rows = ws.get_all_records()
+    return str(rows[-1]["id"])
+
+
+def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> None:
+    for obj_data in parsed_data.get("objectives", []):
+        obj_id = find_or_create_objective(obj_data["title"], sub_team, quarter)
+        for kr_data in obj_data.get("key_results", []):
+            kr_id = find_or_create_kr(
+                obj_id,
+                kr_data["title"],
+                kr_data.get("target") or 0,
+                kr_data.get("unit", ""),
+            )
+            if kr_data.get("current_value") is not None:
+                update_kr_value(
+                    kr_id=kr_id,
+                    new_value=float(kr_data["current_value"]),
+                    week_notes=f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
+                    blockers="",
+                    confidence=3,
+                    updated_by=updated_by,
+                )
+
+    if parsed_data.get("weekly_updates"):
+        week_number = get_week_number()
+        combined_notes = "\n\n".join([
+            f"**{u['section']}**\n{u['content']}"
+            for u in parsed_data["weekly_updates"]
+        ])
+        save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
 
 
 # ---------------------------------------------------------------------------
