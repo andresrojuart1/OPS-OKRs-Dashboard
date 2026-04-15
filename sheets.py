@@ -14,21 +14,18 @@ from google.oauth2.service_account import Credentials
 
 load_dotenv(override=True)
 
+_here = os.path.dirname(os.path.abspath(__file__))
+
 
 def _secret(key: str, default: str = "") -> str:
-    """Read from st.secrets first (Streamlit Cloud), then os.getenv (local)."""
+    """Read from st.secrets (Streamlit Cloud) or os.getenv (local)."""
     try:
-        return str(st.secrets[key])
-    except (KeyError, FileNotFoundError):
-        return os.getenv(key, default)
-
-
-SPREADSHEET_ID = _secret("GSPREAD_SPREADSHEET_ID")
-SERVICE_ACCOUNT_JSON = _secret("GOOGLE_SERVICE_ACCOUNT_JSON")
-_here = os.path.dirname(os.path.abspath(__file__))
-SERVICE_ACCOUNT_FILE = os.path.join(
-    _here, _secret("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json")
-)
+        val = st.secrets.get(key)
+        if val is not None:
+            return str(val)
+    except Exception:
+        pass
+    return os.getenv(key, default)
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -41,12 +38,14 @@ SCOPES = [
 
 @st.cache_resource
 def get_gspread_client() -> gspread.Client:
-    if SERVICE_ACCOUNT_JSON:
+    sa_json = _secret("GOOGLE_SERVICE_ACCOUNT_JSON")
+    sa_file = os.path.join(_here, _secret("GOOGLE_SERVICE_ACCOUNT_FILE", "service_account.json"))
+    if sa_json:
         creds = Credentials.from_service_account_info(
-            json.loads(SERVICE_ACCOUNT_JSON), scopes=SCOPES
+            json.loads(sa_json), scopes=SCOPES
         )
-    elif os.path.isfile(SERVICE_ACCOUNT_FILE):
-        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    elif os.path.isfile(sa_file):
+        creds = Credentials.from_service_account_file(sa_file, scopes=SCOPES)
     else:
         raise EnvironmentError(
             "No service account credentials found. Set GOOGLE_SERVICE_ACCOUNT_JSON "
@@ -57,7 +56,7 @@ def get_gspread_client() -> gspread.Client:
 
 @st.cache_resource
 def get_spreadsheet() -> gspread.Spreadsheet:
-    return get_gspread_client().open_by_key(SPREADSHEET_ID)
+    return get_gspread_client().open_by_key(_secret("GSPREAD_SPREADSHEET_ID"))
 
 
 # ---------------------------------------------------------------------------
