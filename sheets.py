@@ -144,10 +144,11 @@ def _ensure_worksheet(spreadsheet, title, headers):
     return ws
 
 
-def _needs_migration(spreadsheet) -> bool:
+@st.cache_data(ttl=3600)
+def _needs_migration() -> bool:
     """Return True if the objectives sheet uses the old schema (no sub_team column)."""
     try:
-        ws = spreadsheet.worksheet("objectives")
+        ws = get_spreadsheet().worksheet("objectives")
         headers = ws.row_values(1)
         return "sub_team" not in headers
     except gspread.WorksheetNotFound:
@@ -164,9 +165,13 @@ def _wipe_worksheets(spreadsheet) -> None:
 
 
 def seed_if_empty() -> None:
+    if st.session_state.get("seed_checked"):
+        return
+
     spreadsheet = get_spreadsheet()
 
-    if _needs_migration(spreadsheet):
+    if _needs_migration():
+        _needs_migration.clear()
         _wipe_worksheets(spreadsheet)
 
     obj_ws = _ensure_worksheet(spreadsheet, "objectives",  OBJ_HEADERS)
@@ -187,19 +192,21 @@ def seed_if_empty() -> None:
             value_input_option="RAW",
         )
 
+    st.session_state["seed_checked"] = True
+
 
 # ---------------------------------------------------------------------------
 # Read helpers (cached 30 s)
 # ---------------------------------------------------------------------------
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 def load_objectives() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("objectives")
     records = ws.get_all_records()
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 def load_key_results() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("key_results")
     records = ws.get_all_records()
@@ -211,7 +218,7 @@ def load_key_results() -> pd.DataFrame:
     return df
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 def load_updates() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("kr_updates")
     records = ws.get_all_records()
@@ -265,8 +272,7 @@ def update_kr_value(
     )
     kr_ws.update_cell(row_index, col_index, new_value)
 
-    load_key_results.clear()
-    load_updates.clear()
+    st.cache_data.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -322,8 +328,7 @@ def delete_update_by_id(update_id: str) -> None:
             kr_ws.update_cell(i, col_index, new_value)
             break
 
-    load_key_results.clear()
-    load_updates.clear()
+    st.cache_data.clear()
 
 
 def delete_kr_by_id(kr_id: str) -> None:
@@ -344,8 +349,7 @@ def delete_kr_by_id(kr_id: str) -> None:
     for row_num in reversed(rows_to_delete):
         upd_ws.delete_rows(row_num)
 
-    load_key_results.clear()
-    load_updates.clear()
+    st.cache_data.clear()
 
 
 def update_kr_fields(kr_id: str, title: str, target: float, unit: str) -> None:
@@ -365,7 +369,7 @@ def update_kr_fields(kr_id: str, title: str, target: float, unit: str) -> None:
                 kr_ws.update_cell(i, headers.index("unit") + 1, unit)
             break
 
-    load_key_results.clear()
+    st.cache_data.clear()
 
 
 # ---------------------------------------------------------------------------
