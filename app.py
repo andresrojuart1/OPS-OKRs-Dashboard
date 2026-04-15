@@ -679,7 +679,7 @@ def render_dashboard() -> None:
     else:
         active_kr = st.session_state.get("updating_kr") or ""
         for _, obj_row in display_objs.iterrows():
-            render_objective_card(obj_row, krs_df, active_kr=active_kr, show_sub_team=(team_label == "All"))
+            render_objective_card(obj_row, krs_df, active_kr=active_kr)
 
     if st.button("+ Add Objective", key=f"add_obj_{team_label}", type="secondary"):
         add_objective_dialog(team_label, selected_quarter)

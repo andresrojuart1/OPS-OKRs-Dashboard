@@ -20,63 +20,6 @@ TEXT2  = "#B8B8C8"
 MUTED  = "#6B6B7E"
 AMBER  = "#F59E0B"
 
-_CARD_CSS_INJECTED = False
-
-def _inject_card_css() -> None:
-    global _CARD_CSS_INJECTED
-    if _CARD_CSS_INJECTED:
-        return
-    st.markdown("""
-<style>
-.obj-toggle-card {
-    cursor: pointer;
-    position: relative;
-    background: radial-gradient(circle at top right, rgba(227,82,118,0.10), transparent 35%),
-                linear-gradient(180deg, rgba(26,26,36,.92), rgba(6,6,9,.92));
-    border: 1px solid #2A2A3E;
-    border-radius: 20px;
-    padding: 1.1rem 1.25rem .9rem;
-    margin-bottom: .75rem;
-    transition: border-color 0.2s ease;
-}
-.obj-toggle-card:hover { border-color: #3a3f6e; }
-.obj-badge-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-.obj-badge {
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: .76rem;
-    font-weight: 700;
-    letter-spacing: .03em;
-    white-space: nowrap;
-}
-.obj-badge-coral {
-    background: rgba(227,82,118,.12);
-    color: #ff9ab0;
-    border: 1px solid rgba(227,82,118,.32);
-}
-.obj-badge-amber {
-    background: rgba(245,158,11,.12);
-    color: #f8c56a;
-    border: 1px solid rgba(245,158,11,.28);
-}
-.obj-badge-green {
-    background: rgba(34,197,94,.12);
-    color: #7ee2a8;
-    border: 1px solid rgba(34,197,94,.30);
-}
-.obj-subteam { color: #6B6B7E; font-size: 13px; }
-.obj-chevron { margin-left: auto; color: #6B6B7E; font-size: 12px; }
-.obj-title { color: #FFFFFF; font-size: 16px; font-weight: 700; line-height: 1.35; }
-
-</style>
-""", unsafe_allow_html=True)
-    _CARD_CSS_INJECTED = True
-
 
 # ---------------------------------------------------------------------------
 # Dialogs
@@ -176,6 +119,16 @@ def _confirm_delete_update_dialog(update_id: str) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _pct_badge(pct: float) -> str:
+    if pct >= 70:
+        cls, label = "status-green", "On Track"
+    elif pct >= 40:
+        cls, label = "status-amber", "At Risk"
+    else:
+        cls, label = "status-coral", "Off Track"
+    return f'<span class="ontop-status-badge {cls}">{pct:.0f}% · {label}</span>'
+
+
 def _progress_bar(pct: float) -> str:
     return f"""
     <div class="progress-track">
@@ -187,9 +140,7 @@ def _progress_bar(pct: float) -> str:
 # Objective card
 # ---------------------------------------------------------------------------
 
-def render_objective_card(obj_row, krs_df, active_kr: str, show_sub_team: bool = False) -> None:
-    _inject_card_css()
-
+def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
     obj_id    = str(obj_row["id"])
     obj_title = obj_row["title"]
     sub_team  = obj_row.get("sub_team", "")
@@ -197,63 +148,35 @@ def render_objective_card(obj_row, krs_df, active_kr: str, show_sub_team: bool =
     obj_krs = krs_df[krs_df["objective_id"] == obj_id] if not krs_df.empty else krs_df
     avg_pct = obj_krs.apply(compute_progress, axis=1).mean() if not obj_krs.empty else 0.0
 
-    if avg_pct >= 70:
-        status_label, badge_cls = "On Track",  "obj-badge-green"
-    elif avg_pct >= 40:
-        status_label, badge_cls = "At Risk",   "obj-badge-amber"
-    else:
-        status_label, badge_cls = "Off Track", "obj-badge-coral"
-
-    exp_key   = f"obj_expanded_{obj_id}"
-    if exp_key not in st.session_state:
-        st.session_state[exp_key] = False
-    is_expanded = st.session_state[exp_key]
-    chevron     = "▲" if is_expanded else "▼"
-
-    subteam_html = (
-        f'<span class="obj-subteam">{sub_team}</span>'
-        if (show_sub_team and sub_team) else ""
-    )
-
-    # Card HTML — the visible toggle
     st.markdown(f"""
-<div class="obj-toggle-card" style="position:relative;">
-    <div class="obj-badge-row">
-        <span class="obj-badge {badge_cls}">{avg_pct:.0f}% · {status_label}</span>
-        {subteam_html}
-        <span class="obj-chevron">{chevron}</span>
+    <div class="okr-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                {_pct_badge(avg_pct)}
+                <span style="font-size:11px;color:{MUTED};">{sub_team}</span>
+            </div>
+        </div>
+        <div style="font-size:16px;font-weight:700;color:{TEXT1};line-height:1.35;">
+            {obj_title}
+        </div>
     </div>
-    <div class="obj-title">{obj_title}</div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    col_t, _ = st.columns([1, 6])
-    with col_t:
-        if st.button(
-            "▲ Hide" if is_expanded else "▼ Show",
-            key=f"toggle_{obj_id}",
-            type="tertiary",
-        ):
-            st.session_state[exp_key] = not is_expanded
-            st.rerun()
+    if obj_krs.empty:
+        st.markdown(
+            f'<div style="padding:10px 0;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        for _, kr in obj_krs.iterrows():
+            _render_kr_row(kr, active_kr)
 
-    # KRs — only when expanded
-    if is_expanded:
-        if obj_krs.empty:
-            st.markdown(
-                f'<div style="padding:10px 0 4px 8px;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            for _, kr in obj_krs.iterrows():
-                _render_kr_row(kr, active_kr)
+    col_add, _ = st.columns([2, 5])
+    with col_add:
+        if st.button("+ Add KR", key=f"add_kr_{obj_id}", type="tertiary"):
+            add_kr_dialog(obj_id, str(obj_title))
 
-        col_add, _ = st.columns([2, 5])
-        with col_add:
-            if st.button("+ Add KR", key=f"add_kr_{obj_id}", type="tertiary"):
-                add_kr_dialog(obj_id, str(obj_title))
-
-    st.markdown("<div style='margin-bottom:8px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom:18px;'></div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
