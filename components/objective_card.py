@@ -73,16 +73,6 @@ def _inject_card_css() -> None:
 .obj-chevron { margin-left: auto; color: #6B6B7E; font-size: 12px; }
 .obj-title { color: #FFFFFF; font-size: 16px; font-weight: 700; line-height: 1.35; }
 
-/* Invisible Streamlit toggle button stretched over the card */
-div[data-testid="stButton"].obj-toggle-btn > button {
-    position: absolute !important;
-    top: 0 !important; left: 0 !important;
-    width: 100% !important; height: 100% !important;
-    opacity: 0 !important;
-    cursor: pointer !important;
-    z-index: 10 !important;
-    border-radius: 20px !important;
-}
 </style>
 """, unsafe_allow_html=True)
     _CARD_CSS_INJECTED = True
@@ -237,12 +227,15 @@ def render_objective_card(obj_row, krs_df, active_kr: str, show_sub_team: bool =
 </div>
 """, unsafe_allow_html=True)
 
-    # Invisible button that captures the click — CSS stretches it over the card
-    st.markdown('<div class="obj-toggle-btn">', unsafe_allow_html=True)
-    if st.button("toggle", key=f"toggle_{obj_id}", label_visibility="collapsed"):
-        st.session_state[exp_key] = not is_expanded
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    col_t, _ = st.columns([1, 6])
+    with col_t:
+        if st.button(
+            "▲ Hide" if is_expanded else "▼ Show",
+            key=f"toggle_{obj_id}",
+            type="tertiary",
+        ):
+            st.session_state[exp_key] = not is_expanded
+            st.rerun()
 
     # KRs — only when expanded
     if is_expanded:
