@@ -2,7 +2,9 @@
 
 from typing import Optional
 import streamlit as st
-from auth import logout
+from auth import logout as _logout
+import os
+_DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 SUB_TEAMS = [
     "All",
@@ -63,7 +65,11 @@ def render_sidebar() -> Optional[str]:
         """, unsafe_allow_html=True)
 
         if st.button("Sign out", key="signout", use_container_width=True, type="tertiary"):
-            logout()
-            st.rerun()
+            if _DEV_MODE:
+                st.session_state.pop("dev_authenticated", None)
+                st.session_state.pop("user", None)
+                st.rerun()
+            else:
+                _logout()
 
     return None if selected == "All" else selected

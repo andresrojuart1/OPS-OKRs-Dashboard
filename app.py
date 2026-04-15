@@ -4,7 +4,6 @@ Entry point: streamlit run app.py
 """
 
 import os
-import secrets
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -252,24 +251,18 @@ hr { border-color: var(--border-color) !important; }
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-from auth import handle_oauth_callback, build_authorization_url
+from auth import require_login, get_user, logout
 from sheets import seed_if_empty, load_objectives, load_key_results, compute_progress
 from components.sidebar import render_sidebar
 from components.objective_card import render_objective_card
 
 # ---------------------------------------------------------------------------
 for key, default in [
-    ("authenticated", False),
-    ("oauth_state",   secrets.token_urlsafe(16)),
     ("updating_kr",   None),
-    ("auth_error",    None),
     ("selected_team", "All"),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
-
-if not DEV_MODE:
-    handle_oauth_callback()
 
 # ---------------------------------------------------------------------------
 # Login
@@ -299,37 +292,16 @@ def render_login_page() -> None:
         if DEV_MODE:
             st.warning("DEV MODE — OAuth bypassed")
             if st.button("Enter as mrojas@getontop.com", use_container_width=True):
-                st.session_state.update({
-                    "authenticated": True,
-                    "user": {"email":"mrojas@getontop.com","name":"Andrés Rojas",
-                             "given_name":"Andrés","picture":""},
-                })
+                st.session_state["dev_authenticated"] = True
+                st.session_state["user"] = {
+                    "email": "mrojas@getontop.com", "name": "Andrés Rojas",
+                    "given_name": "Andrés", "picture": "",
+                }
                 st.rerun()
             return
 
-        auth_url = build_authorization_url(st.session_state["oauth_state"])
-        st.markdown(f"""
-        <div style="text-align:center;">
-            <a href="{auth_url}" target="_self" style="text-decoration:none;">
-                <div style="display:inline-flex;align-items:center;gap:12px;
-                            background:linear-gradient(135deg,#261C94,#E35276);
-                            color:#fff;font-weight:700;font-size:15px;
-                            padding:14px 36px;border-radius:999px;
-                            box-shadow:0 10px 28px rgba(38,28,148,0.32);cursor:pointer;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Sign in with Google
-                </div>
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.session_state.get("auth_error"):
-            st.error(st.session_state["auth_error"])
+        if st.button("Sign in with Google", use_container_width=True):
+            st.login("google")
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +358,10 @@ def render_header(krs_df, selected_team: str) -> None:
 # ---------------------------------------------------------------------------
 
 def render_dashboard() -> None:
+    # Populate session user info from st.user (production) or dev bypass
+    if not DEV_MODE and "user" not in st.session_state:
+        st.session_state["user"] = get_user()
+
     try:
         seed_if_empty()
     except Exception as exc:
@@ -414,7 +390,13 @@ def render_dashboard() -> None:
 
 
 # ---------------------------------------------------------------------------
-if st.session_state.get("authenticated"):
-    render_dashboard()
+if DEV_MODE:
+    if st.session_state.get("dev_authenticated"):
+        render_dashboard()
+    else:
+        render_login_page()
 else:
-    render_login_page()
+    if require_login():
+        render_dashboard()
+    else:
+        render_login_page()
