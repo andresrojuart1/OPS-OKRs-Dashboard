@@ -373,6 +373,42 @@ def update_kr_fields(kr_id: str, title: str, target: float, unit: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Create
+# ---------------------------------------------------------------------------
+
+def _next_obj_id() -> str:
+    records = get_spreadsheet().worksheet("objectives").get_all_records()
+    nums = [int(str(r.get("id", ""))[1:])
+            for r in records
+            if str(r.get("id", "")).startswith("O") and str(r.get("id", ""))[1:].isdigit()]
+    return f"O{max(nums, default=0) + 1}"
+
+
+def _next_kr_id() -> str:
+    records = get_spreadsheet().worksheet("key_results").get_all_records()
+    nums = [int(str(r.get("id", ""))[2:])
+            for r in records
+            if str(r.get("id", "")).startswith("KR") and str(r.get("id", ""))[2:].isdigit()]
+    return f"KR{max(nums, default=0) + 1}"
+
+
+def create_objective(title: str, sub_team: str, quarter: str) -> None:
+    """Append a new objective row and clear the read cache."""
+    ws = get_spreadsheet().worksheet("objectives")
+    new_id = _next_obj_id()
+    ws.append_row([new_id, title, sub_team, quarter, ""], value_input_option="RAW")
+    st.cache_data.clear()
+
+
+def create_kr(objective_id: str, title: str, target: float, unit: str) -> None:
+    """Append a new key result row and clear the read cache."""
+    ws = get_spreadsheet().worksheet("key_results")
+    new_id = _next_kr_id()
+    ws.append_row([new_id, objective_id, title, target, unit, 0], value_input_option="RAW")
+    st.cache_data.clear()
+
+
+# ---------------------------------------------------------------------------
 def format_value(current: float, target: float, unit: str) -> str:
     u = unit.lower().strip()
     if u == "binary":

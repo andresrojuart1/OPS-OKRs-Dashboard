@@ -286,9 +286,9 @@ hr { border-color: var(--border-color) !important; }
 from auth import require_login, get_user, logout
 from sheets import (
     seed_if_empty, load_objectives, load_key_results, load_updates,
-    compute_progress,
+    compute_progress, create_objective,
 )
-from components.sidebar import render_sidebar
+from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 
 # ---------------------------------------------------------------------------
@@ -431,6 +431,38 @@ def _ai_update_dialog() -> None:
     st.divider()
     st.caption("Copiar texto completo:")
     st.code(text, language=None)
+
+
+# ---------------------------------------------------------------------------
+# Add Objective dialog
+# ---------------------------------------------------------------------------
+
+@st.dialog("New Objective")
+def add_objective_dialog(sub_team: str, quarter: str) -> None:
+    _subteams = [t for t in SUB_TEAMS if t != "All"]
+
+    if sub_team == "All":
+        actual_team = st.selectbox("Sub-team", _subteams)
+    else:
+        actual_team = sub_team
+
+    title = st.text_area(
+        "Objective title",
+        placeholder="Ex: Scale Financial Products into Reliable ARR Contributors…",
+    )
+    st.caption(f"Sub-team: **{actual_team}** · Quarter: **{quarter}**")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key="add_obj_cancel"):
+            st.rerun()
+    with c2:
+        if st.button("Create Objective", type="primary", use_container_width=True, key="add_obj_create"):
+            if title.strip():
+                create_objective(title.strip(), actual_team, quarter)
+                st.rerun()
+            else:
+                st.error("El título no puede estar vacío.")
 
 
 # ---------------------------------------------------------------------------
@@ -604,12 +636,17 @@ def render_dashboard() -> None:
         display_objs = display_objs[display_objs["sub_team"] == selected_team]
 
     if display_objs.empty:
-        st.info(f"No objectives found for **{team_label}** in **{selected_quarter}**.")
-        return
+        st.info(
+            f"No hay OKRs para **{selected_quarter}** · **{team_label}**. "
+            f"Crea el primero con el botón de abajo."
+        )
+    else:
+        active_kr = st.session_state.get("updating_kr") or ""
+        for _, obj_row in display_objs.iterrows():
+            render_objective_card(obj_row, krs_df, active_kr=active_kr)
 
-    active_kr = st.session_state.get("updating_kr") or ""
-    for _, obj_row in display_objs.iterrows():
-        render_objective_card(obj_row, krs_df, active_kr=active_kr)
+    if st.button("+ Add Objective", key=f"add_obj_{team_label}", type="secondary"):
+        add_objective_dialog(team_label, selected_quarter)
 
 
 # ---------------------------------------------------------------------------

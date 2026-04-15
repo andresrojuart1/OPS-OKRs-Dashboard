@@ -3,6 +3,7 @@
 import streamlit as st
 from sheets import (
     compute_progress,
+    create_kr,
     delete_kr_by_id,
     delete_update_by_id,
     format_value,
@@ -61,6 +62,41 @@ def _confirm_delete_kr_dialog(kr_id: str, kr_title: str) -> None:
                 st.rerun()
             except Exception as exc:
                 st.error(str(exc))
+
+
+@st.dialog("New Key Result")
+def add_kr_dialog(objective_id: str, objective_title: str) -> None:
+    cap = objective_title[:80] + "…" if len(objective_title) > 80 else objective_title
+    st.caption(cap)
+
+    title = st.text_input(
+        "Key Result description",
+        placeholder="Ex: Revenue reaches $20K/month",
+    )
+
+    col_target, col_unit = st.columns([2, 1])
+    with col_target:
+        target = st.number_input("Target value", min_value=0.0, value=100.0, step=1.0)
+    with col_unit:
+        _UNITS = ["$", "$/month", "%", "tickets/month", "workflows", "Launched", "PASS", "binary", "Custom..."]
+        unit_sel = st.selectbox("Unit", options=_UNITS)
+
+    if unit_sel == "Custom...":
+        unit = st.text_input("Custom unit", placeholder="Ex: MRR, AUM, users")
+    else:
+        unit = unit_sel
+
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key=f"add_kr_cancel_{objective_id}"):
+            st.rerun()
+    with c2:
+        if st.button("Create KR", type="primary", use_container_width=True, key=f"add_kr_create_{objective_id}"):
+            if title.strip():
+                create_kr(objective_id, title.strip(), target, unit)
+                st.rerun()
+            else:
+                st.error("La descripción no puede estar vacía.")
 
 
 @st.dialog("Confirmar eliminación de update")
@@ -134,6 +170,11 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
     else:
         for _, kr in obj_krs.iterrows():
             _render_kr_row(kr, active_kr)
+
+    col_add, _ = st.columns([2, 5])
+    with col_add:
+        if st.button("+ Add KR", key=f"add_kr_{obj_id}", type="tertiary"):
+            add_kr_dialog(obj_id, str(obj_title))
 
     st.markdown("<div style='margin-bottom:18px;'></div>", unsafe_allow_html=True)
 
