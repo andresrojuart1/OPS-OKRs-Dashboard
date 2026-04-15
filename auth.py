@@ -102,14 +102,6 @@ def handle_oauth_callback() -> bool:
         user_info = get_user_info(access_token)
         email = user_info.get("email", "")
 
-        if not is_allowed_domain(email):
-            revoke_token(access_token)
-            st.session_state["auth_error"] = (
-                f"Acceso denegado. Solo cuentas @{ALLOWED_DOMAIN} pueden ingresar. "
-                f"Intentaste con: {email}"
-            )
-            return True
-
         st.session_state["authenticated"] = True
         st.session_state["auth_error"] = None
         st.session_state["user"] = {
