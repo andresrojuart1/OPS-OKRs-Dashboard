@@ -30,7 +30,7 @@ def build_authorization_url(state: str) -> str:
         "redirect_uri": GOOGLE_REDIRECT_URI,
         "response_type": "code",
         "scope": SCOPES,
-        "access_type": "online",
+        "access_type": "offline",
         "state": state,
         "prompt": "select_account",
     }
