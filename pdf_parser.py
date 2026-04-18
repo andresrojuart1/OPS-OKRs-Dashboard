@@ -246,10 +246,10 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
             from sheets import upload_charts_to_drive, get_week_number
             email = st.session_state.get("user", {}).get("email", "unknown")
             
-            # Save data and get IDs for Undo
+            # 1. Save OKR data & Weekly Note
             import_summary = save_parsed_pdf_data(confirmed_data, sub_team, quarter, email)
             
-            # Upload images if any
+            # 2. Upload images and track their IDs
             if extracted_imgs:
                 from collections import namedtuple
                 MockFile = namedtuple("MockFile", ["name", "read", "type", "seek"])
@@ -261,8 +261,10 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
                     prepared_files.append(f)
                 
                 with st.spinner("Subiendo gráficas extraídas a Drive..."):
-                    upload_charts_to_drive(prepared_files, sub_team, quarter, get_week_number(), email)
+                    chart_ids = upload_charts_to_drive(prepared_files, sub_team, quarter, get_week_number(), email)
+                    import_summary["chart_ids"] = chart_ids
 
+            # 3. Store for Undo
             st.session_state["last_import_summary"] = import_summary
             st.session_state.pop("parsed_pdf_data", None)
             st.session_state.pop("show_pdf_import", None)

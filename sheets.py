@@ -526,11 +526,12 @@ def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "ro
     return parent_id
 
 
-def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number: int, uploaded_by: str) -> None:
+def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int, email: str) -> list:
+    """Upload multiple charts and return a list of created record IDs."""
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseUpload
     import io as _io
-
+    
     creds = get_service_account_credentials()
     drive_service = build("drive", "v3", credentials=creds)
     parent_id = _secret("GOOGLE_DRIVE_PARENT_ID", "root")
@@ -540,9 +541,7 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
     )
 
     charts_ws = get_worksheet("weekly_charts")
-    all_rows = charts_ws.get_all_values()
-    existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
-    next_id = max(existing_ids) + 1 if existing_ids else 1
+    created_ids = []
 
     for file in files:
         file.seek(0)
@@ -566,16 +565,17 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
         except Exception:
             pass
 
-        direct_url = f"https://drive.google.com/uc?export=view&id={drive_file['id']}"
+        record_id = str(uuid.uuid4())[:8]
         charts_ws.append_row(
-            [next_id, sub_team, quarter, week_number, file.name,
-             drive_file["id"], direct_url, uploaded_by,
-             datetime.now(timezone.utc).isoformat()],
+            [record_id, sub_team, quarter, week_number, drive_file["id"], 
+             f"https://drive.google.com/uc?export=view&id={drive_file['id']}", 
+             file.name, email, datetime.now(timezone.utc).isoformat()],
             value_input_option="RAW",
         )
-        next_id += 1
-
+        created_ids.append(record_id)
+    
     st.cache_data.clear()
+    return created_ids
 
 
 @st.cache_data(ttl=60)
@@ -663,7 +663,7 @@ def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -
 
 def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> dict:
     """Save PDF data and return a summary of created IDs for Undo purposes."""
-    created_ids = {"update_ids": [], "note_id": None}
+    created_ids = {"update_ids": [], "note_id": None, "chart_ids": []}
     
     with st.spinner("Procesando y guardando datos de OKRs en Google Sheets (Modo Batch)..."):
         spreadsheet = get_spreadsheet()
@@ -747,24 +747,24 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
 
 
 def undo_last_import(import_summary: dict) -> None:
-    """Delete all updates and the weekly note created in the last PDF import."""
+    """Delete all updates, charts, and the weekly note created in the last PDF import."""
     if not import_summary:
         return
         
     spreadsheet = get_spreadsheet()
-    upd_ws   = spreadsheet.worksheet("kr_updates")
-    notes_ws = spreadsheet.worksheet("weekly_notes")
+    upd_ws    = spreadsheet.worksheet("kr_updates")
+    notes_ws  = spreadsheet.worksheet("weekly_notes")
+    charts_ws = spreadsheet.worksheet("weekly_charts")
     
+    # 1. Delete KR Updates
     update_ids = import_summary.get("update_ids", [])
     if update_ids:
         all_upd = upd_ws.get_all_records()
-        rows_to_del = []
-        for i, row in enumerate(all_upd, start=2):
-            if str(row.get("id")) in update_ids:
-                rows_to_del.append(i)
+        rows_to_del = [i for i, r in enumerate(all_upd, start=2) if str(r.get("id")) in update_ids]
         for r in reversed(rows_to_del):
             upd_ws.delete_rows(r)
             
+    # 2. Delete Weekly Note
     note_id = import_summary.get("note_id")
     if note_id:
         all_notes = notes_ws.get_all_records()
@@ -772,6 +772,16 @@ def undo_last_import(import_summary: dict) -> None:
             if str(row.get("id")) == str(note_id):
                 notes_ws.delete_rows(i)
                 break
+                
+    # 3. Delete Charts (Drive & Sheet)
+    chart_ids = import_summary.get("chart_ids", [])
+    if chart_ids:
+        all_charts = charts_ws.get_all_records()
+        for i, row in enumerate(all_charts, start=2):
+            if str(row.get("id")) in chart_ids:
+                try:
+                    delete_chart_from_drive(str(row.get("id")))
+                except: pass
     
     st.cache_data.clear()
     st.toast("⏪ Importación revertida con éxito", icon="⏪")
