@@ -487,7 +487,7 @@ def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "ro
         results = drive_service.files().list(
             q=query, fields="files(id)",
             supportsAllDrives=True, includeItemsFromAllDrives=True
-        ).execute()
+        ).execute(num_retries=3)
         files = results.get("files", [])
         if files:
             parent_id = files[0]["id"]
@@ -497,7 +497,7 @@ def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "ro
                       "mimeType": "application/vnd.google-apps.folder"},
                 fields="id",
                 supportsAllDrives=True
-            ).execute()
+            ).execute(num_retries=3)
             parent_id = folder["id"]
     return parent_id
 
@@ -529,7 +529,7 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
                 media_body=media,
                 fields="id, webViewLink",
                 supportsAllDrives=True
-            ).execute()
+            ).execute(num_retries=3)
         except Exception as e:
             raise e
 
@@ -538,7 +538,7 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
                 fileId=drive_file["id"],
                 body={"type": "anyone", "role": "reader"},
                 supportsAllDrives=True
-            ).execute()
+            ).execute(num_retries=3)
         except Exception:
             pass
 
@@ -580,7 +580,7 @@ def download_drive_file(file_id: str) -> bytes:
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while not done:
-        status, done = downloader.next_chunk()
+        status, done = downloader.next_chunk(num_retries=3)
     return fh.getvalue()
 
 
@@ -597,14 +597,11 @@ def delete_chart_from_drive(chart_id: str) -> None:
                 drive_service.files().delete(
                     fileId=str(row["drive_file_id"]),
                     supportsAllDrives=True
-                ).execute()
+                ).execute(num_retries=3)
             except Exception as e:
-                st.error(f"Error borrando archivo de Drive: {e}")
-                if hasattr(e, "content"):
-                    st.write(f"Detalles: {e.content.decode()}")
                 # Si el archivo ya no existe, permitimos borrar la fila de Sheets
                 if "404" not in str(e):
-                    return
+                    raise e
 
             ws.delete_rows(i)
             st.cache_data.clear()
