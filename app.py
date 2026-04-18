@@ -256,51 +256,55 @@ h1, h2, h3 {
     letter-spacing: -0.04em !important;
 }
 
-/* Surgical Master Card Selector (Zero Bleeding) */
-div[data-testid="stVerticalBlock"] > div:has(> div div.fintech-card-trigger) {
+/* ULTRA-PRECISE TARGETING (Fixes Box-in-Box leakage) */
+div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) {
     background: var(--bg-surface) !important;
     border: 1px solid var(--border-color) !important;
     border-radius: 16px !important;
     padding: 1.25rem !important;
-    margin-bottom: 1.5rem !important;
-    box-shadow: 0 4px 25px rgba(0,0,0,0.2) !important;
+    margin-bottom: 2rem !important;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important;
+}
+
+/* Ensure children don't inherit the card style */
+div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) div[data-testid="stVerticalBlock"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
 .objective-section {
     margin-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .kr-row-fintech {
-    background: rgba(255, 255, 255, 0.015);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    margin-top: 0.75rem;
-    margin-bottom: 0.25rem;
+    background: rgba(255, 255, 255, 0.01) !important;
+    border: 1px solid rgba(255, 255, 255, 0.03) !important;
+    border-radius: 10px !important;
+    padding: 1rem !important;
+    margin-top: 0.75rem !important;
 }
 
-/* --- GHOST / INVISIBLE BUTTONS --- */
+/* --- GHOST CONTROL SYSTEM (Absolute Transparency) --- */
 div.stButton > button {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     color: var(--text-secondary) !important;
-    font-size: 0.85rem !important;
+    font-size: 0.8rem !important;
     font-weight: 500 !important;
     padding: 0.2rem 0.5rem !important;
     transition: all 0.2s ease !important;
+    min-width: auto !important;
+    width: auto !important;
 }
 
 div.stButton > button:hover {
     color: var(--accent-purple) !important;
-    background: rgba(122, 80, 247, 0.05) !important;
-    transform: scale(1.05);
-}
-
-div.stButton > button:active {
-    transform: scale(0.95);
+    background: rgba(122, 80, 247, 0.08) !important;
 }
 </style>
 
