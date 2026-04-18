@@ -515,16 +515,29 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
     next_id = max(existing_ids) + 1 if existing_ids else 1
 
     for file in files:
-        media = MediaIoBaseUpload(_io.BytesIO(file.read()), mimetype=file.type)
-        drive_file = drive_service.files().create(
-            body={"name": file.name, "parents": [folder_id]},
-            media_body=media,
-            fields="id, webViewLink",
-        ).execute()
-        drive_service.permissions().create(
-            fileId=drive_file["id"],
-            body={"type": "anyone", "role": "reader"},
-        ).execute()
+        file.seek(0)
+        media = MediaIoBaseUpload(_io.BytesIO(file.read()), mimetype=file.type, resumable=True)
+        try:
+            drive_file = drive_service.files().create(
+                body={"name": file.name, "parents": [folder_id]},
+                media_body=media,
+                fields="id, webViewLink",
+            ).execute()
+        except Exception as e:
+            st.error(f"Error creating file '{file.name}' in Drive: {e}")
+            if hasattr(e, "content"):
+                st.write(f"Error details: {e.content.decode()}")
+            raise e
+
+        try:
+            drive_service.permissions().create(
+                fileId=drive_file["id"],
+                body={"type": "anyone", "role": "reader"},
+            ).execute()
+        except Exception as e:
+            st.warning(f"Could not set public permissions for '{file.name}': {e}")
+            # Non-fatal, we can still use the file if the service account has access
+
         direct_url = f"https://drive.google.com/uc?export=view&id={drive_file['id']}"
         charts_ws.append_row(
             [next_id, sub_team, quarter, week_number, file.name,
