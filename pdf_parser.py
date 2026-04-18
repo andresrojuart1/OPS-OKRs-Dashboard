@@ -64,15 +64,20 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
     client = OpenAI(api_key=api_key)
 
     prompt = f"""
-Eres un asistente que extrae datos estructurados de reportes de OKRs.
+Eres un experto en extraer datos de reportes de OKRs de Ops/Fintech.
 
-Analiza el siguiente texto de un reporte OKR del equipo {sub_team} para {quarter}
-y extrae la información en formato JSON estricto.
+Analiza el reporte del equipo {sub_team} para {quarter}.
+Extrae la información en un JSON estricto.
+
+SECCIONES ESPECIALES A BUSCAR:
+- PAYINS: Extrae todos los comentarios narrativos numerados.
+- PAYOUTS: Extrae todos los comentarios narrativos numerados.
+- OKR Progress: Extrae títulos, valores actuales, targets y status.
 
 TEXTO DEL REPORTE:
 {text_content}
 
-Retorna ÚNICAMENTE un JSON válido con esta estructura exacta, sin texto adicional:
+Retorna ÚNICAMENTE un JSON:
 {{
   "objectives": [
     {{
@@ -91,34 +96,58 @@ Retorna ÚNICAMENTE un JSON válido con esta estructura exacta, sin texto adicio
   ],
   "weekly_updates": [
     {{
-      "section": "nombre de sección (ej: PAYINS, PAYOUTS)",
-      "content": "texto del update narrativo"
+      "section": "PAYINS",
+      "content": "resumen de los puntos encontrados"
+    }},
+    {{
+      "section": "PAYOUTS",
+      "content": "resumen de los puntos encontrados"
     }}
   ]
 }}
 
 Reglas:
-- Si el progreso está expresado como porcentaje, úsalo directamente en progress_pct
-- Si está expresado como valor actual vs target, calcula el porcentaje
-- Si el status es MAINTAIN y hay un porcentaje como 100%, úsalo
-- Los weekly_updates son los párrafos narrativos numerados del reporte
-- Si no encuentras algún campo, usa null
+- Sé lo más fiel posible al texto original para los updates.
+- Si hay varias notas bajo PAYINS, júntalas en un solo campo content con saltos de línea.
 """
 
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=2000,
+        response_format={"type": "json_object"},
+        max_tokens=3000,
         temperature=0,
     )
 
     raw = response.choices[0].message.content.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-
-    result = json.loads(raw.strip())
+    result = json.loads(raw)
+    
+    # Improved image split: Quadrants (Left/Right + Top/Bottom)
+    if not images and any(kw in text_content.upper() for kw in ["REVENUE", "CHART", "PAYIN", "PAYOUT"]):
+        with pdfplumber.open(io.BytesIO(pdf_file.read())) as pdf:
+            for page in pdf.pages:
+                if any(kw in (page.extract_text() or "").upper() for kw in ["REVENUE", "CHART"]):
+                    # Dividimos en 4 cuadrantes para no fallar
+                    mid_x = page.width / 2
+                    mid_y = page.height / 2
+                    quads = [
+                        ("Top-Left", (0, 0, mid_x, mid_y * 1.1)),
+                        ("Top-Right", (mid_x, 0, page.width, mid_y * 1.1)),
+                        ("Bottom-Left", (0, mid_y * 0.9, mid_x, page.height)),
+                        ("Bottom-Right", (mid_x, mid_y * 0.9, page.width, page.height))
+                    ]
+                    for name, bbox in quads:
+                        try:
+                            cropped = page.within_bbox(bbox).to_image(resolution=200)
+                            buf = io.BytesIO()
+                            cropped.original.save(buf, format='PNG')
+                            images.append({
+                                "name": f"{name}_P{page.page_number}.png",
+                                "content": buf.getvalue(),
+                                "type": "image/png"
+                            })
+                        except Exception: continue
+    
     result["extracted_images"] = images
     return result
 
