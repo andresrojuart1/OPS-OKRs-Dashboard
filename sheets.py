@@ -638,13 +638,16 @@ def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -
 
 
 def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> None:
-    with st.spinner("Procesando y guardando datos de OKRs en Google Sheets..."):
-        # Load all records once to handle in memory
-        obj_ws = get_worksheet("objectives")
-        kr_ws  = get_worksheet("key_results")
+    with st.spinner("Procesando y guardando datos de OKRs en Google Sheets (Modo Batch)..."):
+        spreadsheet = get_spreadsheet()
+        obj_ws = spreadsheet.worksheet("objectives")
+        kr_ws  = spreadsheet.worksheet("key_results")
+        upd_ws = spreadsheet.worksheet("kr_updates")
         
         objs_list = obj_ws.get_all_records()
         krs_list  = kr_ws.get_all_records()
+        kr_headers = kr_ws.row_values(1)
+        val_col = kr_headers.index("current_value") + 1
 
         def _find_obj_in_list(title, team, q):
             for r in objs_list:
@@ -660,11 +663,14 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
                     return str(r["id"])
             return None
 
+        new_updates_rows = []
+        kr_cell_updates = []
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
         for obj_data in parsed_data.get("objectives", []):
             obj_id = _find_obj_in_list(obj_data["title"], sub_team, quarter)
             if not obj_id:
                 create_objective(obj_data["title"], sub_team, quarter)
-                # Refresh list after create
                 objs_list = obj_ws.get_all_records()
                 obj_id = objs_list[-1]["id"]
             
@@ -672,19 +678,32 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
                 kr_id = _find_kr_in_list(obj_id, kr_data["title"])
                 if not kr_id:
                     create_kr(obj_id, kr_data["title"], float(kr_data.get("target") or 0), kr_data.get("unit", ""))
-                    # Refresh list
                     krs_list = kr_ws.get_all_records()
                     kr_id = krs_list[-1]["id"]
                 
                 if kr_data.get("current_value") is not None:
-                    update_kr_value(
-                        kr_id=kr_id,
-                        new_value=float(kr_data["current_value"]),
-                        week_notes=f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
-                        blockers="",
-                        confidence=3,
-                        updated_by=updated_by,
-                    )
+                    new_val = float(kr_data["current_value"])
+                    # Find row index for cell update
+                    idx = None
+                    for i, r in enumerate(krs_list, start=2):
+                        if str(r.get("id")) == str(kr_id):
+                            idx = i
+                            break
+                    if idx:
+                        kr_cell_updates.append({'range': f"{gspread.utils.rowcol_to_a1(idx, val_col)}", 'values': [[new_val]]})
+                    
+                    upd_id = str(uuid.uuid4())[:8]
+                    new_updates_rows.append([
+                        upd_id, kr_id, new_val, 
+                        f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
+                        "", 3, updated_by, now_str
+                    ])
+        
+        # Batch execute updates
+        if new_updates_rows:
+            upd_ws.append_rows(new_updates_rows, value_input_option="RAW")
+        if kr_cell_updates:
+            kr_ws.batch_update(kr_cell_updates, value_input_option="RAW")
         
         if parsed_data.get("weekly_updates"):
             week_number = get_week_number()
@@ -694,7 +713,8 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
             ])
             save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
     
-    st.toast("✅ Datos de PDF importados con éxito", icon="📄")
+    st.cache_data.clear()
+    st.toast("✅ Datos de PDF importados con éxito (Batch)", icon="📄")
 
 
 # ---------------------------------------------------------------------------
