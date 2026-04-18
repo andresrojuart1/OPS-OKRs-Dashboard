@@ -472,26 +472,40 @@ def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
     return {}
 
 
-def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str, updated_by: str) -> None:
+def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str, updated_by: str) -> str:
+    """Save or update a weekly note and ensure cache is cleared."""
     ws = get_worksheet("weekly_notes")
     rows = ws.get_all_records()
+    note_id = None
+    
+    # Check for existing note to update
     for i, row in enumerate(rows, start=2):
-        if (row["sub_team"] == sub_team and
-                row["quarter"] == quarter and
-                str(row["week_number"]) == str(week_number)):
-            ws.update(f"E{i}:G{i}", [[content, updated_by, datetime.now(timezone.utc).isoformat()]])
-            st.cache_data.clear()
-            return
-    all_rows = ws.get_all_values()
-    existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
-    new_id = max(existing_ids) + 1 if existing_ids else 1
-    ws.append_row(
-        [new_id, sub_team, quarter, week_number, content, updated_by,
-         datetime.now(timezone.utc).isoformat()],
-        value_input_option="RAW",
-    )
+        if (str(row.get("sub_team")) == str(sub_team) and
+            str(row.get("quarter")) == str(quarter) and
+            str(row.get("week_number")) == str(week_number)):
+            
+            note_id = str(row.get("id"))
+            # Update content, updated_by, and updated_at (Columns E, F, G)
+            now_str = datetime.now(timezone.utc).isoformat()
+            ws.update_cell(i, 5, content)    # Column E: content
+            ws.update_cell(i, 6, updated_by) # Column F: updated_by
+            ws.update_cell(i, 7, now_str)    # Column G: updated_at
+            break
+            
+    if note_id is None:
+        # Create new note
+        all_rows = ws.get_all_values()
+        existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
+        new_id = max(existing_ids) + 1 if existing_ids else 1
+        note_id = str(new_id)
+        ws.append_row(
+            [new_id, sub_team, quarter, week_number, content, updated_by,
+             datetime.now(timezone.utc).isoformat()],
+            value_input_option="RAW",
+        )
+    
     st.cache_data.clear()
-    return new_id
+    return note_id
 
 
 # ---------------------------------------------------------------------------
