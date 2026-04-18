@@ -23,18 +23,43 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
             if extracted:
                 text_content += extracted + "\n"
             
-            # Images
-            for img_obj in page.images:
+            # Images & Figures (potential charts)
+            # Try to capture larger graphical elements
+            for fig in page.figures + page.images:
                 try:
-                    # Crop and capture image
-                    bbox = (img_obj["x0"], page.height - img_obj["y1"], img_obj["x1"], page.height - img_obj["y0"])
-                    if (img_obj["x1"] - img_obj["x0"]) < 50: continue # Skip small icons
+                    # Determine area
+                    x0 = fig.get("x0", 0)
+                    top = page.height - fig.get("y1", 0)
+                    x1 = fig.get("x1", page.width)
+                    bottom = page.height - fig.get("y0", 0)
                     
+                    width = x1 - x0
+                    height = bottom - top
+                    
+                    # Focus on elements that look like charts (not icons, not the whole page)
+                    if 150 < width < page.width * 0.95 and 100 < height < page.height * 0.8:
+                        bbox = (x0, top, x1, bottom)
+                        cropped = page.within_bbox(bbox).to_image(resolution=200)
+                        buf = io.BytesIO()
+                        cropped.original.save(buf, format='PNG')
+                        images.append({
+                            "name": f"Chart_P{page.page_number}_{len(images)+1}.png",
+                            "content": buf.getvalue(),
+                            "type": "image/png"
+                        })
+                except Exception:
+                    continue
+            
+            # Fallback: if a page mentions "CHART" or "REVENUE" and we found nothing, 
+            # take a screenshot of the bottom half (where charts usually are)
+            if not images and ("CHART" in text_content.upper() or "REVENUE" in text_content.upper()):
+                try:
+                    bbox = (0, page.height/2, page.width, page.height)
                     cropped = page.within_bbox(bbox).to_image(resolution=200)
                     buf = io.BytesIO()
                     cropped.original.save(buf, format='PNG')
                     images.append({
-                        "name": f"Chart_P{page.page_number}_{img_obj['index']}.png",
+                        "name": f"PageSection_P{page.page_number}.png",
                         "content": buf.getvalue(),
                         "type": "image/png"
                     })

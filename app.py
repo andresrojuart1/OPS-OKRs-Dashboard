@@ -663,17 +663,18 @@ def render_dashboard() -> None:
                             except Exception as exc:
                                 st.error(f"Error parsing PDF: {exc}")
                 
-                # Undo button
-                if "last_import_summary" in st.session_state:
-                    if st.button("⏪ Undo Last Import", help="Revert the last PDF import changes", use_container_width=True):
-                        undo_last_import(st.session_state["last_import_summary"])
-                        st.session_state.pop("last_import_summary", None)
-                        st.rerun()
-
                 if st.session_state.get("parsed_pdf_data"):
                     render_pdf_preview_and_confirm(
                         st.session_state["parsed_pdf_data"], team_label, selected_quarter,
                     )
+
+        # Undo button visible on main dashboard after import
+        if "last_import_summary" in st.session_state:
+            st.warning("⏪ Recent import detected. You can revert it if needed.")
+            if st.button("⏪ Undo Last Import", help="Revert the last PDF import changes", type="secondary"):
+                undo_last_import(st.session_state["last_import_summary"])
+                st.session_state.pop("last_import_summary", None)
+                st.rerun()
 
     # Filter display objectives by quarter + team
     display_objs = objectives_df
