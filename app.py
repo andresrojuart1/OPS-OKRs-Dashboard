@@ -289,6 +289,7 @@ from sheets import (
     compute_progress, create_objective,
     get_week_number, get_weekly_note, save_weekly_note,
     get_weekly_charts, upload_charts_to_drive, delete_chart_from_drive,
+    download_drive_file,
 )
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
@@ -735,7 +736,12 @@ def render_dashboard() -> None:
             chart_cols = st.columns(min(len(current_charts), 2))
             for i, chart in enumerate(current_charts):
                 with chart_cols[i % 2]:
-                    st.image(chart["drive_url"], caption=chart["filename"], use_container_width=True)
+                    try:
+                        img_bytes = download_drive_file(chart["drive_file_id"])
+                        st.image(img_bytes, caption=chart["filename"], use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Error cargando imagen: {e}")
+                    
                     if st.button("🗑️ Remove", key=f"del_chart_{chart['id']}"):
                         delete_chart_from_drive(str(chart["id"]))
                         st.rerun()

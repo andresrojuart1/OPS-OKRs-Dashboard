@@ -576,6 +576,25 @@ def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
     )]
 
 
+@st.cache_data(ttl=600)
+def download_drive_file(file_id: str) -> bytes:
+    """Download a file from Drive and return its bytes."""
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaIoBaseDownload
+    import io as _io
+    
+    creds = get_service_account_credentials()
+    drive_service = build("drive", "v3", credentials=creds)
+    
+    request = drive_service.files().get_media(fileId=file_id)
+    fh = _io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+    return fh.getvalue()
+
+
 def delete_chart_from_drive(chart_id: str) -> None:
     from googleapiclient.discovery import build
     creds = get_service_account_credentials()
