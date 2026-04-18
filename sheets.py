@@ -460,26 +460,27 @@ def get_week_number() -> int:
     return datetime.now().isocalendar()[1]
 
 
-@st.cache_data(ttl=60)
 def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
-    """Read weekly note using positional indexing for maximum reliability."""
+    """Read weekly note WITHOUT caching to ensure immediate visibility."""
     ws = get_worksheet("weekly_notes")
-    all_rows = ws.get_all_values() # Index based
+    all_rows = ws.get_all_values() 
     if len(all_rows) < 2: return {}
     
-    # Header is all_rows[0]
-    # B=1 (sub_team), C=2 (quarter), D=3 (week_number), E=4 (content)
+    t_st = str(sub_team).strip().lower()
+    t_q  = str(quarter).strip().lower()
+    t_w  = str(week_number).strip()
+
     for row in all_rows[1:]:
-        if (len(row) >= 5 and
-            str(row[1]).strip() == str(sub_team).strip() and
-            str(row[2]).strip() == str(quarter).strip() and
-            str(row[3]).strip() == str(week_number).strip()):
+        if (len(row) >= 4 and
+            str(row[1]).strip().lower() == t_st and
+            str(row[2]).strip().lower() == t_q and
+            str(row[3]).strip() == t_w):
             return {
                 "id": row[0],
                 "sub_team": row[1],
                 "quarter": row[2],
                 "week_number": row[3],
-                "content": row[4],
+                "content": row[4] if len(row) > 4 else "",
                 "updated_by": row[5] if len(row) > 5 else "",
                 "updated_at": row[6] if len(row) > 6 else ""
             }
