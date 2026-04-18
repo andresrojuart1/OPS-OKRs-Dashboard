@@ -73,13 +73,14 @@ def get_gspread_client() -> gspread.Client:
     return gspread.authorize(creds)
 
 
-@st.cache_resource
 @gspread_retry(retries=4)
 def get_spreadsheet() -> gspread.Spreadsheet:
+    """Get the spreadsheet object WITHOUT caching to ensure we see fresh data."""
     return get_gspread_client().open_by_key(_secret("GSPREAD_SPREADSHEET_ID"))
 
 
 def get_worksheet(name: str) -> gspread.Worksheet:
+    """Always fetch a clean worksheet object from the spreadsheet."""
     return get_spreadsheet().worksheet(name)
 
 
