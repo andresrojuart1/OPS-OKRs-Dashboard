@@ -175,52 +175,60 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
         except: return 0.0
 
     for obj_i, obj in enumerate(parsed_data.get("objectives", [])):
-        st.markdown(f"**Objective: {obj['title']}**")
+        # Optional: Allow skipping entire objective
+        include_obj = st.checkbox(f"Import Objective: **{obj['title']}**", value=True, key=f"obj_include_{obj_i}")
+        
+        if include_obj:
+            confirmed_krs = []
+            for kr_i, kr in enumerate(obj.get("key_results", [])):
+                with st.expander(f"KR: {kr['title']}", expanded=True):
+                    # Optional: Allow skipping specific KR
+                    include_kr = st.checkbox("Include this KR in import?", value=True, key=f"kr_include_{obj_i}_{kr_i}")
+                    if not include_kr:
+                        continue
+                        
+                    col1, col2, col3 = st.columns([3, 1, 1])
+                    with col1:
+                        kr_title = st.text_input(
+                            "Title", value=str(kr.get("title", "")),
+                            key=f"kr_title_{obj_i}_{kr_i}",
+                        )
+                    with col2:
+                        kr_current = st.number_input(
+                            "Current", value=_clean_float(kr.get("current_value")),
+                            key=f"kr_current_{obj_i}_{kr_i}",
+                            format="%.2f"
+                        )
+                    with col3:
+                        kr_target = st.number_input(
+                            "Target", value=_clean_float(kr.get("target")),
+                            key=f"kr_target_{obj_i}_{kr_i}",
+                            format="%.2f"
+                        )
 
-        confirmed_krs = []
-        for kr_i, kr in enumerate(obj.get("key_results", [])):
-            with st.expander(f"KR: {kr['title']}", expanded=True):
-                col1, col2, col3 = st.columns([3, 1, 1])
-                with col1:
-                    kr_title = st.text_input(
-                        "Title", value=str(kr.get("title", "")),
-                        key=f"kr_title_{obj_i}_{kr_i}",
-                    )
-                with col2:
-                    kr_current = st.number_input(
-                        "Current", value=_clean_float(kr.get("current_value")),
-                        key=f"kr_current_{obj_i}_{kr_i}",
-                        format="%.2f"
-                    )
-                with col3:
-                    kr_target = st.number_input(
-                        "Target", value=_clean_float(kr.get("target")),
-                        key=f"kr_target_{obj_i}_{kr_i}",
-                        format="%.2f"
+                    status_val = kr.get("status") or "IN PROGRESS"
+                    if status_val not in STATUS_OPTIONS:
+                        status_val = "IN PROGRESS"
+                    kr_status = st.selectbox(
+                        "Status",
+                        options=STATUS_OPTIONS,
+                        index=STATUS_OPTIONS.index(status_val),
+                        key=f"kr_status_{obj_i}_{kr_i}",
                     )
 
-                status_val = kr.get("status") or "IN PROGRESS"
-                if status_val not in STATUS_OPTIONS:
-                    status_val = "IN PROGRESS"
-                kr_status = st.selectbox(
-                    "Status",
-                    options=STATUS_OPTIONS,
-                    index=STATUS_OPTIONS.index(status_val),
-                    key=f"kr_status_{obj_i}_{kr_i}",
-                )
+                    confirmed_krs.append({
+                        "title":         kr_title,
+                        "current_value": kr_current,
+                        "target":        kr_target,
+                        "status":        kr_status,
+                        "unit":          kr.get("unit", ""),
+                    })
 
-                confirmed_krs.append({
-                    "title":         kr_title,
-                    "current_value": kr_current,
-                    "target":        kr_target,
-                    "status":        kr_status,
-                    "unit":          kr.get("unit", ""),
+            if confirmed_krs:
+                confirmed_data["objectives"].append({
+                    "title":       obj["title"],
+                    "key_results": confirmed_krs,
                 })
-
-        confirmed_data["objectives"].append({
-            "title":       obj["title"],
-            "key_results": confirmed_krs,
-        })
 
     if parsed_data.get("weekly_updates"):
         st.markdown("**Weekly narrative updates:**")
