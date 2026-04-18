@@ -280,7 +280,6 @@ div.stVerticalBlock:has(div.fintech-card-trigger) {
     padding: 1rem 1.25rem;
     margin-bottom: 0.75rem;
 }
-</style>
 
 /* Metrics & Indicators */
 .metric-value {
@@ -337,6 +336,7 @@ div.stButton > button:hover {
     color: white !important;
     border: none !important;
 }
+</style>
 </style>
 """, unsafe_allow_html=True)
 
