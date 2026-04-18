@@ -684,10 +684,16 @@ def render_dashboard() -> None:
             # Only show the button if it's less than 15 seconds old
             if time.time() - import_time < 60:
                 st.warning("⏪ Recent import detected. You can revert it if needed.")
-                if st.button("⏪ Undo Last Import", help="Revert the last PDF import changes", type="secondary"):
-                    undo_last_import(import_summary)
-                    st.session_state.pop("last_import_summary", None)
-                    st.rerun()
+                c1, c2 = st.columns([1, 4])
+                with c1:
+                    if st.button("⏪ Undo", use_container_width=True, help="Revert the last PDF import changes"):
+                        undo_last_import(import_summary)
+                        st.session_state.pop("last_import_summary", None)
+                        st.rerun()
+                with c2:
+                    if st.button("✅ Dismiss", use_container_width=True, help="Keep changes and hide this message"):
+                        st.session_state.pop("last_import_summary", None)
+                        st.rerun()
             else:
                 st.session_state.pop("last_import_summary", None)
 
