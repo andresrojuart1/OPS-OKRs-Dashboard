@@ -8,16 +8,38 @@ from openai import OpenAI
 
 
 def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -> dict:
-    """Extract text from PDF via pdfplumber, then structure it with GPT-4o."""
+    """Extract text and images from PDF, then structure text with GPT-4o."""
     import pdfplumber
+    from PIL import Image
 
     pdf_file.seek(0)
     text_content = ""
+    images = []
+    
     with pdfplumber.open(io.BytesIO(pdf_file.read())) as pdf:
         for page in pdf.pages:
+            # Text
             extracted = page.extract_text()
             if extracted:
                 text_content += extracted + "\n"
+            
+            # Images
+            for img_obj in page.images:
+                try:
+                    # Crop and capture image
+                    bbox = (img_obj["x0"], page.height - img_obj["y1"], img_obj["x1"], page.height - img_obj["y0"])
+                    if (img_obj["x1"] - img_obj["x0"]) < 50: continue # Skip small icons
+                    
+                    cropped = page.within_bbox(bbox).to_image(resolution=200)
+                    buf = io.BytesIO()
+                    cropped.original.save(buf, format='PNG')
+                    images.append({
+                        "name": f"Chart_P{page.page_number}_{img_obj['index']}.png",
+                        "content": buf.getvalue(),
+                        "type": "image/png"
+                    })
+                except Exception:
+                    continue
 
     client = OpenAI(api_key=api_key)
 
@@ -76,7 +98,9 @@ Reglas:
         if raw.startswith("json"):
             raw = raw[4:]
 
-    return json.loads(raw.strip())
+    result = json.loads(raw.strip())
+    result["extracted_images"] = images
+    return result
 
 
 def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: str) -> None:
@@ -141,6 +165,14 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
             st.info(f"**{update['section']}:** {update['content']}")
         confirmed_data["weekly_updates"] = parsed_data["weekly_updates"]
 
+    extracted_imgs = parsed_data.get("extracted_images", [])
+    if extracted_imgs:
+        st.markdown(f"**Extracted Charts ({len(extracted_imgs)}):**")
+        img_cols = st.columns(min(len(extracted_imgs), 3))
+        for i, img in enumerate(extracted_imgs):
+            with img_cols[i % 3]:
+                st.image(img["content"], caption=img["name"])
+
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
@@ -150,8 +182,26 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
             st.rerun()
     with col2:
         if st.button("💾 Save to Dashboard", type="primary", use_container_width=True, key="pdf_save"):
+            from sheets import upload_charts_to_drive
             email = st.session_state.get("user", {}).get("email", "unknown")
-            save_parsed_pdf_data(confirmed_data, sub_team, quarter, email)
+            
+            # Save data and get IDs for Undo
+            import_summary = save_parsed_pdf_data(confirmed_data, sub_team, quarter, email)
+            
+            # Upload images if any
+            if extracted_imgs:
+                from collections import namedtuple
+                MockFile = namedtuple("MockFile", ["name", "read", "type", "seek"])
+                
+                prepared_files = []
+                for img in extracted_imgs:
+                    f = MockFile(img["name"], lambda: img["content"], img["type"], lambda x: None)
+                    prepared_files.append(f)
+                
+                with st.spinner("Subiendo gráficas extraídas a Drive..."):
+                    upload_charts_to_drive(prepared_files, sub_team, quarter, get_week_number(), email)
+
+            st.session_state["last_import_summary"] = import_summary
             st.session_state.pop("parsed_pdf_data", None)
             st.session_state.pop("show_pdf_import", None)
             st.cache_data.clear()

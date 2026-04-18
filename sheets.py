@@ -461,13 +461,14 @@ def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str
             return
     all_rows = ws.get_all_values()
     existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
-    next_id = max(existing_ids) + 1 if existing_ids else 1
+    new_id = max(existing_ids) + 1 if existing_ids else 1
     ws.append_row(
-        [next_id, sub_team, quarter, week_number, content, updated_by,
+        [new_id, sub_team, quarter, week_number, content, updated_by,
          datetime.now(timezone.utc).isoformat()],
         value_input_option="RAW",
     )
     st.cache_data.clear()
+    return new_id
 
 
 # ---------------------------------------------------------------------------
@@ -637,7 +638,10 @@ def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -
     return str(rows[-1]["id"])
 
 
-def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> None:
+def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> dict:
+    """Save PDF data and return a summary of created IDs for Undo purposes."""
+    created_ids = {"update_ids": [], "note_id": None}
+    
     with st.spinner("Procesando y guardando datos de OKRs en Google Sheets (Modo Batch)..."):
         spreadsheet = get_spreadsheet()
         obj_ws = spreadsheet.worksheet("objectives")
@@ -693,6 +697,7 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
                         kr_cell_updates.append({'range': f"{gspread.utils.rowcol_to_a1(idx, val_col)}", 'values': [[new_val]]})
                     
                     upd_id = str(uuid.uuid4())[:8]
+                    created_ids["update_ids"].append(upd_id)
                     new_updates_rows.append([
                         upd_id, kr_id, new_val, 
                         f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
@@ -711,10 +716,42 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
                 f"**{u['section']}**\n{u['content']}"
                 for u in parsed_data["weekly_updates"]
             ])
-            save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
+            created_ids["note_id"] = save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
     
     st.cache_data.clear()
     st.toast("✅ Datos de PDF importados con éxito (Batch)", icon="📄")
+    return created_ids
+
+
+def undo_last_import(import_summary: dict) -> None:
+    """Delete all updates and the weekly note created in the last PDF import."""
+    if not import_summary:
+        return
+        
+    spreadsheet = get_spreadsheet()
+    upd_ws   = spreadsheet.worksheet("kr_updates")
+    notes_ws = spreadsheet.worksheet("weekly_notes")
+    
+    update_ids = import_summary.get("update_ids", [])
+    if update_ids:
+        all_upd = upd_ws.get_all_records()
+        rows_to_del = []
+        for i, row in enumerate(all_upd, start=2):
+            if str(row.get("id")) in update_ids:
+                rows_to_del.append(i)
+        for r in reversed(rows_to_del):
+            upd_ws.delete_rows(r)
+            
+    note_id = import_summary.get("note_id")
+    if note_id:
+        all_notes = notes_ws.get_all_records()
+        for i, row in enumerate(all_notes, start=2):
+            if str(row.get("id")) == str(note_id):
+                notes_ws.delete_rows(i)
+                break
+    
+    st.cache_data.clear()
+    st.toast("⏪ Importación revertida con éxito", icon="⏪")
 
 
 # ---------------------------------------------------------------------------
