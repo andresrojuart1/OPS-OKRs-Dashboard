@@ -257,28 +257,34 @@ h1, h2, h3 {
     letter-spacing: -0.02em !important;
 }
 
-.objective-card {
+/* Master Fintech Card (Objective + KRs Unification) */
+.fintech-master-card {
     background: var(--bg-surface);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
+    border-radius: 20px;
     padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    transition: transform 0.2s ease, border-color 0.2s ease;
+    margin-bottom: 2.5rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
 }
 
-.objective-card:hover {
-    border-color: rgba(124, 115, 247, 0.3);
+.objective-section {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    padding-bottom: 1.5rem;
 }
 
 .kr-row-fintech {
-    background: var(--glass);
-    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 12px;
-    padding: 1.25rem;
+    padding: 1rem 1.25rem;
     margin-bottom: 0.75rem;
-    position: relative;
-    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.kr-row-fintech:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(124, 115, 247, 0.2);
 }
 
 /* Metrics & Indicators */
