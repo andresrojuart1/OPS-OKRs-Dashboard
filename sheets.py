@@ -567,9 +567,9 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
 
         record_id = str(uuid.uuid4())[:8]
         charts_ws.append_row(
-            [record_id, sub_team, quarter, week_number, drive_file["id"], 
-             f"https://drive.google.com/uc?export=view&id={drive_file['id']}", 
-             file.name, email, datetime.now(timezone.utc).isoformat()],
+            [record_id, sub_team, quarter, week_number, file.name, 
+             drive_file["id"], f"https://drive.google.com/uc?export=view&id={drive_file['id']}", 
+             email, datetime.now(timezone.utc).isoformat()],
             value_input_option="RAW",
         )
         created_ids.append(record_id)
