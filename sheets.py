@@ -12,9 +12,25 @@ import streamlit as st
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 
-load_dotenv(override=True)
+import time
+from functools import wraps
 
-_here = os.path.dirname(os.path.abspath(__file__))
+def gspread_retry(retries=3, backoff_in_seconds=1):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            x = 0
+            while True:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    if x >= retries:
+                        raise e
+                    sleep = (backoff_in_seconds * 2 ** x)
+                    time.sleep(sleep)
+                    x += 1
+        return wrapper
+    return decorator
 
 
 def _secret(key: str, default: str = "") -> str:
@@ -55,6 +71,7 @@ def get_gspread_client() -> gspread.Client:
 
 
 @st.cache_resource
+@gspread_retry(retries=4)
 def get_spreadsheet() -> gspread.Spreadsheet:
     return get_gspread_client().open_by_key(_secret("GSPREAD_SPREADSHEET_ID"))
 
@@ -219,6 +236,7 @@ def seed_if_empty() -> None:
 # ---------------------------------------------------------------------------
 
 @st.cache_data(ttl=60)
+@gspread_retry(retries=3)
 def load_objectives() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("objectives")
     records = ws.get_all_records()
@@ -226,6 +244,7 @@ def load_objectives() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=60)
+@gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("key_results")
     records = ws.get_all_records()
@@ -238,6 +257,7 @@ def load_key_results() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=60)
+@gspread_retry(retries=3)
 def load_updates() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("kr_updates")
     records = ws.get_all_records()
