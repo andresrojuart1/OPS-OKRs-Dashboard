@@ -224,66 +224,117 @@ hr { border-color: var(--border-color) !important; }
     filter: none !important;
 }
 
-/* Objective / KR cards */
-.okr-card {
-    padding: 1.1rem 1.25rem;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: linear-gradient(180deg, rgba(26,26,36,.95), rgba(6,6,9,.95));
+/* --- FINTECH DESIGN SYSTEM (STRIPE/RAMP STYLE) --- */
+:root {
+    --bg-main: #0B0F14;
+    --bg-surface: #121821;
+    --bg-card: #1A2330;
+    --accent-purple: #7c73f7;
+    --accent-coral: #e35276;
+    --accent-teal: #2DD4BF;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --border-color: rgba(255, 255, 255, 0.06);
+    --glass: rgba(255, 255, 255, 0.02);
+}
+
+/* Global Layout Refinement */
+.stApp {
+    background-color: var(--bg-main);
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+}
+
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Typography & Hierarchy */
+h1, h2, h3 {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
+.objective-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.objective-card:hover {
+    border-color: rgba(124, 115, 247, 0.3);
+}
+
+.kr-row-fintech {
+    background: var(--glass);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.25rem;
     margin-bottom: 0.75rem;
+    position: relative;
+    overflow: hidden;
 }
 
-.objective-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #ffffff;
-    line-height: 1.35;
+/* Metrics & Indicators */
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
 }
 
-.kr-row {
-    padding: 0.9rem 1.1rem;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.02);
-    margin: 0.45rem 0;
+.metric-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-/* Action bubbles (Edit/Delete) */
-.action-bubble {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.action-bubble:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(124,115,247,0.4);
-}
-
-.ontop-status-badge {
-    padding: 0.2rem 0.6rem;
+/* Progress System */
+.progress-container-fintech {
+    background: rgba(255, 255, 255, 0.03);
     border-radius: 999px;
-    font-size: 0.72rem;
-    font-weight: 700;
+    height: 8px;
+    margin-top: 1rem;
+    position: relative;
 }
 
-.progress-track {
-    background: rgba(255,255,255,0.08);
-    border-radius: 999px;
-    height: 5px;
-    margin: 8px 0 2px;
-}
-
-.progress-fill {
+.progress-bar-fintech {
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #7c73f7, #e35276);
+    background: linear-gradient(90deg, var(--accent-purple), var(--accent-teal));
+    box-shadow: 0 0 12px rgba(124, 115, 247, 0.4);
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Button System (Fintech Grade) */
+div.stButton > button {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: 1px solid var(--border-color) !important;
+    background: var(--bg-card) !important;
+    padding: 0.5rem 1rem !important;
+}
+
+div.stButton > button:hover {
+    border-color: var(--accent-purple) !important;
+    color: var(--accent-purple) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.primary-button {
+    background: var(--accent-purple) !important;
+    color: white !important;
+    border: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
