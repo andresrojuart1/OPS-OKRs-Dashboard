@@ -27,6 +27,10 @@ def render_sidebar() -> Optional[str]:
     initials = "".join(p[0] for p in name.split()[:2]).upper() or "A"
 
     with st.sidebar:
+        if st.button("🔄 Refresh Data", use_container_width=True, type="secondary"):
+            st.cache_data.clear()
+            st.rerun()
+            
         # Brand
         st.markdown("""
         <div class="ontop-sidebar-brand">

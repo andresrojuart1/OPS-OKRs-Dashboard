@@ -239,7 +239,7 @@ def seed_if_empty() -> None:
 # Read helpers (cached 30 s)
 # ---------------------------------------------------------------------------
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 def load_objectives() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("objectives")
@@ -247,7 +247,7 @@ def load_objectives() -> pd.DataFrame:
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("key_results")
@@ -260,7 +260,7 @@ def load_key_results() -> pd.DataFrame:
     return df
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 def load_updates() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("kr_updates")
@@ -608,7 +608,7 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
     return created_ids
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5)
 def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
     ws = get_worksheet("weekly_charts")
     rows = ws.get_all_records()
