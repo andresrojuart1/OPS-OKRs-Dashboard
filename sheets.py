@@ -239,6 +239,49 @@ def seed_if_empty() -> None:
 # Read helpers (cached 30 s)
 # ---------------------------------------------------------------------------
 
+@gspread_retry()
+def update_objective(obj_id: str, new_title: str) -> None:
+    ws = get_worksheet("objectives")
+    all_rows = ws.get_all_values()
+    for i, row in enumerate(all_rows[1:], start=2):
+        if str(row[0]) == str(obj_id):
+            ws.update_cell(i, 2, new_title)
+            break
+    st.cache_data.clear()
+
+@gspread_retry()
+def delete_objective(obj_id: str) -> None:
+    spreadsheet = get_spreadsheet()
+    obj_ws = spreadsheet.worksheet("objectives")
+    kr_ws  = spreadsheet.worksheet("key_results")
+    upd_ws = spreadsheet.worksheet("kr_updates")
+    
+    # 1. Delete Objectives
+    all_objs = obj_ws.get_all_records()
+    for i, r in enumerate(all_objs, start=2):
+        if str(r.get("id")) == str(obj_id):
+            obj_ws.delete_rows(i)
+            break
+            
+    # 2. Delete Associated KRs and their updates
+    all_krs = kr_ws.get_all_records()
+    associated_kr_ids = [str(r.get("id")) for r in all_krs if str(r.get("objective_id")) == str(obj_id)]
+    
+    if associated_kr_ids:
+        # Delete KRs
+        rows_to_del = [i for i, r in enumerate(all_krs, start=2) if str(r.get("id")) in associated_kr_ids]
+        for r in reversed(rows_to_del):
+            kr_ws.delete_rows(r)
+            
+        # Delete Updates
+        all_upd = upd_ws.get_all_records()
+        rows_to_del_upd = [i for i, r in enumerate(all_upd, start=2) if str(r.get("kr_id")) in associated_kr_ids]
+        for r in reversed(rows_to_del_upd):
+            upd_ws.delete_rows(r)
+        
+    st.cache_data.clear()
+
+
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 @gspread_retry()

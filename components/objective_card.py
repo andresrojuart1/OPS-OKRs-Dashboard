@@ -156,11 +156,20 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
                 <span style="font-size:11px;color:{MUTED};">{sub_team}</span>
             </div>
         </div>
-        <div style="font-size:16px;font-weight:700;color:{TEXT1};line-height:1.35;">
+        <div style="font-size:16px;font-weight:700;color:{TEXT1};line-height:1.35;margin-bottom:12px;">
             {obj_title}
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # Action row for Objective
+    c_edit, c_del, _ = st.columns([0.5, 0.5, 8])
+    with c_edit:
+        if st.button("✏", key=f"e_obj_{obj_id}", help="Editar Objetivo", type="tertiary"):
+            _edit_obj_dialog(obj_id, str(obj_title))
+    with c_del:
+        if st.button("🗑", key=f"d_obj_{obj_id}", help="Eliminar Objetivo", type="tertiary"):
+            _confirm_delete_obj_dialog(obj_id, str(obj_title))
 
     if obj_krs.empty:
         st.markdown(
