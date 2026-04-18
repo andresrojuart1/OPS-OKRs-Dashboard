@@ -224,52 +224,60 @@ hr { border-color: var(--border-color) !important; }
     filter: none !important;
 }
 
-/* Global Styles */
-.main-container { padding: 0.5rem; }
-
 /* Objective / KR cards */
 .okr-card {
-    padding: 0.8rem 1rem;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.1);
+    padding: 1.1rem 1.25rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.15);
     background: linear-gradient(180deg, rgba(26,26,36,.95), rgba(6,6,9,.95));
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
 }
 
 .objective-title {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: #ffffff;
-    line-height: 1.2;
+    line-height: 1.35;
 }
 
 .kr-row {
-    padding: 0.6rem 0.8rem;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.05);
-    background: rgba(0,0,0,0.3);
-    margin: 0.2rem 0;
+    padding: 0.9rem 1.1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.02);
+    margin: 0.45rem 0;
 }
 
-.kr-title {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #ffffff;
-    margin-bottom: 0.2rem;
+/* Action bubbles (Edit/Delete) */
+.action-bubble {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.action-bubble:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(124,115,247,0.4);
 }
 
 .ontop-status-badge {
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.7rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
     font-weight: 700;
 }
 
 .progress-track {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.08);
     border-radius: 999px;
-    height: 4px;
-    margin: 4px 0;
+    height: 5px;
+    margin: 8px 0 2px;
 }
 
 .progress-fill {
