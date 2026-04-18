@@ -720,8 +720,13 @@ def render_dashboard() -> None:
         with col2:
             if st.button("Save Notes", use_container_width=True, key=f"save_notes_{team_label}_{week_number}"):
                 email = st.session_state.get("user", {}).get("email", "unknown")
-                save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
-                st.success("Notes saved!")
+                with st.spinner("Guardando..."):
+                    save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
+                    st.cache_data.clear()
+                    st.success("Notes saved!")
+                    import time
+                    time.sleep(1)
+                    st.rerun()
 
         st.markdown("#### 📊 Charts & Screenshots")
         st.caption(

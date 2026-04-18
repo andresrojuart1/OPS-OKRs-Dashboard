@@ -66,8 +66,10 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
     prompt = f"""
 Eres un experto en extraer datos de reportes de OKRs de Ops/Fintech.
 
-Analiza el reporte del equipo {sub_team} para {quarter}.
+Analiza el reporte del equipo "{sub_team}" para {quarter}.
 Extrae la información en un JSON estricto.
+
+IMPORTANTE: El campo 'sub_team' en el resultado DEBE ser exactamente "{sub_team}". No uses variaciones.
 
 SECCIONES ESPECIALES A BUSCAR:
 - PAYINS: Extrae todos los comentarios narrativos numerados.
