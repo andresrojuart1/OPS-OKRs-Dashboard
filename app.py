@@ -704,29 +704,38 @@ def render_dashboard() -> None:
 
         week_number   = get_week_number()
         existing_note = get_weekly_note(team_label, selected_quarter, week_number)
+        note_content  = existing_note.get("content", "")
 
-        note_text = st.text_area(
-            "Weekly notes",
-            value=existing_note.get("content", ""),
-            height=150,
-            placeholder=(
-                "Ex: Had alignment meeting with Tech on JPM integration timeline. "
-                "Escalated BVNK API issue to leadership..."
-            ),
-            label_visibility="collapsed",
-            key=f"weekly_notes_{team_label}_{selected_quarter}_{week_number}",
-        )
-        col1, col2 = st.columns([4, 1])
-        with col2:
-            if st.button("Save Notes", use_container_width=True, key=f"save_notes_{team_label}_{week_number}"):
-                email = st.session_state.get("user", {}).get("email", "unknown")
-                with st.spinner("Guardando..."):
-                    save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
-                    st.cache_data.clear()
-                    st.success("Notes saved!")
-                    import time
-                    time.sleep(1)
-                    st.rerun()
+        # Display Mode (Card)
+        if note_content:
+            st.markdown(f"""
+            <div style="background-color: rgba(255,255,255,0.05); padding: 1.2rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; color: #e0e0e0; font-size: 0.95rem;">
+                {note_content.replace('\n', '<br>')}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("No narrative notes for this week yet.")
+
+        # Edit Section
+        with st.expander("✏️ Edit Weekly Note"):
+            note_text = st.text_area(
+                "Note Content",
+                value=note_content,
+                height=200,
+                key=f"editor_{team_label}_{week_number}",
+                label_visibility="collapsed"
+            )
+            col1, col2 = st.columns([4, 1])
+            with col2:
+                if st.button("Save Changes", use_container_width=True, type="primary", key=f"btn_save_{team_label}_{week_number}"):
+                    email = st.session_state.get("user", {}).get("email", "unknown")
+                    with st.spinner("Saving..."):
+                        save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
+                        st.cache_data.clear()
+                        st.success("Changes saved!")
+                        import time
+                        time.sleep(1)
+                        st.rerun()
 
         st.markdown("#### 📊 Charts & Screenshots")
         st.caption(
