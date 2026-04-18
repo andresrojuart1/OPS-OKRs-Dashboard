@@ -1,4 +1,4 @@
-"""Objective card — Balanced Premium Density version."""
+"""Objective card — Professional Corner-Actions version."""
 
 import streamlit as st
 from sheets import (
@@ -27,51 +27,42 @@ MUTED  = "#6B6B7E"
 
 @st.dialog("Editar Objetivo")
 def _edit_obj_dialog(obj_id: str, current_title: str) -> None:
-    new_title = st.text_area("Título del Objetivo", value=current_title, height=100)
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Cancelar", use_container_width=True, key=f"ec_obj_{obj_id}"): st.rerun()
-    with c2:
-        if st.button("Guardar", type="primary", use_container_width=True, key=f"es_obj_{obj_id}"):
-            update_objective(obj_id, new_title.strip())
-            st.rerun()
+    new_title = st.text_area("Título", value=current_title, height=100)
+    if st.button("Guardar", type="primary", use_container_width=True):
+        update_objective(obj_id, new_title.strip())
+        st.rerun()
 
-@st.dialog("Confirmar eliminación de Objetivo")
+@st.dialog("Eliminar Objetivo")
 def _confirm_delete_obj_dialog(obj_id: str, obj_title: str) -> None:
-    st.error(f"¿Eliminar este Objetivo y TODOS sus KRs?")
-    st.markdown(f"**{obj_title}**")
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Cancelar", use_container_width=True, key=f"dc_obj_{obj_id}"): st.rerun()
-    with c2:
-        if st.button("Eliminar Todo", type="primary", use_container_width=True, key=f"do_obj_{obj_id}"):
-            delete_objective(obj_id)
-            st.rerun()
+    st.error(f"¿Eliminar Objetivo?")
+    st.caption(obj_title)
+    if st.button("Eliminar Todo (Cascada)", type="primary", use_container_width=True):
+        delete_objective(obj_id)
+        st.rerun()
 
 @st.dialog("Editar KR")
 def _edit_kr_dialog(kr_id: str, current_title: str, current_target: float, current_unit: str) -> None:
     new_title  = st.text_input("Título", value=current_title)
-    new_target = st.number_input("Target", value=float(current_target))
-    new_unit   = st.text_input("Unidad", value=current_unit)
+    c1, c2 = st.columns(2)
+    with c1: nt = st.number_input("Target", value=float(current_target))
+    with c2: nu = st.text_input("Unidad", value=current_unit)
     if st.button("Guardar", type="primary", use_container_width=True):
-        update_kr_fields(kr_id, new_title, new_target, new_unit)
+        update_kr_fields(kr_id, new_title, nt, nu)
         st.rerun()
 
-@st.dialog("Confirmar eliminación de KR")
+@st.dialog("Eliminar KR")
 def _confirm_delete_kr_dialog(kr_id: str, kr_title: str) -> None:
-    st.warning(f"¿Eliminar este KR?")
-    st.caption(kr_title)
-    if st.button("Eliminar", type="primary", use_container_width=True):
+    if st.button("Confirmar Eliminar KR", type="primary", use_container_width=True):
         delete_kr_by_id(kr_id)
         st.rerun()
 
 @st.dialog("New Key Result")
 def add_kr_dialog(objective_id: str, objective_title: str) -> None:
-    title = st.text_input("KR description")
+    title = st.text_input("KR Title")
     c1, c2 = st.columns(2)
     with c1: target = st.number_input("Target", value=100.0)
     with c2: unit = st.text_input("Unit", value="%")
-    if st.button("Create KR", type="primary", use_container_width=True):
+    if st.button("Create", type="primary", use_container_width=True):
         create_kr(objective_id, title, target, unit)
         st.rerun()
 
@@ -98,31 +89,37 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
     obj_krs = krs_df[krs_df["objective_id"] == obj_id] if not krs_df.empty else krs_df
     avg_pct = obj_krs.apply(compute_progress, axis=1).mean() if not obj_krs.empty else 0.0
 
-    st.markdown(f"""
-    <div class="okr-card">
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+    # Header with corner actions for Objective
+    st.markdown(f'<div class="okr-card">', unsafe_allow_html=True)
+    
+    col_t, col_a = st.columns([10, 1])
+    with col_t:
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
             {_pct_badge(avg_pct)}
-            <span style="font-size:11px; color:{MUTED}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
+            <span style="font-size:10px; color:{MUTED}; text-transform:uppercase;">{sub_team}</span>
         </div>
         <div class="objective-title">{obj_title}</div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    
+    with col_a:
+        # Mini icons in the corner
+        if st.button("✏️", key=f"eo_{obj_id}", type="tertiary", help="Editar"): _edit_obj_dialog(obj_id, obj_title)
+        if st.button("🗑️", key=f"do_{obj_id}", type="tertiary", help="Eliminar"): _confirm_delete_obj_dialog(obj_id, obj_title)
 
-    # Clean action row for Objective
-    c1, c2, c3, _ = st.columns([0.5, 0.5, 1.2, 8])
-    with c1:
-        if st.button("✏️", key=f"eobj_{obj_id}", type="tertiary", help="Editar Objetivo"): _edit_obj_dialog(obj_id, obj_title)
-    with c2:
-        if st.button("🗑️", key=f"dobj_{obj_id}", type="tertiary", help="Eliminar Objetivo"): _confirm_delete_obj_dialog(obj_id, obj_title)
-    with c3:
-        if st.button("+ KR", key=f"akr_{obj_id}", type="tertiary"): add_kr_dialog(obj_id, obj_title)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if not obj_krs.empty:
-        # Subtle separator removed for density, boxes provide the visual break
         for _, kr in obj_krs.iterrows():
             _render_kr_row(kr, active_kr)
     
-    st.markdown("<div style='margin-bottom:16px;'></div>", unsafe_allow_html=True)
+    # Add KR button at the end, small and aligned
+    c1, c2 = st.columns([9, 1.5])
+    with c2:
+        if st.button("+ Key Result", key=f"ak_{obj_id}", type="tertiary"): 
+            add_kr_dialog(obj_id, obj_title)
+
+    st.markdown("<div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # KR Row
@@ -132,38 +129,40 @@ def _render_kr_row(kr, active_kr: str) -> None:
     kr_id   = str(kr["id"])
     title   = kr["title"]
     pct     = compute_progress(kr)
-    current = float(kr.get("current_value", 0))
-    target  = float(kr.get("target", 0))
-    unit    = str(kr.get("unit", ""))
-    val_str = format_value(current, target, unit)
+    val_str = format_value(float(kr.get("current_value",0)), float(kr.get("target",0)), str(kr.get("unit","")))
 
     st.markdown(f"""
     <div class="kr-row">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
-            <div style="font-size:0.95rem; font-weight:500; color:{TEXT1}; line-height:1.4;">{title}</div>
+            <div style="font-size:0.95rem; font-weight:500; color:{TEXT1}; line-height:1.4; padding-right:40px;">{title}</div>
             <div style="font-size:0.9rem; font-weight:700; color:{CORAL};">{pct:.0f}%</div>
         </div>
-        <div style="font-size:11px; color:{MUTED}; margin-bottom:6px;">{val_str}</div>
+        <div style="font-size:10px; color:{MUTED}; margin-bottom:6px;">{val_str}</div>
         {_progress_bar(pct)}
     </div>
     """, unsafe_allow_html=True)
 
-    # Actions using columns for perfect alignment
-    c1, c2, c3, c_gap, c5 = st.columns([0.5, 0.5, 1.5, 5, 2])
-    with c1:
-        if st.button("✏️", key=f"ek_{kr_id}", type="tertiary"): _edit_kr_dialog(kr_id, title, target, unit)
-    with c2:
-        if st.button("🗑️", key=f"dk_{kr_id}", type="tertiary"): _confirm_delete_kr_dialog(kr_id, title)
-    with c3:
-        hist_key = f"h_{kr_id}"
-        st.button("Updates" if not st.session_state.get(hist_key) else "Hide", key=f"sh_{kr_id}", type="tertiary",
-                  on_click=lambda k=hist_key: st.session_state.update({k: not st.session_state.get(k, False)}))
+    # Integrated Action Row for KR
+    c_upd, c_hist, c_edit, c_del, _ = st.columns([2, 1.5, 0.5, 0.5, 6])
     
-    with c5:
+    with c_upd:
         is_upd = active_kr == kr_id
         st.button("Update" if not is_upd else "Close", key=f"uk_{kr_id}", 
                   type="secondary" if not is_upd else "primary", use_container_width=True,
                   on_click=lambda y=kr_id: st.session_state.update({"updating_kr": None if active_kr == y else y}))
+    
+    with c_hist:
+        hist_key = f"h_{kr_id}"
+        st.button("Logs" if not st.session_state.get(hist_key) else "Hide", key=f"sh_{kr_id}", type="tertiary",
+                  on_click=lambda k=hist_key: st.session_state.update({k: not st.session_state.get(k, False)}))
+
+    with c_edit:
+        if st.button("✏️", key=f"ek_{kr_id}", type="tertiary"): 
+            _edit_kr_dialog(kr_id, title, float(kr['target']), str(kr['unit']))
+    
+    with c_del:
+        if st.button("🗑️", key=f"dk_{kr_id}", type="tertiary"): 
+            _confirm_delete_kr_dialog(kr_id, title)
 
     if active_kr == kr_id: _render_update_form(kr)
     if st.session_state.get(f"h_{kr_id}"): _render_history(kr_id)
@@ -176,26 +175,23 @@ def _render_update_form(kr) -> None:
     kr_id = str(kr["id"])
     with st.form(key=f"f_{kr_id}", clear_on_submit=True):
         c1, c2 = st.columns([2, 1])
-        with c1: new_val = st.number_input("Nuevo Valor", value=float(kr.get("current_value",0)))
-        with c2: conf = st.slider("Confianza", 1, 5, 3)
-        notes = st.text_input("¿Qué pasó esta semana?")
-        block = st.text_input("Bloqueos")
-        if st.form_submit_button("Guardar Update", use_container_width=True):
+        with c1: new_val = st.number_input("Value", value=float(kr.get("current_value",0)))
+        with c2: conf = st.slider("Conf", 1, 5, 3)
+        notes = st.text_input("Notes")
+        if st.form_submit_button("Save", use_container_width=True):
             from sheets import update_kr_value
-            email = st.session_state.get("user",{}).get("email","unknown")
-            update_kr_value(kr_id=kr_id, new_value=float(new_val), week_notes=notes, blockers=block, confidence=int(conf), updated_by=email)
+            update_kr_value(kr_id=kr_id, new_value=float(new_val), week_notes=notes, confidence=int(conf), updated_by=st.session_state.get("user",{}).get("email","?"))
             st.session_state["updating_kr"] = None
             st.rerun()
 
 def _render_history(kr_id: str) -> None:
     from sheets import load_updates_for_kr, delete_update_by_id
     upds = load_updates_for_kr(kr_id)
-    if upds.empty: return
     for _, row in upds.iterrows():
-        c_info, c_del = st.columns([9, 1])
+        c_info, c_del = st.columns([10, 1])
         with c_info:
-            st.markdown(f'<div style="font-size:11px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><b>{row["new_value"]}</b> · {row["week_notes"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:11px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);"><b>{row["new_value"]}</b> · {row["week_notes"]}</div>', unsafe_allow_html=True)
         with c_del:
-            if st.button("🗑️", key=f"du_{row['id']}", type="tertiary"): 
+            if st.button("🗑️", key=f"dur_{row['id']}", type="tertiary"): 
                 delete_update_by_id(str(row["id"]))
                 st.rerun()
