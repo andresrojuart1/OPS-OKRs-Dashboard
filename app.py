@@ -726,8 +726,10 @@ def render_dashboard() -> None:
         )
         if uploaded_files:
             if st.button("Upload to Drive", type="primary", key=f"upload_charts_{team_label}_{week_number}"):
-                email = st.session_state.get("user", {}).get("email", "unknown")
-                upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
+                with st.spinner("Subiendo imágenes a Google Drive..."):
+                    email = st.session_state.get("user", {}).get("email", "unknown")
+                    upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
+                    st.toast("✅ Imágenes subidas correctamente", icon="📊")
                 st.rerun()
 
         current_charts = get_weekly_charts(team_label, selected_quarter, week_number)
@@ -743,7 +745,9 @@ def render_dashboard() -> None:
                         st.error(f"Error cargando imagen: {e}")
                     
                     if st.button("🗑️ Remove", key=f"del_chart_{chart['id']}"):
-                        delete_chart_from_drive(str(chart["id"]))
+                        with st.spinner("Eliminando imagen..."):
+                            delete_chart_from_drive(str(chart["id"]))
+                            st.toast("Imagen eliminada", icon="🗑️")
                         st.rerun()
 
 
