@@ -305,19 +305,7 @@ div.stButton > button {
 div.stButton > button:hover {
     color: var(--accent-purple) !important;
     background: rgba(122, 80, 247, 0.08) !important;
-}
-</style>
-
-div.stButton > button:hover {
-    border-color: var(--accent-purple) !important;
-    background: rgba(122, 80, 247, 0.1) !important;
-    transform: translateY(-1px);
-}
-
-.primary-button {
-    background: var(--accent-purple) !important;
-    border: none !important;
-    box-shadow: 0 4px 15px rgba(122, 80, 247, 0.3) !important;
+    transform: scale(1.05); /* Added slight pop for hover feedback */
 }
 </style>
 """, unsafe_allow_html=True)
