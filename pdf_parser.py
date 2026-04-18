@@ -162,6 +162,16 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
     confirmed_data: dict = {"objectives": [], "weekly_updates": []}
     STATUS_OPTIONS = ["IN PROGRESS", "BLOCKED", "NOT STARTED", "MAINTAIN", "COMPLETED"]
 
+    def _clean_float(val):
+        if val is None or val == "": return 0.0
+        if isinstance(val, (int, float)): return float(val)
+        try:
+            # Remove %, $, and other symbols, keep only digits and dots
+            import re
+            clean = re.sub(r'[^\d.]', '', str(val))
+            return float(clean) if clean else 0.0
+        except: return 0.0
+
     for obj_i, obj in enumerate(parsed_data.get("objectives", [])):
         st.markdown(f"**Objective: {obj['title']}**")
 
@@ -176,13 +186,15 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
                     )
                 with col2:
                     kr_current = st.number_input(
-                        "Current", value=float(kr.get("current_value") or 0),
+                        "Current", value=_clean_float(kr.get("current_value")),
                         key=f"kr_current_{obj_i}_{kr_i}",
+                        format="%.2f"
                     )
                 with col3:
                     kr_target = st.number_input(
-                        "Target", value=float(kr.get("target") or 0),
+                        "Target", value=_clean_float(kr.get("target")),
                         key=f"kr_target_{obj_i}_{kr_i}",
+                        format="%.2f"
                     )
 
                 status_val = kr.get("status") or "IN PROGRESS"
