@@ -461,6 +461,7 @@ def get_week_number() -> int:
     return datetime.now().isocalendar()[1]
 
 
+@gspread_retry(retries=3)
 def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
     """Read weekly note WITHOUT caching to ensure immediate visibility."""
     ws = get_worksheet("weekly_notes")
@@ -554,6 +555,7 @@ def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "ro
     return parent_id
 
 
+@gspread_retry(retries=3)
 def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int, email: str) -> list:
     """Upload multiple charts and return a list of created record IDs."""
     from googleapiclient.discovery import build
@@ -689,6 +691,7 @@ def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -
     return str(rows[-1]["id"])
 
 
+@gspread_retry(retries=3)
 def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> dict:
     """Save PDF data and return a summary of created IDs for Undo purposes."""
     created_ids = {"update_ids": [], "note_id": None, "chart_ids": []}
