@@ -462,39 +462,51 @@ def get_week_number() -> int:
 
 @st.cache_data(ttl=60)
 def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
+    """Read weekly note using positional indexing for maximum reliability."""
     ws = get_worksheet("weekly_notes")
-    rows = ws.get_all_records()
-    for row in rows:
-        if (row["sub_team"] == sub_team and
-                row["quarter"] == quarter and
-                str(row["week_number"]) == str(week_number)):
-            return row
+    all_rows = ws.get_all_values() # Index based
+    if len(all_rows) < 2: return {}
+    
+    # Header is all_rows[0]
+    # B=1 (sub_team), C=2 (quarter), D=3 (week_number), E=4 (content)
+    for row in all_rows[1:]:
+        if (len(row) >= 5 and
+            str(row[1]).strip() == str(sub_team).strip() and
+            str(row[2]).strip() == str(quarter).strip() and
+            str(row[3]).strip() == str(week_number).strip()):
+            return {
+                "id": row[0],
+                "sub_team": row[1],
+                "quarter": row[2],
+                "week_number": row[3],
+                "content": row[4],
+                "updated_by": row[5] if len(row) > 5 else "",
+                "updated_at": row[6] if len(row) > 6 else ""
+            }
     return {}
 
 
 def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str, updated_by: str) -> str:
-    """Save or update a weekly note and ensure cache is cleared."""
+    """Save or update a weekly note using positional indexing."""
     ws = get_worksheet("weekly_notes")
-    rows = ws.get_all_records()
+    all_rows = ws.get_all_values()
     note_id = None
     
-    # Check for existing note to update
-    for i, row in enumerate(rows, start=2):
-        if (str(row.get("sub_team")) == str(sub_team) and
-            str(row.get("quarter")) == str(quarter) and
-            str(row.get("week_number")) == str(week_number)):
+    # Check for existing note to update (B=1, C=2, D=3 in 0-indexed row)
+    for i, row in enumerate(all_rows[1:], start=2):
+        if (len(row) >= 4 and
+            str(row[1]).strip() == str(sub_team).strip() and
+            str(row[2]).strip() == str(quarter).strip() and
+            str(row[3]).strip() == str(week_number).strip()):
             
-            note_id = str(row.get("id"))
-            # Update content, updated_by, and updated_at (Columns E, F, G)
+            note_id = str(row[0])
             now_str = datetime.now(timezone.utc).isoformat()
-            ws.update_cell(i, 5, content)    # Column E: content
-            ws.update_cell(i, 6, updated_by) # Column F: updated_by
-            ws.update_cell(i, 7, now_str)    # Column G: updated_at
+            ws.update_cell(i, 5, content)    # Col E: content
+            ws.update_cell(i, 6, updated_by) # Col F: updated_by
+            ws.update_cell(i, 7, now_str)    # Col G: updated_at
             break
             
     if note_id is None:
-        # Create new note
-        all_rows = ws.get_all_values()
         existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
         new_id = max(existing_ids) + 1 if existing_ids else 1
         note_id = str(new_id)
