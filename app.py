@@ -256,47 +256,53 @@ h1, h2, h3 {
     letter-spacing: -0.04em !important;
 }
 
-/* Master Fintech Card - Unified Block */
-div[data-testid="stVerticalBlock"]:has(div.fintech-card-trigger) {
+/* Surgical Master Card Selector (Zero Bleeding) */
+div[data-testid="stVerticalBlock"] > div:has(> div div.fintech-card-trigger) {
     background: var(--bg-surface) !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 20px !important;
-    padding: 1.5rem !important;
-    margin-bottom: 2rem !important;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
-}
-
-/* Remove default Streamlit vertical gaps inside the card */
-div[data-testid="stVerticalBlock"]:has(div.fintech-card-trigger) > div {
-    gap: 0 !important;
+    border-radius: 16px !important;
+    padding: 1.25rem !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.2) !important;
 }
 
 .objective-section {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
 }
 
 .kr-row-fintech {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.03);
     border-radius: 12px;
-    padding: 1.1rem 1.4rem;
-    margin-top: 1rem;
-    margin-bottom: 0.5rem;
+    padding: 1rem 1.25rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.25rem;
 }
 
-/* --- ONTOP PILL BUTTONS (Refined for Internal Layout) --- */
+/* --- GHOST / INVISIBLE BUTTONS --- */
 div.stButton > button {
-    border-radius: 999px !important;
-    font-size: 0.75rem !important;
-    font-weight: 600 !important;
-    padding: 0.4rem 1.2rem !important;
     background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: var(--text-primary) !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: var(--text-secondary) !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    padding: 0.2rem 0.5rem !important;
     transition: all 0.2s ease !important;
 }
+
+div.stButton > button:hover {
+    color: var(--accent-purple) !important;
+    background: rgba(122, 80, 247, 0.05) !important;
+    transform: scale(1.05);
+}
+
+div.stButton > button:active {
+    transform: scale(0.95);
+}
+</style>
 
 div.stButton > button:hover {
     border-color: var(--accent-purple) !important;
