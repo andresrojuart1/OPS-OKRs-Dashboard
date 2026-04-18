@@ -224,85 +224,84 @@ hr { border-color: var(--border-color) !important; }
     filter: none !important;
 }
 
-/* --- FINTECH DESIGN SYSTEM (STRIPE/RAMP STYLE) --- */
+/* --- ONTOP BRAND DESIGN SYSTEM --- */
 :root {
-    --bg-main: #0B0F14;
-    --bg-surface: #121821;
-    --bg-card: #1A2330;
-    --accent-purple: #7c73f7;
-    --accent-coral: #e35276;
+    --bg-main: #000000;
+    --bg-surface: #0B0B0B;
+    --bg-card: #111111;
+    --accent-purple: #7A50F7; /* Ontop Primary Purple */
+    --accent-indigo: #281782; /* Ontop Indigo */
     --accent-teal: #2DD4BF;
-    --text-primary: #F8FAFC;
-    --text-secondary: #94A3B8;
-    --border-color: rgba(255, 255, 255, 0.06);
-    --glass: rgba(255, 255, 255, 0.02);
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1AA;
+    --border-color: rgba(255, 255, 255, 0.08); /* Ultra-subtle border */
 }
 
-/* Global Layout Refinement */
+/* Global Ontop Layout */
 .stApp {
     background-color: var(--bg-main);
-    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    font-family: 'Inter', -apple-system, sans-serif;
 }
 
 .main-container {
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 2rem 1rem;
+    padding: 3rem 1rem;
 }
 
-/* Typography & Hierarchy */
+/* Typography */
 h1, h2, h3 {
     color: var(--text-primary) !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.04em !important;
 }
 
-/* Precision-targeted Master Card (Avoids wrapping whole dashboard) */
+/* Master Fintech Card (Ontop Style) */
 div[data-testid="stVerticalBlock"] > div:has(div.fintech-card-trigger) {
     background: var(--bg-surface) !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 16px !important;
-    padding: 1.25rem !important;
-    margin-bottom: 1.5rem !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+    border-radius: 20px !important;
+    padding: 1.75rem !important;
+    margin-bottom: 2rem !important;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
 }
 
 .objective-section {
-    margin-bottom: 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1.25rem;
 }
 
 .kr-row-fintech {
-    background: rgba(255, 255, 255, 0.015);
-    border: 1px solid rgba(255, 255, 255, 0.03);
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 0.8rem;
 }
 
-/* --- ULTRA-MINIMALIST BUTTONS --- */
+/* --- ONTOP PILL BUTTONS --- */
 div.stButton > button {
-    border-radius: 6px !important;
-    font-size: 0.75rem !important;
-    font-weight: 500 !important;
-    height: auto !important;
-    padding: 0.25rem 0.6rem !important;
+    border-radius: 999px !important; /* Full Pill Shape */
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    padding: 0.6rem 1.5rem !important;
     background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: var(--text-secondary) !important;
-    transition: all 0.15s ease !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 div.stButton > button:hover {
     border-color: var(--accent-purple) !important;
-    color: var(--text-primary) !important;
-    background: rgba(124,115,247,0.05) !important;
+    background: rgba(122, 80, 247, 0.1) !important;
+    transform: translateY(-1px);
 }
 
-/* Tertiary/Ghost icons */
-div.stButton > button:active, div.stButton > button:focus {
-    box-shadow: none !important;
+.primary-button {
+    background: var(--accent-purple) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(122, 80, 247, 0.3) !important;
 }
 </style>
 """, unsafe_allow_html=True)
