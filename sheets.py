@@ -593,7 +593,10 @@ def delete_chart_from_drive(chart_id: str) -> None:
     rows = ws.get_all_records()
     for i, row in enumerate(rows, start=2):
         if str(row["id"]) == str(chart_id):
-            drive_service.files().delete(fileId=str(row["drive_file_id"])).execute()
+            drive_service.files().delete(
+                fileId=str(row["drive_file_id"]),
+                supportsAllDrives=True
+            ).execute()
             ws.delete_rows(i)
             st.cache_data.clear()
             return
