@@ -15,6 +15,9 @@ from google.oauth2.service_account import Credentials
 import time
 from functools import wraps
 
+load_dotenv(override=True)
+_here = os.path.dirname(os.path.abspath(__file__))
+
 def gspread_retry(retries=3, backoff_in_seconds=1):
     def decorator(func):
         @wraps(func)
