@@ -224,60 +224,92 @@ hr { border-color: var(--border-color) !important; }
     filter: none !important;
 }
 
+/* Global Styles */
+.main-container {
+    padding: 2rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
 /* Objective / KR cards */
 .okr-card {
-    padding: 1.1rem 1.25rem .9rem;
+    padding: 1.5rem;
     border-radius: 20px;
-    border: 1px solid var(--border-color);
-    background:
-        radial-gradient(circle at top right, rgba(227,82,118,0.10), transparent 35%),
-        linear-gradient(180deg, rgba(26,26,36,.92), rgba(6,6,9,.92));
-    margin-bottom: .75rem;
-}
-.okr-card-purple {
-    background:
-        radial-gradient(circle at top right, rgba(124,115,247,0.18), transparent 35%),
-        linear-gradient(180deg, rgba(27,24,57,.96), rgba(10,10,22,.96));
-    border-color: rgba(124,115,247,0.22);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(13, 13, 22, 0.98));
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-.ontop-status-badge {
-    display:inline-flex; align-items:center; gap:.35rem;
-    padding:.22rem .65rem; border-radius:999px;
-    font-size:.76rem; font-weight:700; letter-spacing:.03em; white-space:nowrap;
-}
-.status-coral {
-    background:rgba(227,82,118,.12); color:#ff9ab0;
-    border:1px solid rgba(227,82,118,.32);
-}
-.status-green {
-    background:rgba(34,197,94,.12); color:#7ee2a8;
-    border:1px solid rgba(34,197,94,.30);
-}
-.status-amber {
-    background:rgba(245,158,11,.12); color:#f8c56a;
-    border:1px solid rgba(245,158,11,.28);
+.objective-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
 }
 
-.progress-track {
-    background: rgba(42,42,62,0.8);
-    border-radius: 999px;
-    height: 5px;
-    overflow: hidden;
-    margin: 6px 0 2px;
+.objective-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.4;
 }
-.progress-fill {
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--ontop-purple), var(--ontop-coral));
+
+.kr-container {
+    padding-left: 0.5rem;
+    border-left: 2px solid rgba(124, 115, 247, 0.15);
+    margin-left: 0.2rem;
+    margin-top: -0.5rem;
 }
 
 .kr-row {
-    padding: .85rem 1.1rem .5rem;
-    border-radius: 14px;
-    border: 1px solid var(--border-color);
-    background: rgba(6,6,9,0.85);
-    margin: .45rem 0;
+    padding: 1.2rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.03);
+    margin: 0.75rem 0;
+    transition: all 0.2s ease;
+}
+
+.kr-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(124, 115, 247, 0.3);
+}
+
+.kr-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #ffffff;
+    margin-bottom: 0.5rem;
+}
+
+.action-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.ontop-status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.progress-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 999px;
+    height: 6px;
+    margin: 12px 0 4px;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #7c73f7, #e35276);
 }
 </style>
 """, unsafe_allow_html=True)

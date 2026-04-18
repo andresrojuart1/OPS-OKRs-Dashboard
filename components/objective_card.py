@@ -10,11 +10,13 @@ from sheets import (
     load_updates_for_kr,
     update_kr_fields,
     update_kr_value,
+    update_objective,
+    delete_objective,
 )
 
 CORAL  = "#E35276"
-PURPLE = "#261C94"
-BORDER = "#2A2A3E"
+PURPLE = "#7c73f7"
+BORDER = "rgba(255,255,255,0.1)"
 TEXT1  = "#FFFFFF"
 TEXT2  = "#B8B8C8"
 MUTED  = "#6B6B7E"
@@ -22,7 +24,37 @@ AMBER  = "#F59E0B"
 
 
 # ---------------------------------------------------------------------------
-# Dialogs
+# Objective Dialogs
+# ---------------------------------------------------------------------------
+
+@st.dialog("Editar Objetivo")
+def _edit_obj_dialog(obj_id: str, current_title: str) -> None:
+    new_title = st.text_area("Título del Objetivo", value=current_title, height=100)
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key=f"edit_obj_cancel_{obj_id}"):
+            st.rerun()
+    with c2:
+        if st.button("Guardar", type="primary", use_container_width=True, key=f"edit_obj_save_{obj_id}"):
+            update_objective(obj_id, new_title.strip())
+            st.rerun()
+
+@st.dialog("Confirmar eliminación de Objetivo")
+def _confirm_delete_obj_dialog(obj_id: str, obj_title: str) -> None:
+    st.error(f"¿Eliminar este Objetivo y TODOS sus KRs asociados? Esta acción no se puede deshacer.")
+    st.markdown(f"**{obj_title}**")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("Cancelar", use_container_width=True, key=f"dobj_cancel_{obj_id}"):
+            st.rerun()
+    with c2:
+        if st.button("Eliminar Todo", type="primary", use_container_width=True, key=f"dobj_ok_{obj_id}"):
+            delete_objective(obj_id)
+            st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# KR Dialogs
 # ---------------------------------------------------------------------------
 
 @st.dialog("Editar Key Result")
@@ -67,7 +99,7 @@ def _confirm_delete_kr_dialog(kr_id: str, kr_title: str) -> None:
 @st.dialog("New Key Result")
 def add_kr_dialog(objective_id: str, objective_title: str) -> None:
     cap = objective_title[:80] + "…" if len(objective_title) > 80 else objective_title
-    st.caption(cap)
+    st.caption(f"Parent: {cap}")
 
     title = st.text_input(
         "Key Result description",
@@ -126,7 +158,13 @@ def _pct_badge(pct: float) -> str:
         cls, label = "status-amber", "At Risk"
     else:
         cls, label = "status-coral", "Off Track"
-    return f'<span class="ontop-status-badge {cls}">{pct:.0f}% · {label}</span>'
+    
+    # Modern badge styles
+    bg_color = "rgba(34,197,94,0.1)" if pct >= 70 else ("rgba(245,158,11,0.1)" if pct >= 40 else "rgba(227,82,118,0.1)")
+    border_color = "rgba(34,197,94,0.3)" if pct >= 70 else ("rgba(245,158,11,0.3)" if pct >= 40 else "rgba(227,82,118,0.3)")
+    text_color = "#7ee2a8" if pct >= 70 else ("#f8c56a" if pct >= 40 else "#ff9ab0")
+    
+    return f'<span class="ontop-status-badge" style="background:{bg_color}; border:1px solid {border_color}; color:{text_color};">{pct:.0f}% · {label}</span>'
 
 
 def _progress_bar(pct: float) -> str:
@@ -137,7 +175,7 @@ def _progress_bar(pct: float) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Objective card
+# Objective Card
 # ---------------------------------------------------------------------------
 
 def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
@@ -150,46 +188,46 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
 
     st.markdown(f"""
     <div class="okr-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                {_pct_badge(avg_pct)}
-                <span style="font-size:11px;color:{MUTED};">{sub_team}</span>
+        <div class="objective-header">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    {_pct_badge(avg_pct)}
+                    <span style="font-size:12px; color:{MUTED}; font-weight:600; text-transform:uppercase;">{sub_team}</span>
+                </div>
+                <div class="objective-title">{obj_title}</div>
             </div>
-        </div>
-        <div style="font-size:16px;font-weight:700;color:{TEXT1};line-height:1.35;margin-bottom:12px;">
-            {obj_title}
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Action row for Objective
-    c_edit, c_del, _ = st.columns([0.5, 0.5, 8])
+    # Action row for Objective (compact & aligned)
+    c_edit, c_del, c_add, _ = st.columns([0.6, 0.6, 1.5, 6])
     with c_edit:
-        if st.button("✏", key=f"e_obj_{obj_id}", help="Editar Objetivo", type="tertiary"):
+        if st.button("✏️", key=f"e_obj_{obj_id}", help="Editar Objetivo", type="tertiary"):
             _edit_obj_dialog(obj_id, str(obj_title))
     with c_del:
-        if st.button("🗑", key=f"d_obj_{obj_id}", help="Eliminar Objetivo", type="tertiary"):
+        if st.button("🗑️", key=f"d_obj_{obj_id}", help="Eliminar Objetivo", type="tertiary"):
             _confirm_delete_obj_dialog(obj_id, str(obj_title))
-
-    if obj_krs.empty:
-        st.markdown(
-            f'<div style="padding:10px 0;"><span style="color:{MUTED};font-size:13px;">No Key Results yet.</span></div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        for _, kr in obj_krs.iterrows():
-            _render_kr_row(kr, active_kr)
-
-    col_add, _ = st.columns([2, 5])
-    with col_add:
+    with c_add:
         if st.button("+ Add KR", key=f"add_kr_{obj_id}", type="tertiary"):
             add_kr_dialog(obj_id, str(obj_title))
 
-    st.markdown("<div style='margin-bottom:18px;'></div>", unsafe_allow_html=True)
+    if obj_krs.empty:
+        st.markdown(
+            f'<div style="padding:0 1.5rem 1rem; color:{MUTED}; font-size:0.9rem;">No Key Results yet.</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        # Tighter spacing before KRs
+        st.markdown('<div style="margin-top:-10px;"></div>', unsafe_allow_html=True)
+        for _, kr in obj_krs.iterrows():
+            _render_kr_row(kr, active_kr)
+
+    st.markdown("<div style='margin-bottom:12px;'></div>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
-# KR row
+# KR Row
 # ---------------------------------------------------------------------------
 
 def _render_kr_row(kr, active_kr: str) -> None:
@@ -203,33 +241,24 @@ def _render_kr_row(kr, active_kr: str) -> None:
 
     st.markdown(f"""
     <div class="kr-row">
-        <div style="font-size:13px;font-weight:500;color:{TEXT1};line-height:1.4;margin-bottom:4px;">
-            {title}
+        <div class="kr-title">{title}</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 8px;">
+            <span style="font-size:12px; color:{MUTED};">{val_str}</span>
+            <span style="font-size:13px; font-weight:700; color:{CORAL};">{pct:.0f}%</span>
         </div>
-        <div style="font-size:11px;color:{MUTED};margin-bottom:6px;">{val_str}</div>
-        <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:10px;color:{MUTED};text-transform:uppercase;
-                         letter-spacing:.06em;min-width:48px;">Progress</span>
-            <div style="flex:1;background:{BORDER};border-radius:999px;height:5px;">
-                <div style="width:{pct:.1f}%;height:100%;border-radius:999px;
-                             background:linear-gradient(90deg,{PURPLE},{CORAL});"></div>
-            </div>
-            <span style="font-size:12px;font-weight:700;color:{CORAL};min-width:30px;text-align:right;">
-                {pct:.0f}%
-            </span>
-        </div>
+        {_progress_bar(pct)}
     </div>
     """, unsafe_allow_html=True)
 
-    # Action row
-    c_edit, c_del, c_show, c_gap, c_upd = st.columns([0.5, 0.5, 2, 4, 2])
+    # Action row for KR
+    c_edit, c_del, c_show, c_gap, c_upd = st.columns([0.6, 0.6, 2, 4, 1.8])
 
     with c_edit:
-        if st.button("✏", key=f"e_{kr_id}", help="Editar KR", type="tertiary"):
+        if st.button("✏️", key=f"e_{kr_id}", help="Editar KR", type="tertiary"):
             _edit_kr_dialog(kr_id, str(title), float(target), str(unit))
 
     with c_del:
-        if st.button("🗑", key=f"d_{kr_id}", help="Eliminar KR", type="tertiary"):
+        if st.button("🗑️", key=f"d_{kr_id}", help="Eliminar KR", type="tertiary"):
             _confirm_delete_kr_dialog(kr_id, str(title))
 
     with c_show:
@@ -245,9 +274,9 @@ def _render_kr_row(kr, active_kr: str) -> None:
     with c_upd:
         is_upd = active_kr == kr_id
         st.button(
-            "✕ Cancel" if is_upd else "Update",
+            "✕ Close" if is_upd else "Update Status",
             key=f"u_{kr_id}",
-            type="secondary",
+            type="secondary" if not is_upd else "primary",
             use_container_width=True,
             on_click=lambda: st.session_state.update(
                 {"updating_kr": None if active_kr == kr_id else kr_id}
@@ -272,13 +301,13 @@ def _render_update_form(kr) -> None:
     current = float(kr.get("current_value", 0))
 
     st.markdown(f"""
-    <div style="background:rgba(38,28,148,0.12);border:1px solid rgba(124,115,247,0.3);
-                border-radius:16px;padding:14px 18px 4px;margin:8px 0 4px;">
-        <div style="font-size:10px;color:#b5afff;font-weight:700;
-                    text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;">
-            Update · {kr_id}
+    <div style="background:rgba(124,115,247,0.05); border:1px solid rgba(124,115,247,0.2);
+                border-radius:16px; padding:14px 18px 4px; margin:8px 0 12px;">
+        <div style="font-size:10px; color:#b5afff; font-weight:700;
+                    text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px;">
+            Update Progress
         </div>
-        <div style="font-size:12px;color:{TEXT2};">
+        <div style="font-size:12px; color:{TEXT2};">
             {kr['title'][:80]}{'…' if len(kr['title'])>80 else ''}
         </div>
     </div>
@@ -304,9 +333,9 @@ def _render_update_form(kr) -> None:
             confidence = st.slider("Confidence", 1, 5, 3)
 
         week_notes = st.text_area("What happened this week?",
-                                  placeholder="Key wins, progress made…", height=72)
+                                  placeholder="Key wins, progress made…", height=80)
         blockers   = st.text_area("Blockers / Dependencies",
-                                  placeholder="What's in the way?", height=56)
+                                  placeholder="What's in the way?", height=60)
 
         cs, cc = st.columns(2)
         with cs:
@@ -322,7 +351,7 @@ def _render_update_form(kr) -> None:
                     week_notes=week_notes, blockers=blockers,
                     confidence=int(confidence), updated_by=email,
                 )
-                st.success(f"{kr_id} updated → {format_value(float(new_val), target, unit)}")
+                st.success("Update saved!")
                 st.session_state["updating_kr"] = None
                 st.rerun()
             except Exception as exc:
@@ -334,7 +363,7 @@ def _render_update_form(kr) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Update history
+# Update History
 # ---------------------------------------------------------------------------
 
 def _render_history(kr_id: str) -> None:
@@ -342,7 +371,7 @@ def _render_history(kr_id: str) -> None:
 
     if updates.empty:
         st.markdown(
-            f'<span style="color:{MUTED};font-size:12px;padding:8px 0;display:block;">No updates yet.</span>',
+            f'<span style="color:{MUTED}; font-size:12px; padding:12px 1.2rem; display:block;">No updates yet.</span>',
             unsafe_allow_html=True,
         )
         return
@@ -355,22 +384,21 @@ def _render_history(kr_id: str) -> None:
         conf      = int(row.get("confidence",  0) or 0)
         dots      = "●" * conf + "○" * (5 - conf)
 
-        col_info, col_del = st.columns([12, 1])
-        with col_info:
+        with st.container():
             st.markdown(f"""
-            <div style="padding:8px 0;border-bottom:1px solid {BORDER};">
-                <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
-                    <span style="font-size:13px;font-weight:600;color:{TEXT1};">→ {val}</span>
-                    <span style="font-size:10px;color:{MUTED};">{row.get('updated_at', '')}</span>
+            <div style="padding:12px 0; border-bottom:1px solid {BORDER}; margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                    <span style="font-size:13px; font-weight:600; color:{TEXT1};">→ {val}</span>
+                    <span style="font-size:10px; color:{MUTED};">{row.get('updated_at', '')}</span>
                 </div>
-                <div style="font-size:11px;color:{TEXT2};">
+                <div style="font-size:11px; color:{TEXT2};">
                     {row.get('updated_by', '')} &nbsp;·&nbsp;
-                    <span style="color:{CORAL};">{dots}</span>
+                    <span style="color:{CORAL}; letter-spacing:2px;">{dots}</span>
                 </div>
-                {"" if not notes    else f'<div style="font-size:12px;color:{TEXT2};margin-top:4px;">📝 {notes}</div>'}
-                {"" if not blockers else f'<div style="font-size:12px;color:{AMBER};margin-top:2px;">⚠️ {blockers}</div>'}
+                {"" if not notes    else f'<div style="font-size:12px; color:{TEXT2}; margin-top:6px; background:rgba(255,255,255,0.02); padding:8px; border-radius:8px;">📝 {notes}</div>'}
+                {"" if not blockers else f'<div style="font-size:12px; color:{AMBER}; margin-top:4px; padding:0 8px;">⚠️ {blockers}</div>'}
             </div>
             """, unsafe_allow_html=True)
-        with col_del:
-            if st.button("🗑", key=f"del_upd_{update_id}", help="Eliminar update", type="tertiary"):
+            
+            if st.button("🗑️ Remove Update", key=f"del_upd_{update_id}", type="tertiary"):
                 _confirm_delete_update_dialog(update_id)
