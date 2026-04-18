@@ -42,19 +42,23 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
                         })
                 except Exception: continue
             
-            # If no technical images found but it's a "Charts" page, capture the page
+            # If no technical images found but it's a "Charts" page, capture regions
             if not images and any(kw in text_content.upper() for kw in ["CHART", "REVENUE", "GRAPH"]):
                 try:
-                    # Capturamos la mitad inferior que suele tener las gráficas
-                    bbox = (0, page.height * 0.3, page.width, page.height)
-                    cropped = page.within_bbox(bbox).to_image(resolution=200)
-                    buf = io.BytesIO()
-                    cropped.original.save(buf, format='PNG')
-                    images.append({
-                        "name": f"Dashboard_P{page.page_number}.png",
-                        "content": buf.getvalue(),
-                        "type": "image/png"
-                    })
+                    # Capturamos dos regiones: Mitad superior y Mitad inferior
+                    areas = [
+                        ("Top", (0, 0, page.width, page.height * 0.55)),
+                        ("Bottom", (0, page.height * 0.45, page.width, page.height))
+                    ]
+                    for suffix, bbox in areas:
+                        cropped = page.within_bbox(bbox).to_image(resolution=200)
+                        buf = io.BytesIO()
+                        cropped.original.save(buf, format='PNG')
+                        images.append({
+                            "name": f"Dashboard_{suffix}_P{page.page_number}.png",
+                            "content": buf.getvalue(),
+                            "type": "image/png"
+                        })
                 except Exception: continue
 
     client = OpenAI(api_key=api_key)
@@ -198,7 +202,7 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
             st.rerun()
     with col2:
         if st.button("💾 Save to Dashboard", type="primary", use_container_width=True, key="pdf_save"):
-            from sheets import upload_charts_to_drive
+            from sheets import upload_charts_to_drive, get_week_number
             email = st.session_state.get("user", {}).get("email", "unknown")
             
             # Save data and get IDs for Undo
@@ -211,7 +215,8 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
                 
                 prepared_files = []
                 for img in extracted_imgs:
-                    f = MockFile(img["name"], lambda: img["content"], img["type"], lambda x: None)
+                    def _read_content(c=img["content"]): return c
+                    f = MockFile(img["name"], _read_content, img["type"], lambda x: None)
                     prepared_files.append(f)
                 
                 with st.spinner("Subiendo gráficas extraídas a Drive..."):
