@@ -225,85 +225,51 @@ hr { border-color: var(--border-color) !important; }
 }
 
 /* Global Styles */
-.main-container {
-    padding: 2rem 1rem;
-    max-width: 1200px;
-    margin: 0 auto;
-}
+.main-container { padding: 0.5rem; }
 
 /* Objective / KR cards */
 .okr-card {
-    padding: 1.5rem;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(145deg, rgba(26, 26, 46, 0.95), rgba(13, 13, 22, 0.98));
-    margin-bottom: 1.5rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-.objective-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: linear-gradient(180deg, rgba(26,26,36,.95), rgba(6,6,9,.95));
+    margin-bottom: 0.4rem;
 }
 
 .objective-title {
-    font-size: 1.25rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #ffffff;
-    line-height: 1.4;
-}
-
-.kr-container {
-    padding-left: 0.5rem;
-    border-left: 2px solid rgba(124, 115, 247, 0.15);
-    margin-left: 0.2rem;
-    margin-top: -0.5rem;
+    line-height: 1.2;
 }
 
 .kr-row {
-    padding: 1.2rem;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.03);
-    margin: 0.75rem 0;
-    transition: all 0.2s ease;
-}
-
-.kr-row:hover {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(124, 115, 247, 0.3);
+    padding: 0.6rem 0.8rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.3);
+    margin: 0.2rem 0;
 }
 
 .kr-title {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
     color: #ffffff;
-    margin-bottom: 0.5rem;
-}
-
-.action-bar {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 1rem;
+    margin-bottom: 0.2rem;
 }
 
 .ontop-status-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
 }
 
 .progress-track {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255,255,255,0.05);
     border-radius: 999px;
-    height: 6px;
-    margin: 12px 0 4px;
+    height: 4px;
+    margin: 4px 0;
 }
 
 .progress-fill {
