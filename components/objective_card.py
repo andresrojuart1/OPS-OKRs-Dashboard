@@ -1,4 +1,4 @@
-"""Objective card — Ontop Fidelity Edition (Cleaned)."""
+"""Objective card — Ontop Fidelity Edition (Internalized)."""
 
 import streamlit as st
 from sheets import (
@@ -26,7 +26,7 @@ def _pct_indicator(pct: float) -> str:
 </div>"""
 
 def _progress_bar(pct: float) -> str:
-    return f"""<div style="background:rgba(255,255,255,0.05); border-radius:999px; height:6px; margin:10px 0; overflow:hidden;">
+    return f"""<div style="background:rgba(255,255,255,0.05); border-radius:999px; height:6px; margin-top:8px; overflow:hidden;">
 <div style="height:100%; width:{pct:.1f}%; background:{PURPLE}; box-shadow:0 0 10px rgba(122, 80, 247, 0.4);"></div>
 </div>"""
 
@@ -38,34 +38,36 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
     avg_pct = obj_krs.apply(compute_progress, axis=1).mean() if not obj_krs.empty else 0.0
 
     with st.container():
-        # Trigger moved inside the first markdown to avoid empty top space
-        header_html = f"""<div class="fintech-card-trigger" style="display:none;"></div>
-<div class="objective-section">
-<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-<span style="font-size:0.75rem; font-weight:700; color:{PURPLE}; background:rgba(122, 80, 247, 0.1); padding:4px 10px; border-radius:999px; text-transform:uppercase;">Performance</span>
-<span style="font-size:0.75rem; color:{MUTED}; font-weight:600;">{sub_team}</span>
-</div>
-{_pct_indicator(avg_pct)}
-<div style="font-size:1.4rem; font-weight:700; color:white; margin-top:1.25rem; line-height:1.4;">{obj_title}</div>
-</div>"""
-        st.markdown(header_html, unsafe_allow_html=True)
+        # Magic trigger at the top level of the container
+        st.markdown('<div class="fintech-card-trigger" style="display:none;"></div>', unsafe_allow_html=True)
+        
+        # Header + Management Row (NOW INSIDE THE SAME VISUAL BLOCK)
+        st.markdown(f"""
+        <div class="objective-section" style="margin-bottom:0.5rem;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                <span style="font-size:0.75rem; font-weight:700; color:{PURPLE}; background:rgba(122, 80, 247, 0.1); padding:4px 10px; border-radius:999px; text-transform:uppercase;">Performance</span>
+                <span style="font-size:0.75rem; color:{MUTED}; font-weight:600;">{sub_team}</span>
+            </div>
+            {_pct_indicator(avg_pct)}
+            <div style="font-size:1.3rem; font-weight:700; color:white; margin-top:1.25rem; line-height:1.4;">{obj_title}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        # Simplified management row
-        c1, c2, c3, _ = st.columns([0.5, 0.5, 1.8, 8])
+        # Management buttons row - placed in the "space" mentioned by the user
+        c1, c2, c3, _ = st.columns([0.45, 0.45, 1.4, 8])
         with c1:
-            if st.button("✏️", key=f"eobj_{obj_id}", help="Edit"): _edit_obj_dialog(obj_id, obj_title)
+            if st.button("✏️", key=f"eobj_{obj_id}", help="Edit Objective"): _edit_obj_dialog(obj_id, obj_title)
         with c2:
-            if st.button("🗑️", key=f"dobj_{obj_id}", help="Delete"): _confirm_delete_obj_dialog(obj_id, obj_title)
+            if st.button("🗑️", key=f"dobj_{obj_id}", help="Delete Objective"): _confirm_delete_obj_dialog(obj_id, obj_title)
         with c3:
             if st.button("+ Key Result", key=f"akr_{obj_id}"): add_kr_dialog(obj_id, obj_title)
 
-        st.markdown('<div style="margin-top:2rem;"></div>', unsafe_allow_html=True)
-
+        # Render KRs immediately after, still inside the master card container
         if not obj_krs.empty:
             for _, kr in obj_krs.iterrows():
                 _render_kr_row(kr, active_kr)
         else:
-            st.markdown(f'<div style="color:{MUTED}; padding:1rem; font-size:0.9rem;">No progress recorded.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="color:{MUTED}; padding:1.25rem 0; font-size:0.9rem;">No progress recorded.</div>', unsafe_allow_html=True)
 
 
 def _render_kr_row(kr, active_kr: str) -> None:
@@ -88,8 +90,7 @@ def _render_kr_row(kr, active_kr: str) -> None:
 {_progress_bar(pct)}
 </div>""", unsafe_allow_html=True)
 
-    # Balanced Action Row
-    c_upd, c_hist, c_ed, c_del, _ = st.columns([2.0, 1.3, 0.5, 0.5, 5.7])
+    c_upd, c_hist, c_ed, c_del, _ = st.columns([1.8, 1.3, 0.5, 0.5, 6])
     with c_upd:
         is_upd = active_kr == kr_id
         if st.button("Close" if is_upd else "Update Status", key=f"uk_{kr_id}", type="primary" if is_upd else "secondary", use_container_width=True):

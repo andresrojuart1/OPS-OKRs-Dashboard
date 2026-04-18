@@ -256,20 +256,25 @@ h1, h2, h3 {
     letter-spacing: -0.04em !important;
 }
 
-/* Master Fintech Card (Ontop Style) */
-div[data-testid="stVerticalBlock"] > div:has(div.fintech-card-trigger) {
+/* Master Fintech Card - Unified Block */
+div[data-testid="stVerticalBlock"]:has(div.fintech-card-trigger) {
     background: var(--bg-surface) !important;
     border: 1px solid var(--border-color) !important;
     border-radius: 20px !important;
-    padding: 1.75rem !important;
+    padding: 1.5rem !important;
     margin-bottom: 2rem !important;
     box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
 }
 
+/* Remove default Streamlit vertical gaps inside the card */
+div[data-testid="stVerticalBlock"]:has(div.fintech-card-trigger) > div {
+    gap: 0 !important;
+}
+
 .objective-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.75rem;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
 }
 
 .kr-row-fintech {
@@ -277,19 +282,20 @@ div[data-testid="stVerticalBlock"] > div:has(div.fintech-card-trigger) {
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 12px;
     padding: 1.1rem 1.4rem;
-    margin-bottom: 0.8rem;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
 }
 
-/* --- ONTOP PILL BUTTONS --- */
+/* --- ONTOP PILL BUTTONS (Refined for Internal Layout) --- */
 div.stButton > button {
-    border-radius: 999px !important; /* Full Pill Shape */
-    font-size: 0.8rem !important;
+    border-radius: 999px !important;
+    font-size: 0.75rem !important;
     font-weight: 600 !important;
-    padding: 0.6rem 1.5rem !important;
+    padding: 0.4rem 1.2rem !important;
     background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
     color: var(--text-primary) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.2s ease !important;
 }
 
 div.stButton > button:hover {
