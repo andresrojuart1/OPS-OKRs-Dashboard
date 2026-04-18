@@ -638,32 +638,63 @@ def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -
 
 
 def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated_by: str) -> None:
-    for obj_data in parsed_data.get("objectives", []):
-        obj_id = find_or_create_objective(obj_data["title"], sub_team, quarter)
-        for kr_data in obj_data.get("key_results", []):
-            kr_id = find_or_create_kr(
-                obj_id,
-                kr_data["title"],
-                kr_data.get("target") or 0,
-                kr_data.get("unit", ""),
-            )
-            if kr_data.get("current_value") is not None:
-                update_kr_value(
-                    kr_id=kr_id,
-                    new_value=float(kr_data["current_value"]),
-                    week_notes=f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
-                    blockers="",
-                    confidence=3,
-                    updated_by=updated_by,
-                )
+    with st.spinner("Procesando y guardando datos de OKRs en Google Sheets..."):
+        # Load all records once to handle in memory
+        obj_ws = get_worksheet("objectives")
+        kr_ws  = get_worksheet("key_results")
+        
+        objs_list = obj_ws.get_all_records()
+        krs_list  = kr_ws.get_all_records()
 
-    if parsed_data.get("weekly_updates"):
-        week_number = get_week_number()
-        combined_notes = "\n\n".join([
-            f"**{u['section']}**\n{u['content']}"
-            for u in parsed_data["weekly_updates"]
-        ])
-        save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
+        def _find_obj_in_list(title, team, q):
+            for r in objs_list:
+                if (str(r["title"]).strip() == title.strip() and
+                    r["sub_team"] == team and r["quarter"] == q):
+                    return str(r["id"])
+            return None
+
+        def _find_kr_in_list(oid, title):
+            for r in krs_list:
+                if (str(r["objective_id"]) == str(oid) and
+                    str(r["title"]).strip() == title.strip()):
+                    return str(r["id"])
+            return None
+
+        for obj_data in parsed_data.get("objectives", []):
+            obj_id = _find_obj_in_list(obj_data["title"], sub_team, quarter)
+            if not obj_id:
+                create_objective(obj_data["title"], sub_team, quarter)
+                # Refresh list after create
+                objs_list = obj_ws.get_all_records()
+                obj_id = objs_list[-1]["id"]
+            
+            for kr_data in obj_data.get("key_results", []):
+                kr_id = _find_kr_in_list(obj_id, kr_data["title"])
+                if not kr_id:
+                    create_kr(obj_id, kr_data["title"], float(kr_data.get("target") or 0), kr_data.get("unit", ""))
+                    # Refresh list
+                    krs_list = kr_ws.get_all_records()
+                    kr_id = krs_list[-1]["id"]
+                
+                if kr_data.get("current_value") is not None:
+                    update_kr_value(
+                        kr_id=kr_id,
+                        new_value=float(kr_data["current_value"]),
+                        week_notes=f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
+                        blockers="",
+                        confidence=3,
+                        updated_by=updated_by,
+                    )
+        
+        if parsed_data.get("weekly_updates"):
+            week_number = get_week_number()
+            combined_notes = "\n\n".join([
+                f"**{u['section']}**\n{u['content']}"
+                for u in parsed_data["weekly_updates"]
+            ])
+            save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
+    
+    st.toast("✅ Datos de PDF importados con éxito", icon="📄")
 
 
 # ---------------------------------------------------------------------------

@@ -651,13 +651,14 @@ def render_dashboard() -> None:
                 )
                 if pdf_file:
                     if st.button("🔍 Parse PDF", type="primary", key=f"parse_pdf_btn_{team_label}"):
-                        with st.spinner("Reading PDF with AI..."):
+                        with st.spinner("Leyendo y analizando PDF con IA (esto puede tardar un momento)..."):
                             try:
                                 parsed_data = parse_okr_pdf_with_ai(
                                     pdf_file, team_label, selected_quarter,
                                     st.secrets["OPENAI_API_KEY"],
                                 )
                                 st.session_state["parsed_pdf_data"] = parsed_data
+                                st.toast("PDF analizado con éxito", icon="🔍")
                             except Exception as exc:
                                 st.error(f"Error parsing PDF: {exc}")
                 if st.session_state.get("parsed_pdf_data"):
