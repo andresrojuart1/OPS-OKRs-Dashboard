@@ -484,7 +484,10 @@ def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "ro
             f"and mimeType='application/vnd.google-apps.folder' "
             f"and trashed=false"
         )
-        results = drive_service.files().list(q=query, fields="files(id)").execute()
+        results = drive_service.files().list(
+            q=query, fields="files(id)",
+            supportsAllDrives=True, includeItemsFromAllDrives=True
+        ).execute()
         files = results.get("files", [])
         if files:
             parent_id = files[0]["id"]
@@ -493,6 +496,7 @@ def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "ro
                 body={"name": part, "parents": [parent_id],
                       "mimeType": "application/vnd.google-apps.folder"},
                 fields="id",
+                supportsAllDrives=True
             ).execute()
             parent_id = folder["id"]
     return parent_id
@@ -524,6 +528,7 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
                 body={"name": file.name, "parents": [folder_id]},
                 media_body=media,
                 fields="id, webViewLink",
+                supportsAllDrives=True
             ).execute()
         except Exception as e:
             st.error(f"Error creating file '{file.name}' in Drive: {e}")
@@ -535,6 +540,7 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
             drive_service.permissions().create(
                 fileId=drive_file["id"],
                 body={"type": "anyone", "role": "reader"},
+                supportsAllDrives=True
             ).execute()
         except Exception as e:
             st.warning(f"Could not set public permissions for '{file.name}': {e}")
