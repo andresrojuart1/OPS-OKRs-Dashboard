@@ -670,9 +670,19 @@ def render_dashboard() -> None:
 
         # Undo button visible on main dashboard after import
         if "last_import_summary" in st.session_state:
-            st.warning("⏪ Recent import detected. You can revert it if needed.")
-            if st.button("⏪ Undo Last Import", help="Revert the last PDF import changes", type="secondary"):
-                undo_last_import(st.session_state["last_import_summary"])
+            import time
+            import_summary = st.session_state["last_import_summary"]
+            import_time = import_summary.get("timestamp", 0)
+            
+            # Only show the button if it's less than 15 seconds old
+            if time.time() - import_time < 15:
+                st.warning("⏪ Recent import detected. You can revert it if needed.")
+                if st.button("⏪ Undo Last Import", help="Revert the last PDF import changes", type="secondary"):
+                    undo_last_import(import_summary)
+                    st.session_state.pop("last_import_summary", None)
+                    st.rerun()
+            else:
+                # Clean up session state if it's too old
                 st.session_state.pop("last_import_summary", None)
                 st.rerun()
 

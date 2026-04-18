@@ -250,6 +250,7 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
             
             # 1. Save OKR data & Weekly Note
             import_summary = save_parsed_pdf_data(confirmed_data, sub_team, quarter, email)
+            import_summary["timestamp"] = datetime.now().timestamp()
             
             # 2. Upload images and track their IDs
             if extracted_imgs:
