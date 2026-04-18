@@ -241,6 +241,7 @@ def seed_if_empty() -> None:
 
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
+@gspread_retry()
 def load_objectives() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("objectives")
     records = ws.get_all_records()
@@ -249,6 +250,7 @@ def load_objectives() -> pd.DataFrame:
 
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
+@gspread_retry()
 def load_key_results() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("key_results")
     records = ws.get_all_records()
@@ -374,6 +376,7 @@ def delete_update_by_id(update_id: str) -> None:
     st.cache_data.clear()
 
 
+@gspread_retry()
 def delete_kr_by_id(kr_id: str) -> None:
     """Delete a KR row and all its associated updates."""
     spreadsheet = get_spreadsheet()
@@ -489,6 +492,7 @@ def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
     return {}
 
 
+@gspread_retry()
 def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str, updated_by: str) -> str:
     """Save or update a weekly note using positional indexing."""
     ws = get_worksheet("weekly_notes")
@@ -777,6 +781,7 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
     return created_ids
 
 
+@gspread_retry()
 def undo_last_import(import_summary: dict) -> None:
     """Delete all updates, charts, and the weekly note created in the last PDF import."""
     if not import_summary:
