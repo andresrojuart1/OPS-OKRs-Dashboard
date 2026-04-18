@@ -593,10 +593,19 @@ def delete_chart_from_drive(chart_id: str) -> None:
     rows = ws.get_all_records()
     for i, row in enumerate(rows, start=2):
         if str(row["id"]) == str(chart_id):
-            drive_service.files().delete(
-                fileId=str(row["drive_file_id"]),
-                supportsAllDrives=True
-            ).execute()
+            try:
+                drive_service.files().delete(
+                    fileId=str(row["drive_file_id"]),
+                    supportsAllDrives=True
+                ).execute()
+            except Exception as e:
+                st.error(f"Error borrando archivo de Drive: {e}")
+                if hasattr(e, "content"):
+                    st.write(f"Detalles: {e.content.decode()}")
+                # Si el archivo ya no existe, permitimos borrar la fila de Sheets
+                if "404" not in str(e):
+                    return
+
             ws.delete_rows(i)
             st.cache_data.clear()
             return
