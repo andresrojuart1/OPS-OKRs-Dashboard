@@ -474,10 +474,10 @@ def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str
 # Weekly Charts (Google Drive)
 # ---------------------------------------------------------------------------
 
-def get_or_create_drive_folder(drive_service: Any, path: str) -> str:
+def get_or_create_drive_folder(drive_service: Any, path: str, root_id: str = "root") -> str:
     """Create folder hierarchy in Drive and return the leaf folder ID."""
     parts = path.split("/")
-    parent_id = "root"
+    parent_id = root_id
     for part in parts:
         query = (
             f"name='{part}' and '{parent_id}' in parents "
@@ -505,8 +505,10 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
 
     creds = get_service_account_credentials()
     drive_service = build("drive", "v3", credentials=creds)
+    parent_id = _secret("GOOGLE_DRIVE_PARENT_ID", "root")
     folder_id = get_or_create_drive_folder(
-        drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}"
+        drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}",
+        root_id=parent_id
     )
 
     charts_ws = get_worksheet("weekly_charts")
