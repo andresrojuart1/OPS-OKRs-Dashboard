@@ -510,10 +510,17 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
     creds = get_service_account_credentials()
     drive_service = build("drive", "v3", credentials=creds)
     parent_id = _secret("GOOGLE_DRIVE_PARENT_ID", "root")
-    folder_id = get_or_create_drive_folder(
-        drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}",
-        root_id=parent_id
-    )
+    st.info(f"Subiendo a Drive usando Parent ID: `{parent_id}`")
+    
+    try:
+        folder_id = get_or_create_drive_folder(
+            drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}",
+            root_id=parent_id
+        )
+        st.info(f"Carpeta destino resuelta: `{folder_id}`")
+    except Exception as e:
+        st.error(f"Error al resolver carpetas en Drive: {e}")
+        raise e
 
     charts_ws = get_worksheet("weekly_charts")
     all_rows = charts_ws.get_all_values()
