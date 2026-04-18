@@ -257,86 +257,53 @@ h1, h2, h3 {
     letter-spacing: -0.02em !important;
 }
 
-/* Master Fintech Card Injected via :has selector */
-div.stVerticalBlock:has(div.fintech-card-trigger) {
+/* Precision-targeted Master Card (Avoids wrapping whole dashboard) */
+div[data-testid="stVerticalBlock"] > div:has(div.fintech-card-trigger) {
     background: var(--bg-surface) !important;
     border: 1px solid var(--border-color) !important;
-    border-radius: 20px !important;
-    padding: 1.5rem !important;
-    margin-bottom: 2.5rem !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.25) !important;
+    border-radius: 16px !important;
+    padding: 1.25rem !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
 }
 
 .objective-section {
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    padding-bottom: 0.75rem;
 }
 
 .kr-row-fintech {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
 }
 
-/* Metrics & Indicators */
-.metric-value {
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1;
-}
-
-.metric-label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-/* Progress System */
-.progress-container-fintech {
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 999px;
-    height: 8px;
-    margin-top: 1rem;
-    position: relative;
-}
-
-.progress-bar-fintech {
-    height: 100%;
-    border-radius: 999px;
-    background: linear-gradient(90deg, var(--accent-purple), var(--accent-teal));
-    box-shadow: 0 0 12px rgba(124, 115, 247, 0.4);
-    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Button System (Fintech Grade) */
+/* --- ULTRA-MINIMALIST BUTTONS --- */
 div.stButton > button {
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    border: 1px solid var(--border-color) !important;
-    background: var(--bg-card) !important;
-    padding: 0.5rem 1rem !important;
+    border-radius: 6px !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    height: auto !important;
+    padding: 0.25rem 0.6rem !important;
+    background: transparent !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    color: var(--text-secondary) !important;
+    transition: all 0.15s ease !important;
 }
 
 div.stButton > button:hover {
     border-color: var(--accent-purple) !important;
-    color: var(--accent-purple) !important;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    color: var(--text-primary) !important;
+    background: rgba(124,115,247,0.05) !important;
 }
 
-.primary-button {
-    background: var(--accent-purple) !important;
-    color: white !important;
-    border: none !important;
+/* Tertiary/Ghost icons */
+div.stButton > button:active, div.stButton > button:focus {
+    box-shadow: none !important;
 }
-</style>
 </style>
 """, unsafe_allow_html=True)
 
