@@ -642,7 +642,14 @@ def render_dashboard() -> None:
 
         if st.session_state.get("show_pdf_import"):
             with st.container():
-                st.markdown("### 📄 Import OKR Update from PDF")
+                col_title, col_exit = st.columns([3, 1])
+                with col_title:
+                    st.markdown("### 📄 Import OKR Update from PDF")
+                with col_exit:
+                    if st.button("⬅️ Back to Dashboard", use_container_width=True):
+                        st.session_state["show_pdf_import"] = False
+                        st.session_state.pop("parsed_pdf_data", None)
+                        st.rerun()
                 st.caption(
                     "Upload your OKR PDF report. The system will extract the data "
                     "and show you a preview before saving anything."
@@ -675,16 +682,14 @@ def render_dashboard() -> None:
             import_time = import_summary.get("timestamp", 0)
             
             # Only show the button if it's less than 15 seconds old
-            if time.time() - import_time < 15:
+            if time.time() - import_time < 60:
                 st.warning("⏪ Recent import detected. You can revert it if needed.")
                 if st.button("⏪ Undo Last Import", help="Revert the last PDF import changes", type="secondary"):
                     undo_last_import(import_summary)
                     st.session_state.pop("last_import_summary", None)
                     st.rerun()
             else:
-                # Clean up session state if it's too old
                 st.session_state.pop("last_import_summary", None)
-                st.rerun()
 
     # Filter display objectives by quarter + team
     display_objs = objectives_df
