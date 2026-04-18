@@ -510,17 +510,10 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
     creds = get_service_account_credentials()
     drive_service = build("drive", "v3", credentials=creds)
     parent_id = _secret("GOOGLE_DRIVE_PARENT_ID", "root")
-    st.info(f"Subiendo a Drive usando Parent ID: `{parent_id}`")
-    
-    try:
-        folder_id = get_or_create_drive_folder(
-            drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}",
-            root_id=parent_id
-        )
-        st.info(f"Carpeta destino resuelta: `{folder_id}`")
-    except Exception as e:
-        st.error(f"Error al resolver carpetas en Drive: {e}")
-        raise e
+    folder_id = get_or_create_drive_folder(
+        drive_service, f"OKR Dashboard/{quarter}/{sub_team}/Week {week_number}",
+        root_id=parent_id
+    )
 
     charts_ws = get_worksheet("weekly_charts")
     all_rows = charts_ws.get_all_values()
@@ -538,9 +531,6 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
                 supportsAllDrives=True
             ).execute()
         except Exception as e:
-            st.error(f"Error creating file '{file.name}' in Drive: {e}")
-            if hasattr(e, "content"):
-                st.write(f"Error details: {e.content.decode()}")
             raise e
 
         try:
@@ -549,9 +539,8 @@ def upload_charts_to_drive(files: list, sub_team: str, quarter: str, week_number
                 body={"type": "anyone", "role": "reader"},
                 supportsAllDrives=True
             ).execute()
-        except Exception as e:
-            st.warning(f"Could not set public permissions for '{file.name}': {e}")
-            # Non-fatal, we can still use the file if the service account has access
+        except Exception:
+            pass
 
         direct_url = f"https://drive.google.com/uc?export=view&id={drive_file['id']}"
         charts_ws.append_row(
