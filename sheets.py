@@ -18,7 +18,7 @@ from functools import wraps
 load_dotenv(override=True)
 _here = os.path.dirname(os.path.abspath(__file__))
 
-def gspread_retry(retries=3, backoff_in_seconds=1):
+def gspread_retry(retries=5, backoff_in_seconds=2):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
