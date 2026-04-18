@@ -23,23 +23,16 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
             if extracted:
                 text_content += extracted + "\n"
             
-            # Images & Figures (potential charts)
-            # Try to capture larger graphical elements
-            for fig in page.figures + page.images:
+            # Images & Rects (potential charts)
+            # Try to capture areas with image objects
+            for img in page.images:
                 try:
                     # Determine area
-                    x0 = fig.get("x0", 0)
-                    top = page.height - fig.get("y1", 0)
-                    x1 = fig.get("x1", page.width)
-                    bottom = page.height - fig.get("y0", 0)
+                    x0, top, x1, bottom = img["x0"], page.height - img["y1"], img["x1"], page.height - img["y0"]
+                    width, height = x1 - x0, bottom - top
                     
-                    width = x1 - x0
-                    height = bottom - top
-                    
-                    # Focus on elements that look like charts (not icons, not the whole page)
-                    if 150 < width < page.width * 0.95 and 100 < height < page.height * 0.8:
-                        bbox = (x0, top, x1, bottom)
-                        cropped = page.within_bbox(bbox).to_image(resolution=200)
+                    if width > 100 and height > 100:
+                        cropped = page.within_bbox((x0, top, x1, bottom)).to_image(resolution=200)
                         buf = io.BytesIO()
                         cropped.original.save(buf, format='PNG')
                         images.append({
@@ -47,24 +40,22 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
                             "content": buf.getvalue(),
                             "type": "image/png"
                         })
-                except Exception:
-                    continue
+                except Exception: continue
             
-            # Fallback: if a page mentions "CHART" or "REVENUE" and we found nothing, 
-            # take a screenshot of the bottom half (where charts usually are)
-            if not images and ("CHART" in text_content.upper() or "REVENUE" in text_content.upper()):
+            # If no technical images found but it's a "Charts" page, capture the page
+            if not images and any(kw in text_content.upper() for kw in ["CHART", "REVENUE", "GRAPH"]):
                 try:
-                    bbox = (0, page.height/2, page.width, page.height)
+                    # Capturamos la mitad inferior que suele tener las gráficas
+                    bbox = (0, page.height * 0.3, page.width, page.height)
                     cropped = page.within_bbox(bbox).to_image(resolution=200)
                     buf = io.BytesIO()
                     cropped.original.save(buf, format='PNG')
                     images.append({
-                        "name": f"PageSection_P{page.page_number}.png",
+                        "name": f"Dashboard_P{page.page_number}.png",
                         "content": buf.getvalue(),
                         "type": "image/png"
                     })
-                except Exception:
-                    continue
+                except Exception: continue
 
     client = OpenAI(api_key=api_key)
 
