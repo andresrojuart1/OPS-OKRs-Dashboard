@@ -5,6 +5,7 @@ import json
 
 import streamlit as st
 from openai import OpenAI
+from datetime import datetime
 
 
 def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -> dict:
