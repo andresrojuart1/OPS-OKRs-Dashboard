@@ -666,18 +666,18 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
         status_text = "Execution Healthy"
         status_icon = "✨"
             
-        st.markdown(f"""
-        <div style="display:flex; align-items:center; gap:8px; margin: 0 0 20px 0; background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 99px; width: fit-content;">
-            <span style="font-size: 1rem;">{status_icon}</span>
-            <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.03em; text-transform: uppercase;">{status_text}</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # KPI Cards
-        st.markdown(f"""
-        <div style="display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap;">
-            <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
-                <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
+    st.markdown(f"""
+    <div style="display:flex; align-items:center; gap:8px; margin: 0 0 20px 0; background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 99px; width: fit-content;">
+        <span style="font-size: 1rem;">{status_icon}</span>
+        <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.03em; text-transform: uppercase;">{status_text}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # KPI Cards
+    st.markdown(f"""
+    <div style="display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap;">
+        <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
+            <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
                 <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{num_objs}</div>
                 <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Total Active</div>
             </div>
