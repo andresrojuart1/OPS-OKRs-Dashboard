@@ -52,11 +52,11 @@ def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = Fa
         title_size = "1.5rem" if is_primary else "1.2rem"
         st.markdown(f"""
         <div class="objective-section" style="border:none; margin-bottom: 1.5rem;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
                 <span style="font-size:{title_size}; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
             </div>
+            <div style="font-size:{title_size}; font-weight:800; color:white; margin-top:0.4rem; margin-bottom:1.2rem; line-height:1.4;">{obj_title}</div>
             {_pct_indicator(avg_pct)}
-            <div style="font-size:{title_size}; font-weight:800; color:white; margin-top:1rem; line-height:1.4;">{obj_title}</div>
         </div>
         """, unsafe_allow_html=True)
 
