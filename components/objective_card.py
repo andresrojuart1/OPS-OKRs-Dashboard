@@ -48,14 +48,17 @@ def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = Fa
         trigger_class = "fintech-card-trigger-primary" if is_primary else "fintech-card-trigger"
         st.markdown(f'<div class="{trigger_class}" style="display:none;"></div>', unsafe_allow_html=True)
         
-        # Header - Adjust spacing and size
-        title_size = "1.5rem" if is_primary else "1.2rem"
+        # Header - Synchronized sizes as requested
+        # Sub-team label is the "anchor" title, Objective is slightly smaller but larger than KRs (0.85rem)
+        sub_team_size = "1.2rem"
+        obj_title_size = "1.05rem"
+        
         st.markdown(f"""
         <div class="objective-section" style="border:none; margin-bottom: 1.5rem;">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <span style="font-size:{title_size}; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
+                <span style="font-size:{sub_team_size}; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
             </div>
-            <div style="font-size:{title_size}; font-weight:800; color:white; margin-top:0.4rem; margin-bottom:1.2rem; line-height:1.4;">{obj_title}</div>
+            <div style="font-size:{obj_title_size}; font-weight:800; color:white; margin-top:0.4rem; margin-bottom:1.2rem; line-height:1.4;">{obj_title}</div>
             {_pct_indicator(avg_pct)}
         </div>
         """, unsafe_allow_html=True)
