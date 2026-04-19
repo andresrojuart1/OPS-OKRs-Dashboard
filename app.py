@@ -751,7 +751,7 @@ def render_dashboard() -> None:
 
     objectives_df = load_objectives()
     if not objectives_df.empty and "sub_team" in objectives_df.columns:
-        objectives_df["sub_team"] = objectives_df["sub_team"].replace({"New Initiatives": "Growth Initiatives"})
+        objectives_df["sub_team"] = objectives_df["sub_team"].replace({"Growth Initiatives": "New Initiatives"})
         
     krs_df        = load_key_results()
     updates_df    = load_updates()

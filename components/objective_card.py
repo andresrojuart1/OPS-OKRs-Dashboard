@@ -53,7 +53,7 @@ def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = Fa
         st.markdown(f"""
         <div class="objective-section" style="border:none; margin-bottom: 1.5rem;">
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-                <span style="font-size:0.7rem; font-weight:700; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
+                <span style="font-size:{title_size}; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
             </div>
             {_pct_indicator(avg_pct)}
             <div style="font-size:{title_size}; font-weight:800; color:white; margin-top:1rem; line-height:1.4;">{obj_title}</div>

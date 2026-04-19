@@ -8,7 +8,7 @@ _DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 SUB_TEAMS = [
     "All",
-    "Growth Initiatives",
+    "New Initiatives",
     "FinOps",
     "AI Experience",
     "AI Monetization",

@@ -103,7 +103,7 @@ SEED_OBJECTIVES = [
     {
         "id": "O1",
         "title": "Scale Financial Products into Reliable ARR Contributors, Building a Second Revenue Engine Alongside Payroll",
-        "sub_team": "Growth Initiatives",
+        "sub_team": "New Initiatives",
         "quarter": "Q2 2026",
         "company_vision": "",
     },
@@ -145,7 +145,7 @@ SEED_OBJECTIVES = [
 ]
 
 SEED_KEY_RESULTS = [
-    # O1 — Growth Initiatives
+    # O1 — New Initiatives
     {"id": "KR1",  "objective_id": "O1", "title": "Revenue from new initiatives reaches $20K/month",                               "target": 20000,   "unit": "$",           "current_value": 0},
     {"id": "KR2",  "objective_id": "O1", "title": "Quick monthly disbursement volume reaches $500K/month",                          "target": 500000,  "unit": "$/month",     "current_value": 0},
     {"id": "KR3",  "objective_id": "O1", "title": "Future Fund AUM reaches $8M between CD and MMF vault",                           "target": 9000000, "unit": "$",           "current_value": 0},
