@@ -3,6 +3,7 @@ Ontop OPS OKRs Dashboard
 Entry point: streamlit run app.py
 """
 
+from datetime import datetime
 import io
 import os
 
@@ -18,7 +19,7 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 st.set_page_config(
     page_title="Ontop OKRs — Operations",
-    page_icon="🔺",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -609,42 +610,51 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
 
     with col_r:
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-        if selected_team == "All":
-            c1, c2 = st.columns(2)
-            with c1:
-                excel_bytes = _generate_template_excel(selected_quarter)
-                st.download_button(
-                    label="Template",
-                    icon=":material/download:",
-                    data=excel_bytes,
-                    file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="hdr_tmpl",
-                    use_container_width=True,
-                )
-            with c2:
-                if st.button("AI Update", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
-                    st.session_state["ai_dialog_stale"] = True
-                    _ai_update_dialog()
-        else:
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                excel_bytes = _generate_template_excel(selected_quarter)
-                st.download_button(
-                    label="Template",
-                    icon=":material/download:",
-                    data=excel_bytes,
-                    file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="hdr_tmpl",
-                    use_container_width=True,
-                )
-            with c2:
-                if st.button("AI Update", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
-                    st.session_state["ai_dialog_stale"] = True
-                    _ai_update_dialog()
-            with c3:
-                if st.button("Import from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn_hdr", type="secondary"):
+        
+        # Determine columns based on view
+        show_pdf = selected_team != "All"
+        cols = st.columns(4 if show_pdf else 3)
+        
+        with cols[0]:
+            if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", use_container_width=True, type="secondary"):
+                st.cache_data.clear()
+                st.session_state["last_sync_time"] = datetime.now()
+                st.toast("Data synchronized", icon="✅")
+                st.rerun()
+            
+            # Last sync indicator
+            last_sync = st.session_state.get("last_sync_time")
+            if last_sync:
+                diff = datetime.now() - last_sync
+                minutes = int(diff.total_seconds() / 60)
+                if minutes == 0:
+                    sync_label = "Just now"
+                elif minutes < 60:
+                    sync_label = f"{minutes}m ago"
+                else:
+                    sync_label = f"{minutes//60}h ago"
+                st.markdown(f"<div style='font-size:0.65rem; color:#6B6B7E; text-align:center; margin-top:-10px;'>Last sync: {sync_label}</div>", unsafe_allow_html=True)
+
+        with cols[1]:
+            excel_bytes = _generate_template_excel(selected_quarter)
+            st.download_button(
+                label="Excel",
+                icon=":material/download:",
+                data=excel_bytes,
+                file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="hdr_tmpl",
+                use_container_width=True,
+            )
+            
+        with cols[2]:
+            if st.button("AI", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
+                st.session_state["ai_dialog_stale"] = True
+                _ai_update_dialog()
+                
+        if show_pdf:
+            with cols[3]:
+                if st.button("from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn_hdr", type="secondary"):
                     st.session_state["show_pdf_import"] = True
 
     # Metrics — filter by quarter + selected team

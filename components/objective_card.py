@@ -49,9 +49,9 @@ def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = Fa
         st.markdown(f'<div class="{trigger_class}" style="display:none;"></div>', unsafe_allow_html=True)
         
         # Header - Synchronized sizes as requested
-        # Sub-team label is the "anchor" title, Objective is slightly smaller but larger than KRs (0.85rem)
+        # Sub-team label is 1.2rem, Objective is 1.15rem, KRs are 1.05rem
         sub_team_size = "1.2rem"
-        obj_title_size = "1.05rem"
+        obj_title_size = "1.15rem"
         
         st.markdown(f"""
         <div class="objective-section" style="border:none; margin-bottom: 1.5rem;">
@@ -89,12 +89,12 @@ def _render_kr_row(kr, active_kr: str) -> None:
     st.markdown(f"""<div class="kr-row-fintech">
 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
 <div style="flex:1; padding-right:1rem;">
-<div style="font-size:0.9rem; font-weight:600; color:white; margin-bottom:2px;">{title}</div>
-<div style="font-size:0.75rem; color:{MUTED};">{val_str}</div>
+<div style="font-size:1.05rem; font-weight:600; color:white; margin-bottom:2px;">{title}</div>
+<div style="font-size:0.85rem; color:{MUTED};">{val_str}</div>
 </div>
 <div style="text-align:right;">
-<div style="font-size:1rem; font-weight:700; color:{GREEN};">{pct:.0f}%</div>
-<div style="font-size:0.5rem; color:{MUTED}; text-transform:uppercase; font-weight:700;">Status</div>
+<div style="font-size:1.05rem; font-weight:700; color:{GREEN};">{pct:.0f}%</div>
+<div style="font-size:0.6rem; color:{MUTED}; text-transform:uppercase; font-weight:700;">Status</div>
 </div>
 </div>
 {_progress_bar(pct)}
