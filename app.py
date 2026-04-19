@@ -634,16 +634,26 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
     else:
         team_krs = krs_df.iloc[:0]
 
+    num_objs = len(filtered_objs) if not filtered_objs.empty else 0
+    total_krs = len(team_krs) if not team_krs.empty else 0
+
     if not team_krs.empty:
         all_pct = team_krs.apply(compute_progress, axis=1)
-        total_krs = len(team_krs)
         at_risk_count = int((all_pct < 70).sum())
         on_track_count = int((all_pct >= 70).sum())
         avg_prog = all_pct.mean()
+    else:
+        at_risk_count = 0
+        on_track_count = 0
+        avg_prog = 0.0
         
-        # Calculate status
-        at_risk_ratio = at_risk_count / total_krs if total_krs > 0 else 0
-        if at_risk_ratio > 0.5:
+    # Calculate status
+    at_risk_ratio = at_risk_count / total_krs if total_krs > 0 else 0
+    if total_krs == 0:
+        status_color = "#6B6B7E"
+        status_text = "No KRs Tracked"
+        status_icon = "➖"
+    elif at_risk_ratio > 0.5:
             status_color = "#ef4444"
             status_text = "Execution at Risk"
             status_icon = "⚠️"
@@ -668,7 +678,7 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
         <div style="display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap;">
             <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
                 <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
-                <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{len(team_krs["objective_id"].unique())}</div>
+                <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{num_objs}</div>
                 <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Total Active</div>
             </div>
             <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
