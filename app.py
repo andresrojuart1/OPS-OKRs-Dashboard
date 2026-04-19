@@ -583,22 +583,43 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
 
     with col_r:
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            excel_bytes = _generate_template_excel(selected_quarter)
-            st.download_button(
-                label="Template",
-                icon=":material/download:",
-                data=excel_bytes,
-                file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="hdr_tmpl",
-                use_container_width=True,
-            )
-        with c2:
-            if st.button("AI Update", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
-                st.session_state["ai_dialog_stale"] = True
-                _ai_update_dialog()
+        if selected_team == "All":
+            c1, c2 = st.columns(2)
+            with c1:
+                excel_bytes = _generate_template_excel(selected_quarter)
+                st.download_button(
+                    label="Template",
+                    icon=":material/download:",
+                    data=excel_bytes,
+                    file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="hdr_tmpl",
+                    use_container_width=True,
+                )
+            with c2:
+                if st.button("AI Update", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
+                    st.session_state["ai_dialog_stale"] = True
+                    _ai_update_dialog()
+        else:
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                excel_bytes = _generate_template_excel(selected_quarter)
+                st.download_button(
+                    label="Template",
+                    icon=":material/download:",
+                    data=excel_bytes,
+                    file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="hdr_tmpl",
+                    use_container_width=True,
+                )
+            with c2:
+                if st.button("AI Update", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
+                    st.session_state["ai_dialog_stale"] = True
+                    _ai_update_dialog()
+            with c3:
+                if st.button("Import from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn_hdr", type="secondary"):
+                    st.session_state["show_pdf_import"] = True
 
     # Metrics — filter by quarter + selected team
     filtered_objs = objectives_df
@@ -736,11 +757,6 @@ def render_dashboard() -> None:
 
     # PDF import section (sub-team views only)
     if team_label != "All":
-        _, col_import = st.columns([3, 1])
-        with col_import:
-            if st.button("Import from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn"):
-                st.session_state["show_pdf_import"] = True
-
         if st.session_state.get("show_pdf_import"):
             with st.container():
                 col_title, col_exit = st.columns([3, 1])
