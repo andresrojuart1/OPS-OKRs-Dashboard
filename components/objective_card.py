@@ -27,7 +27,13 @@ def _pct_indicator(pct: float) -> str:
 
 def _progress_bar(pct: float) -> str:
     return f"""<div style="background:rgba(255,255,255,0.03); border-radius:999px; height:5px; margin:10px 0; overflow:hidden;">
-<div style="height:100%; width:{pct:.1f}%; background:{PURPLE}; box-shadow:0 0 8px rgba(122, 80, 247, 0.3);"></div>
+<style>
+@keyframes fillProgress {{
+  0% {{ transform: scaleX(0); transform-origin: left; }}
+  100% {{ transform: scaleX(1); transform-origin: left; }}
+}}
+</style>
+<div style="height:100%; width:{pct:.1f}%; background:{PURPLE}; box-shadow:0 0 8px rgba(122, 80, 247, 0.3); animation: fillProgress 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
 </div>"""
 
 def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = False) -> None:
