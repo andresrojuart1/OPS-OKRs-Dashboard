@@ -590,23 +590,28 @@ def render_login_page() -> None:
 def render_header(objectives_df, krs_df, selected_team: str) -> None:
     selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
 
-    col_l, col_r = st.columns([3, 2])
+    col_l, col_r = st.columns([1.5, 3.5])
     with col_l:
         sub = f" · {selected_team}" if selected_team != "All" else ""
         st.markdown(f"""
-        <div style="margin-bottom:4px;">
+        <div style="margin-bottom:8px;">
             <div style="font-size:24px;font-weight:800;color:#fff;line-height:1.1;">
                 Operations OKRs{sub}
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.selectbox(
-            "Quarter",
-            QUARTERS,
-            index=QUARTERS.index(selected_quarter) if selected_quarter in QUARTERS else 1,
-            key="selected_quarter",
-            label_visibility="collapsed",
-        )
+        
+        # Quarter selector in a narrower container
+        with st.container():
+            c_q, _ = st.columns([1.5, 1])
+            with c_q:
+                st.selectbox(
+                    "Quarter",
+                    QUARTERS,
+                    index=QUARTERS.index(selected_quarter) if selected_quarter in QUARTERS else 1,
+                    key="selected_quarter",
+                    label_visibility="collapsed",
+                )
 
     with col_r:
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
@@ -711,31 +716,31 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
     
     # KPI Cards
     st.markdown(f"""
-    <div style="display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap;">
-        <div class="fintech-kpi-card" style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
-            <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
-            <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{num_objs}</div>
-            <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Total Active</div>
+    <div style="display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px;">
+            <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
+            <div style="color:#FFFFFF; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{num_objs}</div>
+            <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Total Active</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
-            <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Key Results</div>
-            <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{total_krs}</div>
-            <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Tracked Items</div>
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px;">
+            <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Key Results</div>
+            <div style="color:#FFFFFF; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{total_krs}</div>
+            <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Tracked Items</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
-            <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Execution Progress</div>
-            <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{avg_prog:.0f}%</div>
-            <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Overall Completion</div>
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px;">
+            <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Execution Progress</div>
+            <div style="color:#FFFFFF; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{avg_prog:.0f}%</div>
+            <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Overall Completion</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px; border-bottom:4px solid #10b981;">
-            <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">KRs On Track</div>
-            <div style="color:#10b981; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{on_track_count}</div>
-            <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Healthy Items</div>
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid #10b981;">
+            <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">KRs On Track</div>
+            <div style="color:#10b981; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{on_track_count}</div>
+            <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Healthy Items</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px; border-bottom:4px solid #ef4444;">
-            <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">KRs At Risk</div>
-            <div style="color:#ef4444; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{at_risk_count}</div>
-            <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Needs Attention</div>
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid #ef4444;">
+            <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">KRs At Risk</div>
+            <div style="color:#ef4444; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{at_risk_count}</div>
+            <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Needs Attention</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
