@@ -90,14 +90,14 @@ def _render_kr_row(kr, active_kr: str) -> None:
 </div>""", unsafe_allow_html=True)
 
     # GHOST ACTION ROW for KR
-    c_upd, c_hist, c_ed, c_del, _ = st.columns([0.9, 0.7, 0.35, 0.35, 7.7])
+    c_upd, c_hist, c_ed, c_del, _ = st.columns([0.35, 0.35, 0.35, 0.35, 8.6])
     with c_upd:
-        label = "⚡ Update" if active_kr != kr_id else "✖ Close"
+        label = "🔄" if active_kr != kr_id else "✖️"
         if st.button(label, key=f"uk_{kr_id}"):
             st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
             st.rerun()
     with c_hist:
-        if st.button("📋 Logs", key=f"sh_{kr_id}"):
+        if st.button("👁️", key=f"sh_{kr_id}"):
             st.session_state[f"h_{kr_id}"] = not st.session_state.get(f"h_{kr_id}", False)
             st.rerun()
     with c_ed:
