@@ -654,17 +654,17 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
         status_text = "No KRs Tracked"
         status_icon = "➖"
     elif at_risk_ratio > 0.5:
-            status_color = "#ef4444"
-            status_text = "Execution at Risk"
-            status_icon = "⚠️"
-        elif at_risk_ratio > 0:
-            status_color = "#f59e0b"
-            status_text = "Execution Needs Attention"
-            status_icon = "🔔"
-        else:
-            status_color = "#10b981"
-            status_text = "Execution Healthy"
-            status_icon = "✨"
+        status_color = "#ef4444"
+        status_text = "Execution at Risk"
+        status_icon = "⚠️"
+    elif at_risk_ratio > 0:
+        status_color = "#f59e0b"
+        status_text = "Execution Needs Attention"
+        status_icon = "🔔"
+    else:
+        status_color = "#10b981"
+        status_text = "Execution Healthy"
+        status_icon = "✨"
             
         st.markdown(f"""
         <div style="display:flex; align-items:center; gap:8px; margin: 0 0 20px 0; background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 99px; width: fit-content;">
