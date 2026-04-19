@@ -271,7 +271,7 @@ h1, h2, h3 {
 }
 
 /* PRIMARY ACCENT CARD */
-div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger-primary) {
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger-primary) {
     background: rgba(18, 18, 25, 0.95) !important;
     border: 1px solid rgba(122, 80, 247, 0.3) !important;
     border-radius: 20px !important;
@@ -280,7 +280,7 @@ div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger-primary) {
     box-shadow: 0 8px 32px rgba(122, 80, 247, 0.12) !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger-primary) div[data-testid="stVerticalBlock"] {
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger-primary) div[data-testid="stVerticalBlock"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -288,7 +288,7 @@ div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger-primary) d
 }
 
 /* SECONDARY CARDS (Reduced visual weight) */
-div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) {
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger) {
     background: rgba(11, 11, 16, 0.6) !important;
     border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-radius: 16px !important;
@@ -299,7 +299,7 @@ div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) {
 }
 
 /* Ensure children don't inherit the card style */
-div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) div[data-testid="stVerticalBlock"] {
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger) div[data-testid="stVerticalBlock"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
