@@ -46,7 +46,7 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
             # If no technical images found but it's a "Charts" page, capture regions
             if not images and any(kw in text_content.upper() for kw in ["CHART", "REVENUE", "GRAPH"]):
                 try:
-                    # Capturamos dos regiones: Mitad superior y Mitad inferior
+                    # Capture two regions: Top Half and Bottom Half
                     areas = [
                         ("Top", (0, 0, page.width, page.height * 0.55)),
                         ("Bottom", (0, page.height * 0.45, page.width, page.height))
@@ -65,32 +65,32 @@ def parse_okr_pdf_with_ai(pdf_file, sub_team: str, quarter: str, api_key: str) -
     client = OpenAI(api_key=api_key)
 
     prompt = f"""
-Eres un experto en extraer datos de reportes de OKRs de Ops/Fintech.
+You are an expert at extracting OKR report data from Ops/Fintech companies.
 
-Analiza el reporte del equipo "{sub_team}" para {quarter}.
-Extrae la información en un JSON estricto.
+Analyze the report for the team "{sub_team}" for {quarter}.
+Extract the information into a strict JSON format.
 
-IMPORTANTE: El campo 'sub_team' en el resultado DEBE ser exactamente "{sub_team}". No uses variaciones.
+IMPORTANT: The 'sub_team' field in the result MUST be exactly "{sub_team}". Do not use variations.
 
-SECCIONES ESPECIALES A BUSCAR:
-- PAYINS: Extrae todos los comentarios narrativos numerados.
-- PAYOUTS: Extrae todos los comentarios narrativos numerados.
-- OKR Progress: Extrae títulos, valores actuales, targets y status.
+SPECIAL SECTIONS TO LOOK FOR:
+- PAYINS: Extract all numbered narrative comments.
+- PAYOUTS: Extract all numbered narrative comments.
+- OKR Progress: Extract titles, current values, targets, and status.
 
-TEXTO DEL REPORTE:
+REPORT TEXT:
 {text_content}
 
-Retorna ÚNICAMENTE un JSON:
+Return ONLY a JSON:
 {{
   "objectives": [
     {{
-      "title": "título del objective",
+      "title": "Objective Title",
       "key_results": [
         {{
-          "title": "título del KR",
+          "title": "KR Title",
           "current_value": 0.0,
           "target": 0.0,
-          "unit": "% o $ o texto",
+          "unit": "% or $ or text",
           "status": "IN PROGRESS|BLOCKED|NOT STARTED|MAINTAIN|COMPLETED",
           "progress_pct": 0
         }}
@@ -100,18 +100,18 @@ Retorna ÚNICAMENTE un JSON:
   "weekly_updates": [
     {{
       "section": "PAYINS",
-      "content": "resumen de los puntos encontrados"
+      "content": "Summary of points found"
     }},
     {{
       "section": "PAYOUTS",
-      "content": "resumen de los puntos encontrados"
+      "content": "Summary of points found"
     }}
   ]
 }}
 
-Reglas:
-- Sé lo más fiel posible al texto original para los updates.
-- Si hay varias notas bajo PAYINS, júntalas en un solo campo content con saltos de línea.
+Rules:
+- Be as faithful as possible to the original text for the updates.
+- If there are multiple notes under PAYINS, join them into a single content field with line breaks.
 """
 
     response = client.chat.completions.create(
@@ -130,7 +130,7 @@ Reglas:
         with pdfplumber.open(io.BytesIO(pdf_file.read())) as pdf:
             for page in pdf.pages:
                 if any(kw in (page.extract_text() or "").upper() for kw in ["REVENUE", "CHART"]):
-                    # Dividimos en 4 cuadrantes para no fallar
+                    # Divide into 4 quadrants to capture everything correctly
                     mid_x = page.width / 2
                     mid_y = page.height / 2
                     quads = [
@@ -272,7 +272,7 @@ def render_pdf_preview_and_confirm(parsed_data: dict, sub_team: str, quarter: st
                     f = MockFile(img["name"], _read_content, img["type"], lambda x: None)
                     prepared_files.append(f)
                 
-                with st.spinner("Subiendo gráficas extraídas a Drive..."):
+                with st.spinner("Uploading extracted charts to Drive..."):
                     chart_ids = upload_charts_to_drive(prepared_files, sub_team, quarter, get_week_number(), email)
                     import_summary["chart_ids"] = chart_ids
 

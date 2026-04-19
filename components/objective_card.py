@@ -144,34 +144,38 @@ def _render_history(kr_id: str) -> None:
             delete_update_by_id(str(row["id"]))
             st.rerun()
 
-@st.dialog("Editar Objetivo")
+@st.dialog("Edit Objective")
 def _edit_obj_dialog(obj_id: str, title: str) -> None:
-    nt = st.text_area("Título", value=title, height=80)
-    if st.button("Guardar", type="primary"):
+    nt = st.text_area("Title", value=title, height=80)
+    if st.button("Save", type="primary"):
         update_objective(obj_id, nt.strip())
         st.rerun()
 
-@st.dialog("Eliminar")
+@st.dialog("Delete Objective")
 def _confirm_delete_obj_dialog(obj_id: str, title: str) -> None:
-    st.error("¿Eliminar?")
-    if st.button("Confirmar", type="primary"):
+    st.error("Delete this objective?")
+    if st.button("Confirm", type="primary"):
         delete_objective(obj_id)
         st.rerun()
 
-@st.dialog("Editar KR")
+@st.dialog("Edit KR")
 def _edit_kr_dialog(kr_id: str, title: str) -> None:
     st.text_input("Name", value=title)
     st.button("Update", type="primary")
 
-@st.dialog("Eliminar KR")
+@st.dialog("Delete KR")
 def _confirm_delete_kr_dialog(kr_id: str, title: str) -> None:
-    if st.button("Eliminar", type="primary"):
+    st.error(f"Delete KR: {title}?")
+    if st.button("Delete", type="primary"):
         delete_kr_by_id(kr_id)
         st.rerun()
 
-@st.dialog("Nuevo KR")
+@st.dialog("New KR")
 def add_kr_dialog(obj_id: str, title: str) -> None:
-    t = st.text_input("Name")
+    name = st.text_input("Title")
+    col1, col2 = st.columns(2)
+    with col1: tgt = st.number_input("Target", min_value=1.0, value=100.0)
+    with col2: unit = st.text_input("Unit", value="%")
     if st.button("Create", type="primary"):
-        create_kr(obj_id, t, 100, "%")
+        create_kr(obj_id, name.strip(), float(tgt), unit.strip())
         st.rerun()

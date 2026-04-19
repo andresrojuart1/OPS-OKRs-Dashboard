@@ -467,7 +467,7 @@ def _ai_update_dialog() -> None:
     cache_key = f"_ai_text_{quarter}_{sub_team}"
 
     if st.session_state.get("ai_dialog_stale", True) or cache_key not in st.session_state:
-        team_label = sub_team if sub_team != "All" else "Operations (todos los equipos)"
+        team_label = sub_team if sub_team != "All" else "Operations (all teams)"
 
         lines = []
         for kr in krs_info:
@@ -476,23 +476,23 @@ def _ai_update_dialog() -> None:
                 f"({kr['pct']:.0f}%)"
             )
             if kr.get("last_notes"):
-                lines.append(f"  Última semana: {kr['last_notes']}")
+                lines.append(f"  Last week: {kr['last_notes']}")
             if kr.get("last_blockers"):
-                lines.append(f"  Bloqueos: {kr['last_blockers']}")
+                lines.append(f"  Blockers: {kr['last_blockers']}")
             if kr.get("last_confidence"):
-                lines.append(f"  Confianza: {kr['last_confidence']}/5")
-        krs_text = "\n".join(lines) or "No hay KRs disponibles."
+                lines.append(f"  Confidence: {kr['last_confidence']}/5")
+        krs_text = "\n".join(lines) or "No KRs available."
 
         prompt = (
-            f"Eres un asistente de operaciones de Ontop. Con base en el estado actual de los OKRs "
-            f"del equipo {team_label} para {quarter}, genera un resumen ejecutivo en español de "
-            f"máximo 300 palabras que incluya: 1) Estado general del quarter, "
-            f"2) Logros destacados, 3) Riesgos y bloqueos críticos, "
-            f"4) Recomendaciones concretas para la siguiente semana.\n\n"
-            f"Datos actuales de los KRs:\n{krs_text}"
+            f"You are an operations assistant at Ontop. Based on the current OKRs state "
+            f"for the team {team_label} for {quarter}, generate an executive summary in English of "
+            f"maximum 300 words that includes: 1) Overall quarter status, "
+            f"2) Key achievements, 3) Critical risks and blockers, "
+            f"4) Concrete recommendations for next week.\n\n"
+            f"Current KR data:\n{krs_text}"
         )
 
-        with st.spinner("Generando resumen con IA..."):
+        with st.spinner("Generating AI summary..."):
             try:
                 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
                 response = client.chat.completions.create(
@@ -503,13 +503,13 @@ def _ai_update_dialog() -> None:
                 st.session_state[cache_key] = response.choices[0].message.content
                 st.session_state["ai_dialog_stale"] = False
             except Exception as exc:
-                st.error(f"Error al llamar OpenAI API: {exc}")
+                st.error(f"Error calling OpenAI API: {exc}")
                 return
 
     text = st.session_state.get(cache_key, "")
     st.markdown(text)
     st.divider()
-    st.caption("Copiar texto completo:")
+    st.caption("Copy full text:")
     st.code(text, language=None)
 
 
@@ -534,15 +534,15 @@ def add_objective_dialog(sub_team: str, quarter: str) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Cancelar", use_container_width=True, key="add_obj_cancel"):
+        if st.button("Cancel", use_container_width=True, key="add_obj_cancel"):
             st.rerun()
     with c2:
-        if st.button("Create Objective", type="primary", use_container_width=True, key="add_obj_create"):
+        if st.button("Create", use_container_width=True, type="primary"):
             if title.strip():
                 create_objective(title.strip(), actual_team, quarter)
                 st.rerun()
             else:
-                st.error("El título no puede estar vacío.")
+                st.error("Title cannot be empty.")
 
 
 # ---------------------------------------------------------------------------
@@ -822,7 +822,7 @@ def render_dashboard() -> None:
                                     st.secrets["OPENAI_API_KEY"],
                                 )
                                 st.session_state["parsed_pdf_data"] = parsed_data
-                                st.toast("PDF analizado con éxito", icon="🔍")
+                                st.toast("PDF successfully analyzed", icon="🔍")
                             except Exception as exc:
                                 st.error(f"Error parsing PDF: {exc}")
                 
@@ -862,8 +862,8 @@ def render_dashboard() -> None:
 
     if display_objs.empty:
         st.info(
-            f"No hay OKRs para **{selected_quarter}** · **{team_label}**. "
-            f"Crea el primero con el botón de abajo."
+            f"No OKRs found for **{selected_quarter}** · **{team_label}**. "
+            "Please create one or import from PDF."
         )
     else:
         active_kr = st.session_state.get("updating_kr") or ""
@@ -928,10 +928,10 @@ def render_dashboard() -> None:
         )
         if uploaded_files:
             if st.button("Upload to Drive", type="primary", key=f"upload_charts_{team_label}_{week_number}"):
-                with st.spinner("Subiendo imágenes a Google Drive..."):
+                with st.spinner("Uploading images to Google Drive..."):
                     email = st.session_state.get("user", {}).get("email", "unknown")
                     upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
-                    st.toast("✅ Imágenes subidas correctamente", icon="📊")
+                    st.toast("✅ Images uploaded successfully", icon="📊")
                 st.rerun()
 
         current_charts = get_weekly_charts(team_label, selected_quarter, week_number)
@@ -944,12 +944,12 @@ def render_dashboard() -> None:
                         img_bytes = download_drive_file(chart["drive_file_id"])
                         st.image(img_bytes, caption=chart["filename"], use_container_width=True)
                     except Exception as e:
-                        st.error(f"Error cargando imagen: {e}")
+                        st.error(f"Error loading image: {e}")
                     
                     if st.button("Remove", icon=":material/delete:", key=f"del_chart_{chart['id']}", type="secondary"):
-                        with st.spinner("Eliminando imagen..."):
+                        with st.spinner("Deleting image..."):
                             delete_chart_from_drive(str(chart["id"]))
-                            st.toast("Imagen eliminada", icon="🗑️")
+                            st.toast("Image deleted", icon="🗑️")
                         st.rerun()
 
 

@@ -700,7 +700,7 @@ def delete_chart_from_drive(chart_id: str) -> None:
                     supportsAllDrives=True
                 ).execute(num_retries=3)
             except Exception as e:
-                # Si el archivo ya no existe, permitimos borrar la fila de Sheets
+                # If the file no longer exists, we allow deleting the Sheets row
                 if "404" not in str(e):
                     raise e
 
@@ -743,7 +743,7 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
     """Save PDF data and return a summary of created IDs for Undo purposes."""
     created_ids = {"update_ids": [], "note_id": None, "chart_ids": []}
     
-    with st.spinner("Procesando y guardando datos de OKRs en Google Sheets (Modo Batch)..."):
+    with st.spinner("Processing and saving OKR data to Google Sheets (Batch Mode)..."):
         spreadsheet = get_spreadsheet()
         obj_ws = spreadsheet.worksheet("objectives")
         kr_ws  = spreadsheet.worksheet("key_results")
@@ -820,7 +820,7 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
             created_ids["note_id"] = save_weekly_note(sub_team, quarter, week_number, combined_notes, updated_by)
     
     st.cache_data.clear()
-    st.toast("✅ Datos de PDF importados con éxito (Batch)", icon="📄")
+    st.toast("✅ PDF data imported successfully (Batch)", icon="📄")
     return created_ids
 
 
@@ -863,7 +863,7 @@ def undo_last_import(import_summary: dict) -> None:
                 except: pass
     
     st.cache_data.clear()
-    st.toast("⏪ Importación revertida con éxito", icon="⏪")
+    st.toast("⏪ Import successfully reverted", icon="⏪")
 
 
 # ---------------------------------------------------------------------------
