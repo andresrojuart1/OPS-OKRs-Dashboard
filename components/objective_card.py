@@ -30,7 +30,7 @@ def _progress_bar(pct: float) -> str:
 <div style="height:100%; width:{pct:.1f}%; background:{PURPLE}; box-shadow:0 0 8px rgba(122, 80, 247, 0.3);"></div>
 </div>"""
 
-def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
+def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = False) -> None:
     obj_id    = str(obj_row["id"])
     obj_title = obj_row["title"]
     sub_team  = obj_row.get("sub_team", "")
@@ -39,27 +39,29 @@ def render_objective_card(obj_row, krs_df, active_kr: str) -> None:
 
     with st.container():
         # Clean trigger to avoid layout shift
-        st.markdown('<div class="fintech-card-trigger" style="display:none;"></div>', unsafe_allow_html=True)
+        trigger_class = "fintech-card-trigger-primary" if is_primary else "fintech-card-trigger"
+        st.markdown(f'<div class="{trigger_class}" style="display:none;"></div>', unsafe_allow_html=True)
         
-        # Header - NO internal line for maximum cleanliness
+        # Header - Adjust spacing and size
+        title_size = "1.5rem" if is_primary else "1.2rem"
         st.markdown(f"""
-        <div class="objective-section" style="border:none; margin-bottom:0;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+        <div class="objective-section" style="border:none; margin-bottom: 1.5rem;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
                 <span style="font-size:0.7rem; font-weight:700; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
             </div>
             {_pct_indicator(avg_pct)}
-            <div style="font-size:1.2rem; font-weight:700; color:white; margin-top:0.6rem; line-height:1.4;">{obj_title}</div>
+            <div style="font-size:{title_size}; font-weight:800; color:white; margin-top:1rem; line-height:1.4;">{obj_title}</div>
         </div>
         """, unsafe_allow_html=True)
 
         # GHOST TOOLBAR for Objective
         c1, c2, c3, _ = st.columns([0.4, 0.4, 0.5, 9])
         with c1:
-            if st.button("✏️", key=f"eobj_{obj_id}"): _edit_obj_dialog(obj_id, obj_title)
+            if st.button(" ", icon=":material/edit:", key=f"eobj_{obj_id}", type="tertiary", help="Edit Objective"): _edit_obj_dialog(obj_id, obj_title)
         with c2:
-            if st.button("🗑️", key=f"dobj_{obj_id}"): _confirm_delete_obj_dialog(obj_id, obj_title)
+            if st.button(" ", icon=":material/delete:", key=f"dobj_{obj_id}", type="tertiary", help="Delete Objective"): _confirm_delete_obj_dialog(obj_id, obj_title)
         with c3:
-            if st.button("➕", key=f"akr_{obj_id}"): add_kr_dialog(obj_id, obj_title)
+            if st.button(" ", icon=":material/add:", key=f"akr_{obj_id}", type="tertiary", help="Add KR"): add_kr_dialog(obj_id, obj_title)
 
         # KRs list
         if not obj_krs.empty:
@@ -89,21 +91,24 @@ def _render_kr_row(kr, active_kr: str) -> None:
 {_progress_bar(pct)}
 </div>""", unsafe_allow_html=True)
 
+    # Added spacing between KR list item and action buttons
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
     # GHOST ACTION ROW for KR
     c_upd, c_hist, c_ed, c_del, _ = st.columns([0.35, 0.35, 0.35, 0.35, 8.6])
     with c_upd:
-        label = "🔄" if active_kr != kr_id else "✖️"
-        if st.button(label, key=f"uk_{kr_id}"):
+        icon = ":material/refresh:" if active_kr != kr_id else ":material/close:"
+        if st.button(" ", icon=icon, key=f"uk_{kr_id}", type="tertiary", help="Update"):
             st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
             st.rerun()
     with c_hist:
-        if st.button("👁️", key=f"sh_{kr_id}"):
+        if st.button(" ", icon=":material/description:", key=f"sh_{kr_id}", type="tertiary", help="Logs"):
             st.session_state[f"h_{kr_id}"] = not st.session_state.get(f"h_{kr_id}", False)
             st.rerun()
     with c_ed:
-        if st.button("✏️", key=f"ek_{kr_id}"): _edit_kr_dialog(kr_id, title)
+        if st.button(" ", icon=":material/edit:", key=f"ek_{kr_id}", type="tertiary", help="Edit"): _edit_kr_dialog(kr_id, title)
     with c_del:
-        if st.button("🗑️", key=f"dk_{kr_id}"): _confirm_delete_kr_dialog(kr_id, title)
+        if st.button(" ", icon=":material/delete:", key=f"dk_{kr_id}", type="tertiary", help="Delete"): _confirm_delete_kr_dialog(kr_id, title)
 
     if active_kr == kr_id: _render_update_form(kr)
     if st.session_state.get(f"h_{kr_id}"): _render_history(kr_id)
@@ -129,7 +134,7 @@ def _render_history(kr_id: str) -> None:
     upds = load_updates_for_kr(kr_id)
     for _, row in upds.iterrows():
         st.markdown(f'<div style="font-size:10px; color:{MUTED}; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.02);"><b>{row["new_value"]}</b> · {row["week_notes"]}</div>', unsafe_allow_html=True)
-        if st.button("🗑️", key=f"delu_{row['id']}"):
+        if st.button(" ", icon=":material/delete:", key=f"delu_{row['id']}", type="tertiary", help="Delete update"):
             delete_update_by_id(str(row["id"]))
             st.rerun()
 

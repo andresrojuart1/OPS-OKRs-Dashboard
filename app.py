@@ -135,6 +135,20 @@ p, li, label, .stMarkdown, .stCaption { color: var(--text-secondary); }
     border-color: rgba(255, 255, 255, 0.30) !important;
 }
 
+/* Destructive actions (Detects the delete material icon) */
+div[data-testid="stButton"] button:has(span[data-testid="stIconMaterial"]:contains('delete')),
+div[data-testid="stButton"] button:has(span[data-testid="stIconMaterial"]:contains('close')) {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+    color: #ef4444 !important;
+}
+div[data-testid="stButton"] button:has(span[data-testid="stIconMaterial"]:contains('delete')):hover,
+div[data-testid="stButton"] button:has(span[data-testid="stIconMaterial"]:contains('close')):hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #f87171 !important;
+}
+
 /* Metrics */
 div[data-testid="stMetric"] {
     background: rgba(6,6,9,0.82);
@@ -256,14 +270,32 @@ h1, h2, h3 {
     letter-spacing: -0.04em !important;
 }
 
-/* ULTRA-PRECISE TARGETING (Fixes Box-in-Box leakage) */
+/* PRIMARY ACCENT CARD */
+div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger-primary) {
+    background: rgba(18, 18, 25, 0.95) !important;
+    border: 1px solid rgba(122, 80, 247, 0.3) !important;
+    border-radius: 20px !important;
+    padding: 2rem !important;
+    margin-bottom: 2.5rem !important;
+    box-shadow: 0 8px 32px rgba(122, 80, 247, 0.12) !important;
+}
+
+div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger-primary) div[data-testid="stVerticalBlock"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* SECONDARY CARDS (Reduced visual weight) */
 div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) {
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-color) !important;
+    background: rgba(11, 11, 16, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-radius: 16px !important;
     padding: 1.25rem !important;
-    margin-bottom: 2rem !important;
-    box-shadow: 0 4px 30px rgba(0,0,0,0.3) !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: none !important;
+    opacity: 0.95;
 }
 
 /* Ensure children don't inherit the card style */
@@ -288,19 +320,8 @@ div[data-testid="stVerticalBlock"]:has(> div div.fintech-card-trigger) div[data-
     margin-top: 0.75rem !important;
 }
 
-/* --- GHOST CONTROL SYSTEM (Absolute Transparency) --- */
-div.stButton > button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: var(--text-secondary) !important;
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
-    padding: 0.2rem 0.5rem !important;
-    transition: all 0.2s ease !important;
-    min-width: auto !important;
-    width: auto !important;
-}
+/* --- GHOST CONTROL SYSTEM REMOVED ---
+   We now rely on unified st.button types. */
 
 div.stButton > button:hover {
     color: var(--accent-purple) !important;
@@ -566,7 +587,8 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
         with c1:
             excel_bytes = _generate_template_excel(selected_quarter)
             st.download_button(
-                label="⬇ Template",
+                label="Template",
+                icon=":material/download:",
                 data=excel_bytes,
                 file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -574,7 +596,7 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
                 use_container_width=True,
             )
         with c2:
-            if st.button("🤖 AI Update", key="hdr_ai", use_container_width=True, type="secondary"):
+            if st.button("AI Update", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
                 st.session_state["ai_dialog_stale"] = True
                 _ai_update_dialog()
 
@@ -593,12 +615,63 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
 
     if not team_krs.empty:
         all_pct = team_krs.apply(compute_progress, axis=1)
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Objectives",   len(team_krs["objective_id"].unique()))
-        c2.metric("Key Results",  len(team_krs))
-        c3.metric("Avg Progress", f"{all_pct.mean():.0f}%")
-        c4.metric("On Track ✅",  int((all_pct >= 70).sum()))
-        c5.metric("At Risk",      int((all_pct < 70).sum()))
+        total_krs = len(team_krs)
+        at_risk_count = int((all_pct < 70).sum())
+        on_track_count = int((all_pct >= 70).sum())
+        avg_prog = all_pct.mean()
+        
+        # Calculate status
+        at_risk_ratio = at_risk_count / total_krs if total_krs > 0 else 0
+        if at_risk_ratio > 0.5:
+            status_color = "#ef4444"
+            status_text = "Execution at Risk"
+            status_icon = "⚠️"
+        elif at_risk_ratio > 0:
+            status_color = "#f59e0b"
+            status_text = "Execution Needs Attention"
+            status_icon = "🔔"
+        else:
+            status_color = "#10b981"
+            status_text = "Execution Healthy"
+            status_icon = "✨"
+            
+        st.markdown(f"""
+        <div style="display:flex; align-items:center; gap:8px; margin: 0 0 20px 0; background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 99px; width: fit-content;">
+            <span style="font-size: 1rem;">{status_icon}</span>
+            <span style="color: {status_color}; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.03em; text-transform: uppercase;">{status_text}</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # KPI Cards
+        st.markdown(f"""
+        <div style="display:flex; gap:16px; margin-bottom:10px; flex-wrap:wrap;">
+            <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
+                <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
+                <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{len(team_krs["objective_id"].unique())}</div>
+                <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Total Active</div>
+            </div>
+            <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
+                <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Key Results</div>
+                <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{total_krs}</div>
+                <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Tracked Items</div>
+            </div>
+            <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px;">
+                <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Avg Progress</div>
+                <div style="color:#FFFFFF; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{avg_prog:.0f}%</div>
+                <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">Execution Progress</div>
+            </div>
+            <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px; border-bottom:4px solid #10b981;">
+                <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">On Track</div>
+                <div style="color:#10b981; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{on_track_count}</div>
+                <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">KRs On Track</div>
+            </div>
+            <div style="flex:1; min-width: 120px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:16px; padding:20px; border-bottom:4px solid #ef4444;">
+                <div style="color:#A1A1AA; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">At Risk</div>
+                <div style="color:#ef4444; font-size:2.4rem; font-weight:800; line-height:1.2; margin-top:8px;">{at_risk_count}</div>
+                <div style="color:#6B6B7E; font-size:0.7rem; font-weight:600; margin-top:8px;">KRs At Risk</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("<hr style='margin:14px 0 22px;'>", unsafe_allow_html=True)
 
@@ -665,7 +738,7 @@ def render_dashboard() -> None:
     if team_label != "All":
         _, col_import = st.columns([3, 1])
         with col_import:
-            if st.button("📄 Import from PDF", use_container_width=True, key="pdf_import_btn"):
+            if st.button("Import from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn"):
                 st.session_state["show_pdf_import"] = True
 
         if st.session_state.get("show_pdf_import"):
@@ -674,7 +747,7 @@ def render_dashboard() -> None:
                 with col_title:
                     st.markdown("### 📄 Import OKR Update from PDF")
                 with col_exit:
-                    if st.button("⬅️ Back to Dashboard", use_container_width=True):
+                    if st.button("Back to Dashboard", icon=":material/arrow_back:", use_container_width=True):
                         st.session_state["show_pdf_import"] = False
                         st.session_state.pop("parsed_pdf_data", None)
                         st.rerun()
@@ -686,7 +759,7 @@ def render_dashboard() -> None:
                     "Upload PDF", type=["pdf"], key=f"pdf_uploader_{team_label}"
                 )
                 if pdf_file:
-                    if st.button("🔍 Parse PDF", type="primary", key=f"parse_pdf_btn_{team_label}"):
+                    if st.button("Parse PDF", icon=":material/search:", type="primary", key=f"parse_pdf_btn_{team_label}"):
                         with st.spinner("Leyendo y analizando PDF con IA (esto puede tardar un momento)..."):
                             try:
                                 parsed_data = parse_okr_pdf_with_ai(
@@ -714,12 +787,12 @@ def render_dashboard() -> None:
                 st.warning("⏪ Recent import detected. You can revert it if needed.")
                 c1, c2 = st.columns([1, 4])
                 with c1:
-                    if st.button("⏪ Undo", use_container_width=True, help="Revert the last PDF import changes"):
+                    if st.button("Undo", icon=":material/undo:", use_container_width=True, help="Revert the last PDF import changes"):
                         undo_last_import(import_summary)
                         st.session_state.pop("last_import_summary", None)
                         st.rerun()
                 with c2:
-                    if st.button("✅ Dismiss", use_container_width=True, help="Keep changes and hide this message"):
+                    if st.button("Dismiss", icon=":material/check:", use_container_width=True, help="Keep changes and hide this message"):
                         st.session_state.pop("last_import_summary", None)
                         st.rerun()
             else:
@@ -739,10 +812,10 @@ def render_dashboard() -> None:
         )
     else:
         active_kr = st.session_state.get("updating_kr") or ""
-        for _, obj_row in display_objs.iterrows():
-            render_objective_card(obj_row, krs_df, active_kr=active_kr)
+        for i, (_, obj_row) in enumerate(display_objs.iterrows()):
+            render_objective_card(obj_row, krs_df, active_kr=active_kr, is_primary=(i == 0))
 
-    if st.button("+ Add Objective", key=f"add_obj_{team_label}", type="secondary"):
+    if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
         add_objective_dialog(team_label, selected_quarter)
 
     # Weekly Notes + Charts section (sub-team views only)
@@ -818,7 +891,7 @@ def render_dashboard() -> None:
                     except Exception as e:
                         st.error(f"Error cargando imagen: {e}")
                     
-                    if st.button("🗑️ Remove", key=f"del_chart_{chart['id']}"):
+                    if st.button("Remove", icon=":material/delete:", key=f"del_chart_{chart['id']}", type="secondary"):
                         with st.spinner("Eliminando imagen..."):
                             delete_chart_from_drive(str(chart["id"]))
                             st.toast("Imagen eliminada", icon="🗑️")
