@@ -707,6 +707,28 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
         status_text = "Execution Healthy"
         status_icon = "✨"
             
+    def _get_status_color(ratio, inverse=False):
+        if inverse:
+            # Low is good (for At Risk)
+            if ratio <= 0.1: return "#10b981" # Green
+            if ratio <= 0.25: return "#fbbf24" # Yellow
+            if ratio <= 0.5: return "#f59e0b" # Orange
+            return "#ef4444" # Red
+        else:
+            # High is good
+            if ratio >= 0.8: return "#10b981" # Green
+            if ratio >= 0.5: return "#fbbf24" # Yellow
+            if ratio >= 0.25: return "#f59e0b" # Orange
+            return "#ef4444" # Red
+
+    prog_ratio = avg_prog / 100.0
+    ot_ratio = on_track_count / total_krs if total_krs > 0 else 0
+    ar_ratio = at_risk_count / total_krs if total_krs > 0 else 0
+
+    prog_kpi_color = _get_status_color(prog_ratio)
+    ot_kpi_color = _get_status_color(ot_ratio)
+    ar_kpi_color = _get_status_color(ar_ratio, inverse=True)
+
     st.markdown(f"""
     <div style="display:flex; align-items:center; gap:8px; margin: 0 0 20px 0; background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 99px; width: fit-content;">
         <span style="font-size: 1rem;">{status_icon}</span>
@@ -717,29 +739,29 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
     # KPI Cards
     st.markdown(f"""
     <div style="display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
-        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px;">
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid #6B6B7E;">
             <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Objectives</div>
             <div style="color:#FFFFFF; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{num_objs}</div>
             <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Total Active</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px;">
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid #6B6B7E;">
             <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Key Results</div>
             <div style="color:#FFFFFF; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{total_krs}</div>
             <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Tracked Items</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px;">
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid {prog_kpi_color};">
             <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Execution Progress</div>
-            <div style="color:#FFFFFF; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{avg_prog:.0f}%</div>
+            <div style="color:{prog_kpi_color}; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{avg_prog:.0f}%</div>
             <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Overall Completion</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid #10b981;">
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid {ot_kpi_color};">
             <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">KRs On Track</div>
-            <div style="color:#10b981; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{on_track_count}</div>
+            <div style="color:{ot_kpi_color}; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{on_track_count}</div>
             <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Healthy Items</div>
         </div>
-        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid #ef4444;">
+        <div class="fintech-kpi-card" style="flex:1; min-width: 100px; background:rgba(6,6,9,0.82); border:1px solid #2A2A3E; border-radius:12px; padding:16px; border-bottom:3px solid {ar_kpi_color};">
             <div style="color:#A1A1AA; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">KRs At Risk</div>
-            <div style="color:#ef4444; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{at_risk_count}</div>
+            <div style="color:{ar_kpi_color}; font-size:1.8rem; font-weight:800; line-height:1.2; margin-top:4px;">{at_risk_count}</div>
             <div style="color:#6B6B7E; font-size:0.65rem; font-weight:600; margin-top:4px;">Needs Attention</div>
         </div>
     </div>
