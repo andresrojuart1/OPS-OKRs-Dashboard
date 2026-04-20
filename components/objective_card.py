@@ -211,9 +211,10 @@ def _render_kr_block(data, active_kr: str) -> None:
             u_label = "Cancel" if active_kr == kr_id else "Update"
             if st.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
+                st.session_state["editing_id"] = None
                 st.rerun()
 
-        # --- NARRATIVE ROW (15px Visibility) ---
+        # --- NARRATIVE ROW & PROGRESS ---
         if latest is not None:
             badge_color = _pct_color(pct)
             fmt_override = latest.get("value_format", "number")
@@ -223,7 +224,14 @@ def _render_kr_block(data, active_kr: str) -> None:
                 <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.55;">{latest.get('week_notes', '')}</div>
             </div>
             """, unsafe_allow_html=True)
-            # Show dependencies if any
+            
+            # Action Row (Edit/Deps)
+            col_edit, col_empty = st.columns([0.15, 0.85])
+            if col_edit.button("Edit", key=f"edit_btn_{latest.get('id')}", type="tertiary"):
+                st.session_state["updating_kr"] = kr_id
+                st.session_state["editing_id"] = latest.get("id")
+                st.rerun()
+
             deps = latest.get("blockers", "")
             if deps:
                 st.markdown(f'<div style="padding-left:12px; margin-top:4px; font-size:13px; color:#f87171; font-weight:500;">⚠ Dependencies: {deps}</div>', unsafe_allow_html=True)
@@ -233,37 +241,62 @@ def _render_kr_block(data, active_kr: str) -> None:
         st.markdown(_kr_progress_bar(pct), unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if active_kr == kr_id: _render_update_form(kr)
-
+    if active_kr == kr_id: _render_update_form(data)
 
 # ---------------------------------------------------------------------------
 # Update Form
 # ---------------------------------------------------------------------------
 
-def _render_update_form(kr):
+def _render_update_form(data):
+    kr, latest = data["kr"], data["latest"]
     kr_id = str(kr["id"])
+    edit_id = st.session_state.get("editing_id")
+    
+    # Pre-populate if editing
+    init_val = float(kr.get("current_value", 0))
+    init_notes = ""
+    init_deps = ""
+    init_fmt = "number"
+    
+    if edit_id and latest and str(latest.get("id")) == str(edit_id):
+        init_val = float(latest.get("new_value", init_val))
+        init_notes = latest.get("week_notes", "")
+        init_deps = latest.get("blockers", "")
+        init_fmt = latest.get("value_format", "number")
+
     st.markdown('<div style="background:rgba(122,80,247,0.05); padding:16px; border-radius:12px; border:1px solid rgba(122,80,247,0.2); margin:12px 0;">', unsafe_allow_html=True)
     with st.form(key=f"frm_{kr_id}"):
         c1, c2 = st.columns([1, 1])
         with c1:
-            val = st.number_input("Numerical Value", value=float(kr.get("current_value", 0)))
+            val = st.number_input("Numerical Value", value=init_val)
         with c2:
-            v_fmt = st.selectbox("Value format", ["number", "percentage", "currency"])
+            v_fmt = st.selectbox("Value format", ["number", "percentage", "currency"], 
+                               index=["number", "percentage", "currency"].index(init_fmt) if init_fmt in ["number", "percentage", "currency"] else 0)
             
-        notes = st.text_input("Narrative (Notes)")
-        deps = st.text_input("Dependencies / Blockers")
+        notes = st.text_input("Narrative (Notes)", value=init_notes)
+        deps = st.text_input("Dependencies / Blockers", value=init_deps)
         
-        if st.form_submit_button("Save Update", use_container_width=True):
+        btn_label = "Update Log" if edit_id else "Save New Update"
+        if st.form_submit_button(btn_label, use_container_width=True):
             try:
-                selected_week = st.session_state.get("selected_week", 1)
-                update_kr_value(
-                    kr_id, val, notes, deps, 3, 
-                    st.session_state.get("user",{}).get("email","?"),
-                    selected_week,
-                    v_fmt
-                )
-                st.session_state["updating_kr"] = None; st.rerun()
-            except Exception as e: handle_error(e, "Save failed", "Update")
+                success = False
+                if edit_id:
+                    success = edit_kr_update(edit_id, val, notes, deps, v_fmt)
+                else:
+                    selected_week = st.session_state.get("selected_week", 1)
+                    update_kr_value(
+                        kr_id, val, notes, deps, 3, 
+                        st.session_state.get("user",{}).get("email","?"),
+                        selected_week,
+                        v_fmt
+                    )
+                    success = True # update_kr_value raises on failure or we should check it
+                
+                if success:
+                    st.session_state["updating_kr"] = None
+                    st.session_state["editing_id"] = None
+                    st.rerun()
+            except Exception as e: handle_error(e, "Operation failed", "Update")
     st.markdown("</div>", unsafe_allow_html=True)
 
 @st.dialog("Objective Actions")

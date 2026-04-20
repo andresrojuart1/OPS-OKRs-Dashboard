@@ -423,40 +423,62 @@ def delete_update_by_id(update_id: str) -> None:
     """Delete a kr_update row by ID and recalculate the parent KR's current_value."""
     spreadsheet = get_spreadsheet()
     upd_ws = spreadsheet.worksheet("kr_updates")
-
     all_updates = upd_ws.get_all_records()
 
     kr_id = None
     for row in all_updates:
-        if str(row.get("id", "")) == str(update_id):
-            kr_id = str(row.get("kr_id", ""))
+        if str(row.get("id")) == str(update_id):
+            kr_id = str(row.get("kr_id"))
             break
+    
+    if not kr_id: return
 
-    if kr_id is None:
-        raise ValueError(f"Update '{update_id}' not found.")
+    rows_to_del = [i for i, r in enumerate(all_updates, start=2) if str(r.get("id")) == str(update_id)]
+    for r in reversed(rows_to_del):
+        upd_ws.delete_rows(r)
 
-    cell = upd_ws.find(str(update_id), in_column=1)
-    if cell:
-        upd_ws.delete_rows(cell.row)
-
-    remaining = sorted(
-        [r for r in all_updates
-         if str(r.get("kr_id", "")) == kr_id and str(r.get("id", "")) != str(update_id)],
-        key=lambda r: str(r.get("updated_at", "")),
-        reverse=True,
-    )
-    new_value = float(remaining[0].get("new_value", 0) or 0) if remaining else 0.0
+    # Re-sync KR current_value
+    updates_df = get_updates()
+    kr_updates = updates_df[updates_df["kr_id"].astype(str) == str(kr_id)]
+    new_val = 0.0
+    if not kr_updates.empty:
+        new_val = float(kr_updates.sort_values("updated_at").iloc[-1]["new_value"])
 
     kr_ws = spreadsheet.worksheet("key_results")
     all_krs = kr_ws.get_all_records()
-    headers = kr_ws.row_values(1)
-    for i, row in enumerate(all_krs, start=2):
-        if str(row.get("id", "")) == kr_id:
-            col_index = headers.index("current_value") + 1
-            kr_ws.update_cell(i, col_index, new_value)
+    for i, kr_row in enumerate(all_krs, start=2):
+        if str(kr_row.get("id")) == kr_id:
+            kr_ws.update_cell(i, 6, new_val)
             break
-
+    
     st.cache_data.clear()
+
+def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: str, val_format: str) -> bool:
+    """Finds an update entry by ID and overwrites its numerical and narrative values."""
+    try:
+        spreadsheet = get_spreadsheet()
+        upd_ws = spreadsheet.worksheet("kr_updates")
+        all_records = upd_ws.get_all_records()
+        
+        target_row = -1
+        for i, row in enumerate(all_records, start=2):
+            if str(row.get("id")) == str(update_id):
+                target_row = i
+                break
+        
+        if target_row == -1: return False
+
+        upd_ws.update_cell(target_row, 3, new_value)
+        upd_ws.update_cell(target_row, 4, notes)
+        upd_ws.update_cell(target_row, 5, dependencies)
+        upd_ws.update_cell(target_row, 10, val_format)
+        
+        st.cache_data.clear()
+        return True
+    except Exception as e:
+        logger.error(f"Error editing update: {e}")
+        return False
+
 
 
 @gspread_retry()
@@ -883,7 +905,7 @@ def undo_last_import(import_summary: dict) -> None:
         all_upd = upd_ws.get_all_records()
         rows_to_del = [i for i, r in enumerate(all_upd, start=2) if str(r.get("id")) in update_ids]
         for r in reversed(rows_to_del):
-            upd_ws.delete_rows(r)
+             upd_ws.delete_rows(r)
             
     # 2. Delete Weekly Note
     note_id = import_summary.get("note_id")
