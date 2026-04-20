@@ -921,7 +921,7 @@ def render_dashboard() -> None:
 
     # --- PRECOMPUTE KR DATA ---
     selected_week = st.session_state.get("selected_week", get_week_number())
-    
+
     def _get_latest_map(df, week_limit):
         if df.empty: return {}
         rev = df[df["week_number"] <= week_limit].sort_values(["kr_id", "updated_at"], ascending=[True, False])
@@ -929,6 +929,9 @@ def render_dashboard() -> None:
 
     latest_map = _get_latest_map(updates_df, selected_week)
     prev_latest_map = _get_latest_map(updates_df, selected_week - 1)
+
+    # Get all-time latest values (for Excel export) - use max week_number, not selected_week
+    all_time_latest_map = _get_latest_map(updates_df, 999999) if not updates_df.empty else {}
 
     # ✅ FIX: Handle empty updates_df gracefully
     if not updates_df.empty and "week_number" in updates_df.columns:
@@ -939,28 +942,38 @@ def render_dashboard() -> None:
         narrative_map = {}
 
     krs_info_all = {}
+    krs_info_all_for_export = {}  # Separate structure with all-time latest values
     if not krs_df.empty:
         for _, kr in krs_df.iterrows():
             kid = str(kr["id"])
             latest = latest_map.get(kid)
             narrative = narrative_map.get(kid)
             prev_latest = prev_latest_map.get(kid)
-            
+            all_time_latest = all_time_latest_map.get(kid)  # Get all-time latest
+
+            # For display (respects selected week)
             eff_val = float(latest["new_value"]) if latest else float(kr.get("current_value", 0))
             calc_kr = kr.copy(); calc_kr["current_value"] = eff_val
             pct = compute_progress(calc_kr)
-            
+
             prev_pct = None
             if selected_week > 1:
                 pv = float(prev_latest["new_value"]) if prev_latest else float(kr.get("current_value", 0))
                 p_kr = kr.copy(); p_kr["current_value"] = pv
                 prev_pct = compute_progress(p_kr)
-                
+
             krs_info_all[kid] = {
-                "kr": kr, "val": eff_val, "pct": pct, 
+                "kr": kr, "val": eff_val, "pct": pct,
                 "latest": latest, "narrative": narrative, "prev_pct": prev_pct,
                 "has_updates": latest is not None,
                 "title": str(kr["title"]), "target": float(kr["target"]), "unit": str(kr["unit"]), # compatibility
+            }
+
+            # For Excel export (use all-time latest value)
+            export_val = float(all_time_latest["new_value"]) if all_time_latest else float(kr.get("current_value", 0))
+            krs_info_all_for_export[kid] = {
+                "kr": kr, "val": export_val,
+                "title": str(kr["title"]), "target": float(kr["target"]), "unit": str(kr["unit"]),
             }
 
     # Filter for Header and AI summaries based on the current team/quarter selection
@@ -971,8 +984,8 @@ def render_dashboard() -> None:
         krs_info_list = []
         
     st.session_state["_krs_for_ai"] = krs_info_list
-    
-    render_header(objectives_df, krs_df, updates_df, team_label, krs_info_list, krs_info_all)
+
+    render_header(objectives_df, krs_df, updates_df, team_label, krs_info_list, krs_info_all_for_export)
     render_last_action()
 
 
