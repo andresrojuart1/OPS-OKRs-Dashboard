@@ -86,41 +86,51 @@ def _render_kr_row(kr, active_kr: str) -> None:
     pct = compute_progress(kr)
     val_str = format_value(float(kr.get("current_value",0)), float(kr.get("target",0)), str(kr.get("unit","")))
 
-    st.markdown(f"""<div class="kr-row-fintech">
-<div style="display:flex; justify-content:space-between; align-items:flex-start;">
-<div style="flex:1; padding-right:1.5rem;">
-<div style="font-size:15px; font-weight:600; color:#FFFFFF; margin-bottom:4px; line-height:1.4;">{title}</div>
-<div style="font-size:13px; color:rgba(255,255,255,0.5); font-weight:500;">{val_str}</div>
-</div>
-<div style="text-align:right;">
-<div style="font-size:16px; font-weight:700; color:{GREEN}; letter-spacing:-0.02em;">{pct:.0f}%</div>
-<div style="font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.05em; margin-top:2px;">Achievement</div>
-</div>
-</div>
-{_progress_bar(pct)}
-</div>""", unsafe_allow_html=True)
+    with st.container():
+        # Trigger for CSS targeting
+        st.markdown('<div class="kr-card-trigger"></div>', unsafe_allow_html=True)
+        
+        # Primary zone: Title/Info and Progress/Update
+        c_left, c_right = st.columns([2.5, 1.2])
+        
+        with c_left:
+            st.markdown(f"""
+            <div style="margin-bottom:8px;">
+                <div style="font-size:16px; font-weight:600; color:#FFFFFF; line-height:1.2; margin-bottom:4px;">{title}</div>
+                <div style="font-size:13px; color:rgba(255,255,255,0.6); font-weight:500;">{val_str}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Secondary Actions Row (subtle)
+            cs1, cs2, cs3, _ = st.columns([0.15, 0.15, 0.35, 3])
+            with cs1:
+                if st.button(" ", icon=":material/description:", key=f"sh_{kr_id}", type="tertiary", help="Logs"):
+                    st.session_state[f"h_{kr_id}"] = not st.session_state.get(f"h_{kr_id}", False)
+                    st.rerun()
+            with cs2:
+                if st.button(" ", icon=":material/edit:", key=f"ek_{kr_id}", type="tertiary", help="Edit"): _edit_kr_dialog(kr_id, title)
+            with cs3:
+                if st.button(" ", icon=":material/delete:", key=f"dk_{kr_id}", type="tertiary", help="Delete"): _confirm_delete_kr_dialog(kr_id, title)
 
-    # Added spacing between KR list item and action buttons
-    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+        with c_right:
+            st.markdown(f"""
+            <div style="text-align:right; margin-bottom:12px;">
+                <div style="font-size:18px; font-weight:700; color:{GREEN}; letter-spacing:-0.02em;">{pct:.0f}%</div>
+                <div style="font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.05em;">Achievement</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Primary Update Action
+            upd_icon = ":material/sync:" if active_kr != kr_id else ":material/close:"
+            if st.button("Update", icon=upd_icon, key=f"uk_{kr_id}", type="secondary", use_container_width=True):
+                st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
+                st.rerun()
 
-    # GHOST ACTION ROW for KR
-    c_upd, c_hist, c_ed, c_del, _ = st.columns([0.35, 0.35, 0.35, 0.35, 8.6])
-    with c_upd:
-        icon = ":material/refresh:" if active_kr != kr_id else ":material/close:"
-        if st.button(" ", icon=icon, key=f"uk_{kr_id}", type="tertiary", help="Update"):
-            st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
-            st.rerun()
-    with c_hist:
-        if st.button(" ", icon=":material/description:", key=f"sh_{kr_id}", type="tertiary", help="Logs"):
-            st.session_state[f"h_{kr_id}"] = not st.session_state.get(f"h_{kr_id}", False)
-            st.rerun()
-    with c_ed:
-        if st.button(" ", icon=":material/edit:", key=f"ek_{kr_id}", type="tertiary", help="Edit"): _edit_kr_dialog(kr_id, title)
-    with c_del:
-        if st.button(" ", icon=":material/delete:", key=f"dk_{kr_id}", type="tertiary", help="Delete"): _confirm_delete_kr_dialog(kr_id, title)
+        # Bottom Zone: Progress Bar
+        st.markdown(_progress_bar(pct), unsafe_allow_html=True)
 
-    if active_kr == kr_id: _render_update_form(kr)
-    if st.session_state.get(f"h_{kr_id}"): _render_history(kr_id)
+        if active_kr == kr_id: _render_update_form(kr)
+        if st.session_state.get(f"h_{kr_id}"): _render_history(kr_id)
 
 
 def _render_update_form(kr) -> None:

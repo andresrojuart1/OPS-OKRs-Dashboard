@@ -332,25 +332,28 @@ div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigge
 
 /* Container Resets (Streamlit specific) */
 div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger-primary) div[data-testid="stVerticalBlock"],
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger) div[data-testid="stVerticalBlock"] {
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger) div[data-testid="stVerticalBlock"],
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-card-trigger) div[data-testid="stVerticalBlock"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
 }
 
-/* KR ROWS as separate containers */
-.kr-row-fintech {
-    background: rgba(255, 255, 255, 0.02) !important;
-    border: 1px solid var(--border-color) !important;
+/* KR ROWS as actionable cards */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-card-trigger) {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 12px !important;
-    padding: 1.25rem 1.5rem !important;
-    margin: 1.25rem 0 !important;
+    padding: 16px 18px !important;
+    margin-bottom: 12px !important;
     transition: all 0.2s ease !important;
 }
-.kr-row-fintech:hover {
-    background: rgba(255, 255, 255, 0.04) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-card-trigger):hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
 }
 
 .kr-progress-track {
@@ -370,6 +373,19 @@ div.stButton > button {
 div.stButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Secondary Button (Update Action) */
+div.stButton > button[kind="secondary"] {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+}
+div.stButton > button[kind="secondary"]:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: var(--accent-purple) !important;
 }
 </style>
 
