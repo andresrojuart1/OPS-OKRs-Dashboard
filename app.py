@@ -816,9 +816,10 @@ def render_dashboard() -> None:
     # --- DYNAMIC WEEK INITIALIZATION ---
     if "selected_week" not in st.session_state:
         if not updates_df.empty and "week_number" in updates_df.columns:
-            latest_data_wk = updates_df["week_number"].max()
+            latest_data_wk = pd.to_numeric(updates_df["week_number"].max(), errors="coerce")
             if pd.notna(latest_data_wk) and latest_data_wk > 0:
                 st.session_state["selected_week"] = int(latest_data_wk)
+
             else:
                 st.session_state["selected_week"] = get_week_number()
         else:
