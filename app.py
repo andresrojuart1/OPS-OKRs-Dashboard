@@ -640,9 +640,12 @@ def render_login_page() -> None:
 # Header
 # ---------------------------------------------------------------------------
 
-def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info) -> None:
+def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, krs_info_all=None) -> None:
     """Dashboard header with system-level actions and KPI summaries."""
     selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
+
+    # Use krs_info_all for Excel export (complete data), fallback to krs_info if not provided
+    krs_info_for_export = list(krs_info_all.values()) if krs_info_all else krs_info
 
     col_l, col_r = st.columns([1.5, 3.5])
     with col_l:
@@ -698,7 +701,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info) ->
                 st.markdown(f"<div style='font-size:0.65rem; color:#6B6B7E; text-align:center; margin-top:-10px;'>Last sync: {sync_label}</div>", unsafe_allow_html=True)
 
         with cols[1]:
-            excel_bytes = _generate_template_excel(selected_quarter, krs_info)
+            excel_bytes = _generate_template_excel(selected_quarter, krs_info_for_export)
             st.download_button(
                 label="Excel",
                 icon=":material/download:",
@@ -962,7 +965,7 @@ def render_dashboard() -> None:
         
     st.session_state["_krs_for_ai"] = krs_info_list
     
-    render_header(objectives_df, krs_df, updates_df, team_label, krs_info_list)
+    render_header(objectives_df, krs_df, updates_df, team_label, krs_info_list, krs_info_all)
     render_last_action()
 
 
