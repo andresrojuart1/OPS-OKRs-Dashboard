@@ -395,8 +395,14 @@ div[data-testid="stExpander"] summary {
 
 # ---------------------------------------------------------------------------
 from auth import require_login, get_user, logout
+from sheets_cached import (
+    load_objectives_cached as load_objectives,
+    load_key_results_cached as load_key_results,
+    load_updates_cached as load_updates,
+    clear_sheets_cache,
+)
 from sheets import (
-    seed_if_empty, load_objectives, load_key_results, load_updates,
+    seed_if_empty,
     compute_progress, create_objective,
     get_week_number, get_weekly_note, save_weekly_note,
     undo_last_import,
@@ -669,7 +675,7 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
         
         with cols[0]:
             if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", use_container_width=True, type="secondary"):
-                st.cache_data.clear()
+                clear_sheets_cache()
                 st.session_state["last_sync_time"] = datetime.now()
                 track_action("Synced data")
                 st.toast("Data synchronized", icon="✅")
@@ -1035,9 +1041,10 @@ def render_dashboard() -> None:
 
         # Display Mode (Card)
         if note_content:
+            formatted_note = note_content.replace('\n', '<br>')
             st.markdown(f"""
             <div style="background-color: rgba(255,255,255,0.03); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem; color: rgba(255,255,255,0.85); font-size: 0.95rem; line-height:1.6;">
-                {note_content.replace('\n', '<br>')}
+                {formatted_note}
             </div>
             """, unsafe_allow_html=True)
         else:
