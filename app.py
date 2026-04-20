@@ -1029,7 +1029,24 @@ def render_dashboard() -> None:
     display_objs = objectives_df
     if not objectives_df.empty and "quarter" in objectives_df.columns:
         display_objs = display_objs[display_objs["quarter"] == selected_quarter]
-    if team_label != "All" and not display_objs.empty and "sub_team" in display_objs.columns:
+
+    # ✅ DYNAMIC ORDERING: Sort by subteam if viewing "All"
+    if team_label == "All" and not display_objs.empty and "sub_team" in display_objs.columns:
+        # Define the subteam order
+        subteam_order = {
+            "New Initiatives": 0,
+            "FinOps": 1,
+            "AI Experience": 2,
+            "AI Monetization": 3,
+            "Security & Compliance Ops": 4,
+        }
+        # Map subteam to order, use 999 for unknown teams (put them at the end)
+        display_objs = display_objs.copy()
+        display_objs["_order"] = display_objs["sub_team"].map(lambda x: subteam_order.get(x, 999))
+        # Sort by order, then by creation order (index)
+        display_objs = display_objs.sort_values(["_order", display_objs.index])
+        display_objs = display_objs.drop(columns=["_order"])
+    elif team_label != "All" and not display_objs.empty and "sub_team" in display_objs.columns:
         display_objs = display_objs[display_objs["sub_team"] == team_label]
 
     if display_objs.empty:
