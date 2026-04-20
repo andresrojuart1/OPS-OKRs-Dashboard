@@ -813,6 +813,12 @@ def render_dashboard() -> None:
     krs_df        = load_key_results()
     updates_df    = load_updates()
     
+    # Filter out orphan updates (references to deleted KRs)
+    if not updates_df.empty and not krs_df.empty:
+        valid_kr_ids = set(krs_df["id"].astype(str).unique())
+        updates_df = updates_df[updates_df["kr_id"].astype(str).isin(valid_kr_ids)].copy()
+
+    
     # --- DYNAMIC WEEK INITIALIZATION ---
     if "selected_week" not in st.session_state:
         if not updates_df.empty and "week_number" in updates_df.columns:
