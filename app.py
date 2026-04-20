@@ -641,8 +641,8 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
     with col_l:
         sub = f" · {selected_team}" if selected_team != "All" else ""
         st.markdown(f"""
-        <div style="margin-bottom:8px;">
-            <div style="font-size:24px;font-weight:800;color:#fff;line-height:1.1;">
+        <div style="margin-bottom:8px; overflow:hidden;">
+            <div style="font-size:24px; font-weight:800; color:#fff; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="Operations OKRs{sub}">
                 Operations OKRs{sub}
             </div>
         </div>
