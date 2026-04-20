@@ -13,6 +13,7 @@ import openpyxl
 import streamlit as st
 from dotenv import load_dotenv
 from openpyxl.styles import Alignment, Font, PatternFill
+import pandas as pd
 
 load_dotenv(override=True)
 
@@ -414,7 +415,6 @@ for key, default in [
     ("selected_quarter",  "Q2 2026"),
     ("ai_dialog_stale",   True),
     ("show_pdf_import",   False),
-    ("selected_week",     get_week_number()),
     ("last_sync_time",    None),
 ]:
     if key not in st.session_state:
@@ -812,6 +812,17 @@ def render_dashboard() -> None:
         
     krs_df        = load_key_results()
     updates_df    = load_updates()
+    
+    # --- DYNAMIC WEEK INITIALIZATION ---
+    if "selected_week" not in st.session_state:
+        if not updates_df.empty and "week_number" in updates_df.columns:
+            latest_data_wk = updates_df["week_number"].max()
+            if pd.notna(latest_data_wk) and latest_data_wk > 0:
+                st.session_state["selected_week"] = int(latest_data_wk)
+            else:
+                st.session_state["selected_week"] = get_week_number()
+        else:
+            st.session_state["selected_week"] = get_week_number()
     
     # --- PERSISTENT DIALOGS ---
     active_obj = st.session_state.get("active_obj_settings")
