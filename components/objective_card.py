@@ -215,7 +215,7 @@ def _render_kr_block(data, active_kr: str) -> None:
         v_left, v_right = st.columns([0.8, 0.2])
         cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
         v_left.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500; margin-top:-4px;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
-        v_right.markdown(f'<div style="text-align:right; font-size:16px; font-weight:800; color:{_pct_color(pct)}; margin-top:-8px;">{pct:.0f}% of target</div>', unsafe_allow_html=True)
+        v_right.markdown(f'<div style="text-align:right; font-size:16px; font-weight:800; color:{_pct_color(pct)}; margin-top:-8px;">{pct:.0f}%</div>', unsafe_allow_html=True)
 
         # --- PROGRESS BAR DIRECTLY BELOW ---
         st.markdown(_kr_compact_bar(pct), unsafe_allow_html=True)
