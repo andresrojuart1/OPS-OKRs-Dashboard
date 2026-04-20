@@ -205,7 +205,7 @@ def _render_kr_block(data, active_kr: str) -> None:
         
         with c_right:
             st.markdown(f'<div style="text-align:right; font-size:24px; font-weight:800; color:{_pct_color(pct)}; line-height:1; margin-bottom:6px;">{pct:.0f}%</div>', unsafe_allow_html=True)
-            if st.button("Update", key=f"upd_{kr_id}", type="primary", use_container_width=True):
+            if st.button("Update", key=f"upd_{kr_id}", type="secondary", use_container_width=True):
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                 st.rerun()
 
