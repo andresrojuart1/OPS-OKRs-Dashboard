@@ -1,8 +1,7 @@
-"""Objective card — Executive OKR layout with Time-Travel & Dynamic Trends.
+"""Objective card — Executive OKR layout with Master Hierarchical Structure.
 
-Hierarchy: Sub-team → Objective → Key Results → Weekly Updates
-Designed for leadership meetings: high contrast, readable, scannable.
-Supports global week selection with historical progress & trend analysis.
+Hierarchy: Sub-team → Objective (Master Card) → Key Results (Sub-cards) → Updates
+Designed for boardroom presentations: 15px narratives, distinct grouping.
 """
 
 import pandas as pd
@@ -35,417 +34,228 @@ RED = "#ff4b4b"
 
 
 def _pct_color(pct: float) -> str:
-    if pct >= 70:
-        return GREEN
-    if pct >= 40:
-        return YELLOW
+    if pct >= 70: return GREEN
+    if pct >= 40: return YELLOW
     return RED
 
 
-# ---------------------------------------------------------------------------
-# Visual helpers
-# ---------------------------------------------------------------------------
-
 def _get_week_from_ts(ts_str: str) -> int:
-    """Helper to derive ISO week from 'YYYY-MM-DD HH:MM UTC' string."""
     try:
         dt = datetime.strptime(str(ts_str).strip(), "%Y-%m-%d %H:%M UTC")
         return dt.isocalendar()[1]
-    except:
-        return 0
+    except: return 0
 
 
 def _obj_progress_bar(pct: float) -> str:
-    """Full-width progress bar for objective level."""
-    return f"""<div style="background:rgba(255,255,255,0.06); border-radius:999px; height:8px;
-    overflow:hidden; margin:8px 0 4px;">
-<div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px;
-    background:linear-gradient(90deg, {PURPLE}, {GREEN});
-    transition: width 0.6s ease;"></div>
+    return f"""<div style="background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden; margin:8px 0 4px;">
+<div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px; background:linear-gradient(90deg, {PURPLE}, {GREEN}); transition: width 0.6s ease;"></div>
 </div>"""
 
 
 def _kr_progress_bar(pct: float) -> str:
-    """Thinner progress bar for KR level."""
-    return f"""<div style="background:rgba(255,255,255,0.04); border-radius:999px; height:5px;
-    overflow:hidden; margin:10px 0 0;">
-<div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px;
-    background:{PURPLE}; box-shadow:0 0 8px {PURPLE}44;
-    transition: width 0.6s ease;"></div>
+    return f"""<div style="background:rgba(255,255,255,0.04); border-radius:999px; height:5px; overflow:hidden; margin:10px 0 0;">
+<div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px; background:{PURPLE}; transition: width 0.6s ease;"></div>
 </div>"""
 
 
-def _relative_time(ts_str: str) -> str:
-    """Convert 'YYYY-MM-DD HH:MM UTC' to a relative timestamp or week label."""
-    try:
-        dt = datetime.strptime(str(ts_str).strip(), "%Y-%m-%d %H:%M UTC")
-        dt = dt.replace(tzinfo=timezone.utc)
-        diff = datetime.now(timezone.utc) - dt
-        minutes = int(diff.total_seconds() / 60)
-        if minutes < 1:
-            return "just now"
-        if minutes < 60:
-            return f"{minutes}m ago"
-        hours = minutes // 60
-        if hours < 24:
-            return f"{hours}h ago"
-        days = hours // 24
-        if days < 7:
-            return f"{days}d ago"
-        return f"Week {dt.isocalendar()[1]}"
-    except Exception:
-        return str(ts_str) if ts_str else ""
-
-
 def _format_badge(value, unit: str) -> str:
-    """Format a value for display as a change badge."""
-    try:
-        v = float(value)
-    except (ValueError, TypeError):
-        return str(value)
+    try: v = float(value)
+    except (ValueError, TypeError): return str(value)
     u = unit.lower().strip()
-    if u == "%":
-        return f"{v:.2f}%"
+    if u == "%": return f"{v:+.2f}%" if v != 0 else f"{v:.2f}%"
     if u in ("$", "$/month"):
-        if v >= 1_000_000:
-            return f"${v / 1_000_000:.1f}M"
-        if v >= 1_000:
-            return f"${v / 1_000:.0f}K"
+        if v >= 1_000_000: return f"${v / 1_000_000:.1f}M"
+        if v >= 1_000: return f"${v / 1_000:.0f}K"
         return f"${v:,.0f}"
-    if u == "binary":
-        return "Done ✓" if v >= 1 else "Pending"
     return f"{v:g} {unit}"
 
 
 def _format_current_target(current: float, target: float, unit: str) -> str:
-    """Full 'Current: X / Target: Y' label."""
     u = unit.lower().strip()
-    if u == "binary":
-        return "Done ✓" if current >= 1 else "Status: Pending"
+    if u == "binary": return "Done ✓" if current >= 1 else "Status: Pending"
     if u in ("$", "$/month"):
         def fmt(v):
-            if v >= 1_000_000:
-                return f"${v / 1_000_000:.1f}M"
-            if v >= 1_000:
-                return f"${v / 1_000:.0f}K"
+            if v >= 1_000_000: return f"${v / 1_000_000:.1f}M"
+            if v >= 1_000: return f"${v / 1_000:.0f}K"
             return f"${v:,.0f}"
-        return f"Current: {fmt(current)} / Target: {fmt(target)}"
-    if u == "%":
-        return f"Current: {current:.2f}% / Target: {target:.0f}%"
-    return f"Current: {current:g} / Target: {target:g} {unit}"
+        return f"{fmt(current)} / {fmt(target)}"
+    if u == "%": return f"{current:.2f}% / {target:.0f}%"
+    return f"{current:g} / {target:g} {unit}"
 
 
-def _get_historical_val(updates_df, kr_id: str, target_week: int):
-    """Derive effective value and latest update for a target week."""
+def _get_historical_data(updates_df, kr_id: str, target_week: int):
     if updates_df.empty: return 0.0, None
-    
-    valid_upds = updates_df[updates_df["kr_id"].astype(str) == kr_id].copy()
-    valid_upds["wk"] = valid_upds["updated_at"].apply(_get_week_from_ts)
-    up_to_week = valid_upds[valid_upds["wk"] <= target_week].sort_values("updated_at", ascending=False)
-    
+    v_upds = updates_df[updates_df["kr_id"].astype(str) == kr_id].copy()
+    v_upds["wk"] = v_upds["updated_at"].apply(_get_week_from_ts)
+    up_to_week = v_upds[v_upds["wk"] <= target_week].sort_values("updated_at", ascending=False)
     if not up_to_week.empty:
         return float(up_to_week.iloc[0].get("new_value", 0)), up_to_week.iloc[0]
     return 0.0, None
 
 
 # ---------------------------------------------------------------------------
-# Main component
+# Main Component
 # ---------------------------------------------------------------------------
 
-def render_objective_card(
-    obj_row, krs_df, updates_df, is_primary: bool = False
-) -> None:
-    obj_id = str(obj_row["id"])
-    obj_title = obj_row["title"]
-    sub_team = obj_row.get("sub_team", "")
-    active_kr = st.session_state.get("updating_kr") or ""
+def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False) -> None:
+    obj_id, obj_title = str(obj_row["id"]), obj_row["title"]
+    sub_team = obj_row.get("sub_team", "General")
     selected_week = st.session_state.get("selected_week", 1)
+    active_kr = st.session_state.get("updating_kr") or ""
 
-    # Filter KRs
-    if not krs_df.empty:
-        obj_krs = krs_df[krs_df["objective_id"].astype(str) == obj_id]
-    else:
-        obj_krs = krs_df
-
-    # --- Trend & Progress Logic ---
-    effective_krs_data = []
-    prev_week_pcts = []
+    # Filter and Compute
+    obj_krs = krs_df[krs_df["objective_id"].astype(str) == obj_id] if not krs_df.empty else pd.DataFrame()
+    effective_krs = []
+    prev_pcts = []
     
-    if not obj_krs.empty:
-        for _, kr in obj_krs.iterrows():
-            kr_id = str(kr["id"])
-            
-            # Val as of Selected Week
-            val, latest = _get_historical_val(updates_df, kr_id, selected_week)
-            # Val as of Selected Week - 1 (for Trend)
-            v_prev, _ = _get_historical_val(updates_df, kr_id, selected_week - 1)
-            
-            # Pct now
-            calc_kr = kr.copy()
-            calc_kr["current_value"] = val
-            pct = compute_progress(calc_kr)
-            
-            # Pct prev
-            calc_kr_prev = kr.copy()
-            calc_kr_prev["current_value"] = v_prev
-            pct_prev = compute_progress(calc_kr_prev)
-            
-            effective_krs_data.append({
-                "kr": kr, "pct": pct, "val": val, "latest": latest,
-                "updates": updates_df[updates_df["kr_id"].astype(str) == kr_id] if not updates_df.empty else pd.DataFrame()
-            })
-            prev_week_pcts.append(pct_prev)
-
-    if effective_krs_data:
-        avg_pct = sum(d["pct"] for d in effective_krs_data) / len(effective_krs_data)
-        prev_avg_pct = sum(prev_week_pcts) / len(prev_week_pcts)
-        total_krs = len(effective_krs_data)
-        active_krs = sum(1 for d in effective_krs_data if d["pct"] > 0)
+    for _, kr in obj_krs.iterrows():
+        val, latest = _get_historical_data(updates_df, str(kr["id"]), selected_week)
+        val_prev, _ = _get_historical_data(updates_df, str(kr["id"]), selected_week - 1)
         
-        # Trend Badge
-        diff = avg_pct - prev_avg_pct
-        if diff > 0:
-            trend_label = f"↑ {diff:.0f}% Week"
-            trend_bg = f"{GREEN}15"
-            trend_txt = GREEN
-        elif diff < 0:
-            trend_label = f"↓ {abs(diff):.0f}% Week"
-            trend_bg = f"{RED}15"
-            trend_txt = RED
-        else:
-            trend_label = "Stable"
-            trend_bg = "rgba(255,255,255,0.06)"
-            trend_txt = MUTED
+        calc_kr = kr.copy(); calc_kr["current_value"] = val
+        calc_kr_p = kr.copy(); calc_kr_p["current_value"] = val_prev
+        
+        pct = compute_progress(calc_kr)
+        effective_krs.append({"kr": kr, "pct": pct, "val": val, "latest": latest})
+        prev_pcts.append(compute_progress(calc_kr_p))
+
+    if effective_krs:
+        avg_pct = sum(d["pct"] for d in effective_krs) / len(effective_krs)
+        prev_avg = sum(prev_pcts) / len(prev_pcts)
+        total_krs, achieved = len(effective_krs), sum(1 for d in effective_krs if d["pct"] >= 100)
+        diff = avg_pct - prev_avg
+        trend_label = f"↑ {diff:.1f}% this week" if diff > 0 else (f"↓ {abs(diff):.1f}% this week" if diff < 0 else "Stable")
+        trend_txt = GREEN if diff > 0 else (RED if diff < 0 else MUTED)
     else:
-        avg_pct = 0.0
-        total_krs = 0
-        active_krs = 0
-        trend_label = "No Data"
-        trend_bg = "transparent"
-        trend_txt = MUTED
+        avg_pct = 0.0; total_krs = achieved = 0; trend_label = "No Data"; trend_txt = MUTED
 
     with st.container():
         st.markdown('<div class="okr-card-trigger" style="display:none;"></div>', unsafe_allow_html=True)
 
-        # ── HEADER ──
-        c_label, _, c_add, c_edit, c_del = st.columns([3, 2.5, 1.2, 0.5, 0.5])
-        with c_label:
-            st.markdown(
-                f'<div style="font-size:12px; font-weight:700; color:{PURPLE}; '
-                f'text-transform:uppercase; letter-spacing:0.1em; padding-top:4px;">'
-                f'{sub_team} <span style="opacity:0.4; margin:0 8px;">·</span> '
-                f'<span style="color:#fff; opacity:0.6;">Week {selected_week}</span></div>',
-                unsafe_allow_html=True,
-            )
-        with c_add:
-            if st.button("Add KR", icon=":material/add:", key=f"akr_{obj_id}", type="secondary", use_container_width=True):
-                add_kr_dialog(obj_id, obj_title)
-        with c_edit:
-            if st.button(" ", icon=":material/edit:", key=f"eobj_{obj_id}", type="tertiary", help="Edit"):
-                _edit_obj_dialog(obj_id, obj_title)
-        with c_del:
-            if st.button(" ", icon=":material/delete:", key=f"dobj_{obj_id}", type="tertiary", help="Delete"):
-                _confirm_delete_obj_dialog(obj_id, obj_title)
-
-        st.markdown(f'<div style="font-size:22px; font-weight:700; color:#fff; line-height:1.35; margin:12px 0 20px;">{obj_title}</div>', unsafe_allow_html=True)
-
-        # ── PROGRESS & TREND ──
+        # ── HEADER: Label + Week ──
         st.markdown(
-            f"""<div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
-<span style="font-size:2.6rem; font-weight:800; color:#fff; letter-spacing:-0.04em; line-height:1;">{avg_pct:.0f}%</span>
-<span style="font-size:11px; font-weight:700; color:{trend_txt}; background:{trend_bg}; padding:4px 10px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">{trend_label}</span>
+            f'<div style="font-size:11px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">'
+            f'{sub_team} <span style="opacity:0.3; margin:0 6px;">|</span> WEEK {selected_week}</div>',
+            unsafe_allow_html=True
+        )
+
+        # ── OBJECTIVE INFO ──
+        c_title, c_actions = st.columns([5, 1])
+        with c_title:
+            st.markdown(f'<div style="font-size:22px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:16px;">{obj_title}</div>', unsafe_allow_html=True)
+        with c_actions:
+            if st.button(" ", icon=":material/more_horiz:", key=f"more_{obj_id}", type="secondary"):
+                _obj_actions_dialog(obj_id, obj_title)
+
+        # ── PROGRESS ──
+        st.markdown(
+            f"""<div style="display:flex; align-items:baseline; gap:12px; margin-bottom:6px;">
+<span style="font-size:36px; font-weight:800; color:#fff; letter-spacing:-1px;">{avg_pct:.0f}%</span>
+<span style="font-size:11px; font-weight:700; color:{trend_txt}; text-transform:uppercase; letter-spacing:0.04em;">{trend_label}</span>
 </div>""",
-            unsafe_allow_html=True,
+            unsafe_allow_html=True
         )
         st.markdown(_obj_progress_bar(avg_pct), unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:20px;">{avg_pct:.0f}% completion · {active_krs} / {total_krs} KRs achieved</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:24px;">{achieved} / {total_krs} KRs achieved</div>', unsafe_allow_html=True)
 
-        # ── KEY RESULTS ──
-        st.markdown('<div style="font-size:15px; font-weight:700; color:rgba(255,255,255,0.7); text-transform:uppercase; letter-spacing:0.06em; padding:16px 0 12px; border-top:1px solid rgba(255,255,255,0.06);">Key Results</div>', unsafe_allow_html=True)
+        # ── KEY RESULTS SECTION ──
+        st.markdown('<div style="font-size:14px; font-weight:700; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.08em; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:16px;">Key Results</div>', unsafe_allow_html=True)
 
-        if effective_krs_data:
-            for data in effective_krs_data:
-                _render_kr_block(data, active_kr)
+        if effective_krs:
+            for data in effective_krs:
+                _render_kr_subcard(data, active_kr)
         else:
-            st.markdown(f'<div style="color:{MUTED}; padding:1.5rem 0; font-size:14px; text-align:center;">No key results tracked yet.</div>', unsafe_allow_html=True)
-
+            st.markdown(f'<div style="color:{MUTED}; text-align:center; padding:12px;">Add KRs to track progress</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-# KR block
+# KR Sub-card
 # ---------------------------------------------------------------------------
 
-def _render_kr_block(data, active_kr: str) -> None:
-    kr, pct, val, latest, upds = data["kr"], data["pct"], data["val"], data["latest"], data["updates"]
+def _render_kr_subcard(data, active_kr: str) -> None:
+    kr, pct, val, latest = data["kr"], data["pct"], data["val"], data["latest"]
     kr_id, title = str(kr["id"]), kr["title"]
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
-    pct_color = _pct_color(pct)
-
+    
     with st.container():
         st.markdown('<div class="kr-block-trigger" style="display:none;"></div>', unsafe_allow_html=True)
+        
+        # ── TOP: Info vs Achievement ──
+        c_info, c_ach = st.columns([4, 1.5])
+        with c_info:
+            st.markdown(f'<div style="font-size:16px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.4);">{_format_current_target(val, target, unit)}</div>', unsafe_allow_html=True)
+        with c_ach:
+            st.markdown(f'<div style="text-align:right; font-size:24px; font-weight:800; color:{_pct_color(pct)}; line-height:1;">{pct:.0f}%</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:right; font-size:9px; font-weight:800; color:rgba(255,255,255,0.25); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;">Achievement</div>', unsafe_allow_html=True)
 
-        # ── ROW 1 ──
-        st.markdown(
-            f"""<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
-<div style="flex:1; padding-right:16px;">
-    <div style="font-size:16px; font-weight:600; color:#FFFFFF; line-height:1.35; margin-bottom:4px;">{title}</div>
-    <div style="font-size:13px; color:rgba(255,255,255,0.5); font-weight:500;">{_format_current_target(val, target, unit)}</div>
-</div>
-<div style="text-align:right; flex-shrink:0;">
-    <div style="font-size:22px; font-weight:700; color:{pct_color}; letter-spacing:-0.02em; line-height:1;">{pct:.0f}%</div>
-    <div style="font-size:9px; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.06em; margin-top:3px;">Achievement</div>
-</div>
-</div>""",
-            unsafe_allow_html=True,
-        )
+        # ── MIDDLE: Latest Update Row ──
+        st.markdown('<div style="height:12px;"></div>', unsafe_allow_html=True)
+        if latest is not None:
+            upd_val = float(latest.get("new_value", 0))
+            diff_val = upd_val - float(latest.get("old_value", 0)) if "old_value" in latest else 0
+            badge_color = GREEN if pct >= 100 else (YELLOW if pct > 0 else MUTED)
+            
+            st.markdown(f"""
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid rgba(255,255,255,0.03);">
+                <div style="background:{badge_color}15; color:{badge_color}; border-radius:6px; padding:3px 8px; font-size:14px; font-weight:700;">{_format_badge(upd_val, unit)}</div>
+                <div style="flex:1; font-size:15px; color:rgba(255,255,255,0.8); line-height:1.4;">{latest.get('week_notes', '')}</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.2);">Week {latest.get('wk', '?')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="font-size:14px; color:rgba(255,255,255,0.2); font-style:italic; padding:6px 0;">No updates recorded for this KR</div>', unsafe_allow_html=True)
 
-        # ── ROW 2 ──
-        c_actions, c_update_info, c_btn = st.columns([1.2, 3, 1.8])
-
-        with c_actions:
-            ac1, ac2, ac3 = st.columns(3)
-            with ac1:
-                if st.button(" ", icon=":material/description:", key=f"sh_{kr_id}", type="tertiary", help="History"):
-                    st.session_state[f"h_{kr_id}"] = not st.session_state.get(f"h_{kr_id}", False)
-                    st.rerun()
-            with ac2:
-                if st.button(" ", icon=":material/edit:", key=f"ek_{kr_id}", type="tertiary", help="Edit"):
-                    _edit_kr_dialog(kr_id, title)
-            with ac3:
-                if st.button(" ", icon=":material/delete:", key=f"dk_{kr_id}", type="tertiary", help="Delete"):
-                    _confirm_delete_kr_dialog(kr_id, title)
-
-        with c_update_info:
-            if latest is not None:
-                badge_val = _format_badge(latest.get("new_value", 0), unit)
-                notes_text = str(latest.get("week_notes", "")) or ""
-                st.markdown(
-                    f"""<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding-top:6px;">
-<span style="background:rgba(45,212,191,0.12); color:{GREEN}; padding:3px 10px; border-radius:6px; font-size:13px; font-weight:700; white-space:nowrap;">{badge_val}</span>
-<span style="color:rgba(255,255,255,0.7); font-size:14px; line-height:1.4;">{notes_text}</span>
-</div>""",
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.markdown('<div style="color:rgba(255,255,255,0.25); font-size:13px; padding-top:8px;">No updates recorded</div>', unsafe_allow_html=True)
-
+        # ── BOTTOM: Primary Action ──
+        c_sp, c_btn = st.columns([4, 1.5])
         with c_btn:
-            upd_icon = ":material/sync:" if active_kr != kr_id else ":material/close:"
-            if st.button("Update", icon=upd_icon, key=f"uk_{kr_id}", type="secondary", use_container_width=True):
+            if st.button("Update", key=f"upd_{kr_id}", type="primary", use_container_width=True):
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                 st.rerun()
+        with c_sp:
+            st.markdown(_kr_progress_bar(pct), unsafe_allow_html=True)
 
-        st.markdown(_kr_progress_bar(pct), unsafe_allow_html=True)
-
-    if active_kr == kr_id:
-        _render_update_form(kr)
-    if st.session_state.get(f"h_{kr_id}"):
-        _render_history(kr_id, upds)
+    if active_kr == kr_id: _render_update_form(kr)
 
 
-# ---------------------------------------------------------------------------
-# Update form
-# ---------------------------------------------------------------------------
-
-def _render_update_form(kr) -> None:
+def _render_update_form(kr):
     kr_id = str(kr["id"])
-    st.markdown('<div style="background:rgba(122,80,247,0.04); padding:1rem 1.25rem; border-radius:12px; border:1px solid rgba(122,80,247,0.12); margin:0.5rem 0 1rem;">', unsafe_allow_html=True)
-    with st.form(key=f"f_{kr_id}", clear_on_submit=True):
-        c1, c2 = st.columns([2, 1])
-        with c1:
-            new_val = st.number_input("New Value", value=float(kr.get("current_value", 0)))
-        with c2:
-            conf = st.slider("Confidence", 1, 5, 3)
-        notes = st.text_input("What happened this week?")
-        blockers = st.text_input("Blockers / Dependencies")
-
-        if st.form_submit_button("Register Update", use_container_width=True):
+    st.markdown('<div style="background:rgba(122,80,247,0.05); padding:16px; border-radius:12px; border:1px solid rgba(122,80,247,0.2); margin-top:8px;">', unsafe_allow_html=True)
+    with st.form(key=f"frm_{kr_id}"):
+        c1, c2 = st.columns(2)
+        with c1: val = st.number_input("Current Value", value=float(kr.get("current_value", 0)))
+        with c2: conf = st.slider("Confidence", 1, 5, 3)
+        notes = st.text_input("Narrative Update (What happened?)", placeholder="Ex: Closed partnerships with 3 vendors...")
+        blockers = st.text_input("Blockers / Risks", placeholder="None")
+        if st.form_submit_button("Submit Weekly Update", use_container_width=True):
             try:
-                update_kr_value(kr_id=kr_id, new_value=float(new_val), week_notes=notes, blockers=blockers, confidence=conf, updated_by=st.session_state.get("user", {}).get("email", "?"))
-                track_action("Updated KR", detail=f"{kr_id} → {new_val}")
-                st.session_state["updating_kr"] = None
-                st.rerun()
-            except Exception as exc: handle_error(exc, "Failed to save update", "Update KR")
+                update_kr_value(kr_id, val, notes, blockers, conf, st.session_state.get("user", {}).get("email", "?"))
+                track_action("Updated KR", detail=kr_id); st.session_state["updating_kr"] = None; st.rerun()
+            except Exception as e: handle_error(e, "Save failed", "KR Update")
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------------------
-# History
-# ---------------------------------------------------------------------------
+@st.dialog("Objective Actions")
+def _obj_actions_dialog(obj_id, title):
+    st.write(f"Editing: **{title}**")
+    if st.button("Edit Objective Title", use_container_width=True): _edit_obj_dialog(obj_id, title)
+    if st.button("Add Key Result", use_container_width=True, type="primary"): add_kr_dialog(obj_id, title)
+    st.divider()
+    if st.button("Delete Objective", type="secondary", use_container_width=True): _confirm_delete_obj_dialog(obj_id, title)
 
-def _render_history(kr_id: str, kr_updates: pd.DataFrame) -> None:
-    with st.expander("Update history", expanded=True):
-        if kr_updates.empty: return
-        all_time = kr_updates.sort_values("updated_at", ascending=False)
-        for _, row in all_time.iterrows():
-            value, notes, blockers, ts_str, row_id = row.get("new_value", "—"), row.get("week_notes", ""), row.get("blockers", ""), str(row.get("updated_at", "")), str(row.get("id", ""))
-            c_info, c_del = st.columns([6, 0.5])
-            with c_info:
-                blocker_html = f' · <span style="color:{RED};">⚠ {blockers}</span>' if blockers else ""
-                st.markdown(f"""<div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.04);"><div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="color:rgba(255,255,255,0.3); font-size:12px;">{_relative_time(ts_str)}</span><span style="background:rgba(45,212,191,0.1); color:{GREEN}; padding:2px 8px; border-radius:4px; font-size:13px; font-weight:700;">{value}</span><span style="color:rgba(255,255,255,0.65); font-size:14px;">{notes}</span>{blocker_html}</div></div>""", unsafe_allow_html=True)
-            with c_del:
-                if row_id and st.button(" ", icon=":material/delete:", key=f"delu_{row_id}_{ts_str}", type="tertiary"):
-                    try:
-                        delete_update_by_id(row_id)
-                        track_action("Deleted update", detail=row_id)
-                        st.rerun()
-                    except Exception as exc: handle_error(exc, "Failed to delete update", "Delete update")
-
-
-# ---------------------------------------------------------------------------
-# Dialogs (Edit/Delete/Add)
-# ---------------------------------------------------------------------------
-
-@st.dialog("Edit Objective")
-def _edit_obj_dialog(obj_id: str, title: str) -> None:
-    nt = st.text_area("Title", value=title, height=80)
-    if st.button("Save", type="primary", use_container_width=True):
-        try:
-            update_objective(obj_id, nt.strip())
-            track_action("Edited objective", detail=obj_id); st.rerun()
-        except Exception as exc: handle_error(exc, "Failed to save objective", "Edit objective")
-
+@st.dialog("Edit Title")
+def _edit_obj_dialog(id, title):
+    nt = st.text_input("New Title", value=title)
+    if st.button("Save"): update_objective(id, nt); st.rerun()
 
 @st.dialog("Delete Objective")
-def _confirm_delete_obj_dialog(obj_id: str, title: str) -> None:
-    st.warning(f"Delete **{title}**?")
-    if st.button("Confirm Delete", type="primary", use_container_width=True):
-        try:
-            delete_objective(obj_id); track_action("Deleted objective", detail=obj_id); st.rerun()
-        except Exception as exc: handle_error(exc, "Failed to delete objective", "Delete objective")
+def _confirm_delete_obj_dialog(id, title):
+    st.error(f"Delete objective and all its KRs?")
+    if st.button("Yes, Delete"): delete_objective(id); st.rerun()
 
-
-@st.dialog("Edit Key Result")
-def _edit_kr_dialog(kr_id: str, title: str) -> None:
-    from sheets import load_key_results, update_kr_fields
-    df = load_key_results()
-    kr = df[df["id"].astype(str) == str(kr_id)].iloc[0] if not df.empty else {}
-    nt = st.text_input("Title", value=kr.get("title", title))
+@st.dialog("Add Key Result")
+def add_kr_dialog(obj_id, obj_title):
+    t = st.text_input("KR Title")
     c1, c2 = st.columns(2)
-    with c1: ntgt = st.number_input("Target", value=float(kr.get("target", 0)))
-    with c2: nunit = st.text_input("Unit", value=str(kr.get("unit", "")))
-    if st.button("Save Changes", type="primary", use_container_width=True):
-        try:
-            update_kr_fields(kr_id, nt.strip(), float(ntgt), nunit.strip()); track_action("Edited KR", detail=kr_id); st.rerun()
-        except Exception as exc: handle_error(exc, "Failed to save KR changes", "Edit KR")
-
-
-@st.dialog("Delete KR")
-def _confirm_delete_kr_dialog(kr_id: str, title: str) -> None:
-    st.warning(f"Delete **{title}**?")
-    if st.button("Delete", type="primary", use_container_width=True):
-        try:
-            delete_kr_by_id(kr_id); track_action("Deleted KR", detail=kr_id); st.rerun()
-        except Exception as exc: handle_error(exc, "Failed to delete KR", "Delete KR")
-
-
-@st.dialog("New KR")
-def add_kr_dialog(obj_id: str, title: str) -> None:
-    name = st.text_input("Title")
-    c1, c2 = st.columns(2)
-    with c1: tgt = st.number_input("Target", min_value=1.0, value=100.0)
-    with c2: unit = st.text_input("Unit", value="%")
-    if st.button("Create", type="primary", use_container_width=True):
-        if not name.strip(): st.error("Title cannot be empty."); return
-        try:
-            create_kr(obj_id, name.strip(), float(tgt), unit.strip()); track_action("Created KR", detail=f"for {obj_id}"); st.rerun()
-        except Exception as exc: handle_error(exc, "Failed to create KR", "Create KR")
+    with c1: tgt = st.number_input("Target", value=100.0)
+    with c2: unt = st.text_input("Unit", value="%")
+    if st.button("Create KR", type="primary"): create_kr(obj_id, t, tgt, unt); st.rerun()
