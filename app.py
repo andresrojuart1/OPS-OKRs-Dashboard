@@ -810,6 +810,13 @@ def render_dashboard() -> None:
         
     krs_df        = load_key_results()
     updates_df    = load_updates()
+    
+    # --- PERSISTENT DIALOGS ---
+    active_obj = st.session_state.get("active_obj_settings")
+    if active_obj:
+        from components.objective_card import _obj_actions_dialog
+        _obj_actions_dialog(active_obj["id"], active_obj["title"])
+
     selected_team = render_sidebar()
     team_label    = selected_team if selected_team else "All"
 

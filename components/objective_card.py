@@ -182,10 +182,7 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
                 st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
                 st.rerun()
         
-        # Check if we should render the dialog for this objective
-        settings = st.session_state.get("active_obj_settings")
-        if settings and settings["id"] == obj_id:
-            _obj_actions_dialog(settings["id"], settings["title"])
+        # Dialog is now triggered globally in app.py for persistence
 
         # Objective Progress Summary
         st.markdown(f'<div style="font-size:32px; font-weight:700; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
