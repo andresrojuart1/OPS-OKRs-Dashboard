@@ -477,7 +477,7 @@ def _generate_template_excel(quarter: str, krs_info: list = None, objectives_df:
                 obj_id = str(kr_data.get("objective_id", ""))
                 obj_rows = objectives_df[objectives_df["id"].astype(str) == obj_id]
                 if not obj_rows.empty:
-                    obj_title = str(obj_rows.iloc[0].get("title", ""))[:50]
+                    obj_title = str(obj_rows.iloc[0].get("title", ""))
 
             # Get Confidence, Blockers, and Week Notes from updates_df (most recent update for this KR)
             confidence = ""
@@ -531,7 +531,10 @@ def _generate_template_excel(quarter: str, krs_info: list = None, objectives_df:
 
     for col in ws.columns:
         max_len = max((len(str(c.value or "")) for c in col), default=0)
-        ws.column_dimensions[col[0].column_letter].width = max(12, min(max_len + 2, 60))
+        col_letter = col[0].column_letter
+        # Objective column (A) needs more width for full text
+        max_width = 80 if col_letter == "A" else 60
+        ws.column_dimensions[col_letter].width = max(12, min(max_len + 2, max_width))
 
     buf = io.BytesIO()
     wb.save(buf)
