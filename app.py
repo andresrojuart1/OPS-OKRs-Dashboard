@@ -833,7 +833,7 @@ def render_dashboard() -> None:
         else:
             latest = None
             
-        eff_val = float(latest["new_value"]) if latest is not None else 0.0
+        eff_val = float(latest["new_value"]) if latest is not None else float(kr.get("current_value", 0))
         # Temporary KR for pct calculation
         calc_kr = kr.copy()
         calc_kr["current_value"] = eff_val
