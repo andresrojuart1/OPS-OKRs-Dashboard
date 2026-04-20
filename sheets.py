@@ -454,45 +454,42 @@ def delete_update_by_id(update_id: str) -> None:
     st.cache_data.clear()
 
 def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: str, val_format: str) -> bool:
-    """Finds an update by ID, modifies the master dataframe, and saves the whole set back to Sheets."""
+    """Safely updates a specific record by ID using atomic cell updates to prevent data loss."""
     try:
         spreadsheet = get_spreadsheet()
         upd_ws = spreadsheet.worksheet("kr_updates")
         
-        # 1. Load the ENTIRE master dataset
+        # 1. Load master records for identification
         records = upd_ws.get_all_records()
-        if not records: return False
-        
+        if not records:
+            logger.error("Safeguard: Could not retrieve records from 'kr_updates'. Aborting to prevent data loss.")
+            return False
+            
         df = pd.DataFrame(records)
-        
-        # 2. Normalize ID types for explicit matching
         df["id"] = df["id"].astype(str)
         search_id = str(update_id)
         
-        # 3. Verify existence before updating
+        # 2. Check if record exists in the master set
         if search_id not in df["id"].values:
-            logger.warning(f"Record '{search_id}' not found in master dataframe.")
+            logger.warning(f"Record '{search_id}' not found in master set.")
             return False
             
-        # 4. Apply updates to the master dataframe using .loc
-        # Columns: new_value, week_notes, blockers, value_format
-        mask = df["id"] == search_id
-        df.loc[mask, "new_value"] = new_value
-        df.loc[mask, "week_notes"] = notes
-        df.loc[mask, "blockers"]   = dependencies
-        df.loc[mask, "value_format"] = val_format
+        # 3. Determine the EXACT row index (Sheet row = index + 2)
+        target_idx = df[df["id"] == search_id].index[0]
+        target_row = int(target_idx) + 2
         
-        # 5. Persist the ENTIRE modified dataframe back to Sheets
-        # We clear and rewrite to ensure the master source matches our memory exactly
-        rows = [df.columns.values.tolist()] + df.values.tolist()
-        upd_ws.clear()
-        upd_ws.update(rows)
+        # 4. Perform ATOMIC updates — only modify specific cells, never clear the sheet
+        # Columns in UPD_HEADERS: new_value(3), week_notes(4), blockers(5), value_format(10)
+        upd_ws.update_cell(target_row, 3, new_value)
+        upd_ws.update_cell(target_row, 4, notes)
+        upd_ws.update_cell(target_row, 5, dependencies)
+        upd_ws.update_cell(target_row, 10, val_format)
         
         st.cache_data.clear()
         return True
             
     except Exception as e:
-        logger.error(f"Full-sync save failed in edit mode: {e}")
+        logger.error(f"Atomic update failed: {e}")
         return False
 
 
