@@ -300,19 +300,23 @@ hr {
 }
 
 /* ═══════════════════════════════════════════════════
-   MASTER OBJECTIVE CARD (Executive Hierarchy)
+   MASTER OBJECTIVE CARD
    ═══════════════════════════════════════════════════ */
 div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger) {
-    background: #111118 !important; /* Lighter than page bg */
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: 16px !important;
-    padding: 24px !important;
-    margin-bottom: 24px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid rgba(122, 80, 247, 0.15) !important;
+    border-radius: 20px !important;
+    padding: 2rem 2.25rem 1.75rem !important;
+    margin-bottom: 2rem !important;
+    box-shadow: var(--card-shadow), 0 0 40px rgba(122, 80, 247, 0.04) !important;
     transition: all 0.25s ease !important;
 }
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger):hover {
+    border-color: rgba(122, 80, 247, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 50px rgba(122, 80, 247, 0.06) !important;
+}
 
-/* Inner container reset specifically for Objective Card contents */
+/* Inner container resets inside objective card */
 div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger) div[data-testid="stVerticalBlock"] {
     background: transparent !important;
     border: none !important;
@@ -322,47 +326,67 @@ div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger) d
 }
 
 /* ═══════════════════════════════════════════════════
-   KR SUB-CARDS (Inside Master Card)
+   KR BLOCKS (inside objective cards)
+   Higher specificity than the inner reset above
    ═══════════════════════════════════════════════════ */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger)
 div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-block-trigger) {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
-    border-radius: 12px !important;
-    padding: 16px !important;
-    margin-bottom: 12px !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px !important;
+    padding: 18px 20px !important;
+    margin-bottom: 10px !important;
     transition: all 0.2s ease !important;
 }
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger)
 div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-block-trigger):hover {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Inner container resets within KR blocks */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-block-trigger) div[data-testid="stVerticalBlock"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 /* ═══════════════════════════════════════════════════
-   BUTTONS & TYPOGRAPHY
+   BUTTONS
    ═══════════════════════════════════════════════════ */
 div.stButton > button {
     border-radius: 10px !important;
-    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
 }
-div.stButton > button[kind="primary"] {
-    background: var(--accent-purple) !important;
-    border: none !important;
+div.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 div.stButton > button[kind="secondary"] {
-    background: rgba(255, 255, 255, 0.06) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     color: #FFFFFF !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+}
+div.stButton > button[kind="secondary"]:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: var(--accent-purple) !important;
 }
 
-/* Adjust expanders for meeting readability */
+/* Expander styling for history */
 div[data-testid="stExpander"] {
-    border: 1px solid rgba(255, 255, 255, 0.04) !important;
-    border-radius: 8px !important;
-    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.015) !important;
 }
 div[data-testid="stExpander"] summary {
+    color: rgba(255, 255, 255, 0.5) !important;
     font-size: 13px !important;
-    color: rgba(255, 255, 255, 0.4) !important;
+    font-weight: 600 !important;
 }
 </style>
 
