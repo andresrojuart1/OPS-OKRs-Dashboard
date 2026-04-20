@@ -26,14 +26,15 @@ def _pct_indicator(pct: float) -> str:
 </div>"""
 
 def _progress_bar(pct: float) -> str:
-    return f"""<div style="background:rgba(255,255,255,0.03); border-radius:999px; height:5px; margin:10px 0; overflow:hidden;">
+    color = PURPLE
+    return f"""<div class="kr-progress-track">
 <style>
 @keyframes fillProgress {{
   0% {{ transform: scaleX(0); transform-origin: left; }}
   100% {{ transform: scaleX(1); transform-origin: left; }}
 }}
 </style>
-<div style="height:100%; width:{pct:.1f}%; background:{PURPLE}; box-shadow:0 0 8px rgba(122, 80, 247, 0.3); animation: fillProgress 1s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+<div style="height:100%; width:{pct:.1f}%; background:{color}; box-shadow:0 0 12px {color}44; animation: fillProgress 1s cubic-bezier(0.4, 0, 0.2, 1); border-radius:999px;"></div>
 </div>"""
 
 def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = False) -> None:
@@ -48,17 +49,16 @@ def render_objective_card(obj_row, krs_df, active_kr: str, is_primary: bool = Fa
         trigger_class = "fintech-card-trigger-primary" if is_primary else "fintech-card-trigger"
         st.markdown(f'<div class="{trigger_class}" style="display:none;"></div>', unsafe_allow_html=True)
         
-        # Header - Synchronized sizes as requested
-        # Sub-team label is 1.2rem, Objective is 1.15rem, KRs are 1.05rem
-        sub_team_size = "1.2rem"
-        obj_title_size = "1.15rem"
+        # Header - Premium Typography
+        sub_team_size = "11px"
+        obj_title_size = "24px" if is_primary else "20px"
         
         st.markdown(f"""
-        <div class="objective-section" style="border:none; margin-bottom: 1.5rem;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <span style="font-size:{sub_team_size}; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.04em;">{sub_team}</span>
+        <div style="margin-bottom: 2rem;">
+            <div style="margin-bottom: 8px;">
+                <span style="font-size:{sub_team_size}; font-weight:700; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.1em; opacity:0.8;">{sub_team}</span>
             </div>
-            <div style="font-size:{obj_title_size}; font-weight:800; color:white; margin-top:0.4rem; margin-bottom:1.2rem; line-height:1.4;">{obj_title}</div>
+            <div style="font-size:{obj_title_size}; font-weight:700; color:white; margin-bottom:1.25rem; line-height:1.3; letter-spacing:-0.01em;">{obj_title}</div>
             {_pct_indicator(avg_pct)}
         </div>
         """, unsafe_allow_html=True)
@@ -88,13 +88,13 @@ def _render_kr_row(kr, active_kr: str) -> None:
 
     st.markdown(f"""<div class="kr-row-fintech">
 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-<div style="flex:1; padding-right:1rem;">
-<div style="font-size:1.05rem; font-weight:600; color:white; margin-bottom:2px;">{title}</div>
-<div style="font-size:0.85rem; color:{MUTED};">{val_str}</div>
+<div style="flex:1; padding-right:1.5rem;">
+<div style="font-size:15px; font-weight:600; color:#FFFFFF; margin-bottom:4px; line-height:1.4;">{title}</div>
+<div style="font-size:13px; color:rgba(255,255,255,0.5); font-weight:500;">{val_str}</div>
 </div>
 <div style="text-align:right;">
-<div style="font-size:1.05rem; font-weight:700; color:{GREEN};">{pct:.0f}%</div>
-<div style="font-size:0.6rem; color:{MUTED}; text-transform:uppercase; font-weight:700;">Status</div>
+<div style="font-size:16px; font-weight:700; color:{GREEN}; letter-spacing:-0.02em;">{pct:.0f}%</div>
+<div style="font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:800; letter-spacing:0.05em; margin-top:2px;">Achievement</div>
 </div>
 </div>
 {_progress_bar(pct)}
