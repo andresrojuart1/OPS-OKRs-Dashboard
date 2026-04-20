@@ -71,36 +71,33 @@ def _kr_progress_bar(pct: float) -> str:
 </div>"""
 
 
-def _format_badge(value, unit: str, fmt_override: str = None) -> str:
+def _format_badge(value, unit: str, fmt_override: str = "number") -> str:
     try: v = float(value)
     except: return str(value)
     
-    u = unit.lower().strip()
     f = str(fmt_override).lower().strip() if fmt_override else "number"
+    if f == "percentage": return f"{v:.1f}%"
+    if f == "currency": return f"${v:,.2f}"
     
-    if f == "percentage" or u == "%":
-        # Note: input is usually 50 for 50%, we might multiply by 100 if raw decimal, 
-        # but here UI already treats current_value as raw comparison to target.
-        return f"{v:+.2f}%" if v != 0 else f"{v:.2f}%"
+    # Fallback to unit hints
+    u = unit.lower().strip()
+    if u == "%": return f"{v:.1f}%"
+    if u in ("$", "$/month"): return f"${v:,.2f}" if f == "currency" else f"${v:,.0f}"
     
-    if f == "currency" or u in ("$", "$/month"):
-        if abs(v) >= 1_000_000: return f"${v / 1_000_000:.1f}M"
-        if abs(v) >= 1_000: return f"${v / 1_000:.0f}K"
-        return f"${v:,.2f}" if f == "currency" else f"${v:,.0f}"
-        
     return f"{v:g} {unit}"
 
 
-def _format_current_target(current: float, target: float, unit: str) -> str:
+def _format_current_target(current: float, target: float, unit: str, fmt: str = "number") -> str:
     u = unit.lower().strip()
+    f = fmt.lower().strip()
     if u == "binary": return "Done ✓" if current >= 1 else "Pending"
-    if u in ("$", "$/month"):
-        def fmt(v):
-            if v >= 1_000_000: return f"${v / 1_000_000:.1f}M"
-            if v >= 1_000: return f"${v / 1_000:.0f}K"
-            return f"${v:,.0f}"
-        return f"{fmt(current)} / {fmt(target)}"
-    return f"{current:g} / {target:g} {unit}"
+    
+    def apply_fmt(val):
+        if f == "percentage" or u == "%": return f"{val:.1f}%"
+        if f == "currency" or u in ("$", "$/month"): return f"${val:,.0f}"
+        return f"{val:g}"
+
+    return f"{apply_fmt(current)} / {apply_fmt(target)} {unit if u not in ('%', '$') else ''}"
 
 
 def _get_hist_val(updates_df, kr_id: str, week: int):
@@ -205,7 +202,8 @@ def _render_kr_block(data, active_kr: str) -> None:
         c_left, c_right = st.columns([3.5, 1.5])
         with c_left:
             st.markdown(f'<div style="font-size:19px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
-            st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit)}</div>', unsafe_allow_html=True)
+            cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
+            st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
         
         with c_right:
             st.markdown(f'<div style="text-align:right; font-size:24px; font-weight:800; color:{_pct_color(pct)}; line-height:1; margin-bottom:6px;">{pct:.0f}%</div>', unsafe_allow_html=True)
