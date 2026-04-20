@@ -328,31 +328,48 @@ def _render_update_form(data):
                 handle_error(e, "Operation failed", "Update")
     st.markdown("</div>", unsafe_allow_html=True)
 
-@st.dialog("Objective Actions")
+@st.dialog("Objective Settings")
 def _obj_actions_dialog(id, title):
-    st.write(f"Objective: **{title}**")
-    if st.button("Edit Title"): _edit_obj_dialog(id, title)
-    if st.button("Add Key Result"): add_kr_dialog(id)
-    st.divider()
-    if st.button("Delete Objective", type="secondary"): delete_objective(id); st.rerun()
-
-@st.dialog("Edit Title")
-def _edit_obj_dialog(id, title):
-    nt = st.text_input("Title", value=title)
-    if st.button("Save"): update_objective(id, nt); st.rerun()
-
-@st.dialog("Add KR")
-def add_kr_dialog(id):
-    t = st.text_input("Title")
-    tgt = st.number_input("Target", value=100.0)
+    view = st.session_state.get(f"obj_view_{id}", "menu")
     
-    # Standardized Format Selector
-    fmt_options = ["number", "percentage", "currency"]
-    fmt = st.selectbox("Display Format", options=fmt_options, index=0)
-    
-    if st.button("Create"): 
-        create_kr(id, t, tgt, fmt)
-        st.rerun()
+    if view == "edit_title":
+        st.markdown("### Edit Objective Title")
+        nt = st.text_input("Title", value=title)
+        c1, c2 = st.columns(2)
+        if c1.button("Save", type="primary", use_container_width=True):
+            update_objective(id, nt)
+            st.session_state.pop(f"obj_view_{id}", None)
+            st.rerun()
+        if c2.button("Back", use_container_width=True):
+            st.session_state.pop(f"obj_view_{id}", None)
+            st.rerun()
+            
+    elif view == "add_kr":
+        st.markdown("### Add New Key Result")
+        t = st.text_input("KR Title")
+        tgt = st.number_input("Target", value=100.0)
+        fmt = st.selectbox("Format", ["number", "percentage", "currency"])
+        c1, c2 = st.columns(2)
+        if c1.button("Create", type="primary", use_container_width=True):
+            create_kr(id, t, tgt, fmt)
+            st.session_state.pop(f"obj_view_{id}", None)
+            st.rerun()
+        if c2.button("Back", use_container_width=True):
+            st.session_state.pop(f"obj_view_{id}", None)
+            st.rerun()
+            
+    else:
+        st.write(f"Objective: **{title}**")
+        if st.button("Edit Title", use_container_width=True):
+            st.session_state[f"obj_view_{id}"] = "edit_title"
+            st.rerun()
+        if st.button("Add Key Result", use_container_width=True):
+            st.session_state[f"obj_view_{id}"] = "add_kr"
+            st.rerun()
+        st.divider()
+        if st.button("Delete Objective", type="secondary", use_container_width=True):
+            delete_objective(id)
+            st.rerun()
 
 @st.dialog("Edit Key Result")
 def _edit_kr_metadata_dialog(kr):
