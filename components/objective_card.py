@@ -201,8 +201,10 @@ def _render_kr_block(data, active_kr: str) -> None:
         # --- PRIMARY INFO (LEFT) vs ACTION/METRIC (RIGHT) ---
         c_left, c_right = st.columns([3.5, 1.5])
         with c_left:
-            st.markdown(f'<div style="font-size:19px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
-            cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
+            header_col, edit_kr_col = st.columns([0.9, 0.1])
+            header_col.markdown(f'<div style="font-size:19px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
+            if edit_kr_col.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
+                _edit_kr_metadata_dialog(kr)
             st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
         
         with c_right:
@@ -318,3 +320,17 @@ def add_kr_dialog(id):
     tgt = st.number_input("Target", value=100.0)
     unt = st.text_input("Unit", value="%")
     if st.button("Create"): create_kr(id, t, tgt, unt); st.rerun()
+
+@st.dialog("Edit Key Result")
+def _edit_kr_metadata_dialog(kr):
+    kr_id = str(kr["id"])
+    t_val = st.text_input("Title", value=kr["title"])
+    tgt_val = st.number_input("Target Value", value=float(kr["target"]))
+    u_val = st.text_input("Unit", value=kr["unit"])
+    
+    if st.button("Save Metadata", use_container_width=True):
+        try:
+            update_kr_fields(kr_id, t_val, tgt_val, u_val)
+            st.rerun()
+        except Exception as e:
+            handle_error(e, "Failed to update KR metadata", "KR")
