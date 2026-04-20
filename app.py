@@ -955,15 +955,19 @@ def render_dashboard() -> None:
 
     # Weekly Notes + Charts section (sub-team views only)
     if team_label != "All":
-        st.divider()
-        st.subheader("📝 Additional Weekly Notes")
-        st.caption("Document important updates, decisions or context not tied to specific KRs")
+        # Section Header
+        st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:24px;">📝 Additional Weekly Notes</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Important context and decisions for this period</div>', unsafe_allow_html=True)
 
         week_number   = st.session_state.get("selected_week", get_week_number())
         is_past_week = week_number < get_week_number()
         
         if is_past_week:
-            st.warning(f"Viewing history for **Week {week_number}**. Updates made now will be recorded for **Week {get_week_number()}**.")
+            st.markdown(f"""
+            <div style="background:rgba(255,255,255,0.03); padding:10px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:16px;">
+                💡 Viewing history for <b>Week {week_number}</b>. Updates made now will be recorded for <b>Week {get_week_number()}</b>.
+            </div>
+            """, unsafe_allow_html=True)
             
         existing_note = get_weekly_note(team_label, selected_quarter, week_number)
         note_content  = existing_note.get("content", "")
@@ -971,12 +975,16 @@ def render_dashboard() -> None:
         # Display Mode (Card)
         if note_content:
             st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.05); padding: 1.2rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem; color: #e0e0e0; font-size: 0.95rem;">
+            <div style="background-color: rgba(255,255,255,0.03); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem; color: rgba(255,255,255,0.85); font-size: 0.95rem; line-height:1.6;">
                 {note_content.replace('\n', '<br>')}
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.info("No narrative notes for this week yet.")
+            st.markdown(f"""
+            <div style="padding: 24px; text-align:center; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.06); color:rgba(255,255,255,0.3); font-size:14px; margin-bottom:16px;">
+                No narrative notes recorded for Week {week_number}.
+            </div>
+            """, unsafe_allow_html=True)
 
         # Edit Section
         with st.expander("✏️ Edit Weekly Note"):
@@ -998,11 +1006,9 @@ def render_dashboard() -> None:
                         st.toast("Changes saved!", icon="✅")
                         st.rerun()
 
-        st.markdown("#### 📊 Charts & Screenshots")
-        st.caption(
-            "Upload dashboard screenshots for this week's session. "
-            "Previous weeks' charts are archived but not shown here."
-        )
+        # Charts Section
+        st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:32px;">📊 Charts & Screenshots</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Evidence and visual data for the weekly sync</div>', unsafe_allow_html=True)
         uploaded_files = st.file_uploader(
             "Upload charts",
             type=["png", "jpg", "jpeg"],
