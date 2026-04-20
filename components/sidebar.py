@@ -36,7 +36,7 @@ def render_sidebar() -> Optional[str]:
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown('<div class="ontop-sidebar-section-label">Sub-teams</div>', unsafe_allow_html=True)
+        st.markdown('<div style="height:4px;"></div>', unsafe_allow_html=True)
 
         selected = st.session_state["selected_team"]
         for team in SUB_TEAMS:
