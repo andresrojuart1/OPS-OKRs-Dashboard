@@ -160,8 +160,8 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
         avg_pct = 0.0; achieved = total = 0
 
     with st.container():
-        # Label & Header
-        st.markdown(f'<div style="font-size:11px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
+        # Label & Header (Visual Hierarchy 14px)
+        st.markdown(f'<div style="font-size:14px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:10px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
         
         c_title, c_opts = st.columns([5, 0.5])
         with c_title:
