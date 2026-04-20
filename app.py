@@ -813,10 +813,27 @@ def render_dashboard() -> None:
     krs_df        = load_key_results()
     updates_df    = load_updates()
     
-    # Filter out orphan updates (references to deleted KRs)
+    # --- MULTI-LEVEL DATA CONSISTENCY ---
+    # 1. Filter Objectives
+    if not objectives_df.empty:
+        objectives_df = objectives_df[objectives_df["id"].astype(str).str.strip() != ""].copy()
+        
+    # 2. Filter KRs (Must have active Objective)
+    if not krs_df.empty and not objectives_df.empty:
+        valid_obj_ids = set(objectives_df["id"].astype(str).unique())
+        krs_df = krs_df[
+            (krs_df["id"].astype(str).str.strip() != "") & 
+            (krs_df["objective_id"].astype(str).isin(valid_obj_ids))
+        ].copy()
+        
+    # 3. Filter Updates (Must have active KR)
     if not updates_df.empty and not krs_df.empty:
         valid_kr_ids = set(krs_df["id"].astype(str).unique())
-        updates_df = updates_df[updates_df["kr_id"].astype(str).isin(valid_kr_ids)].copy()
+        updates_df = updates_df[
+            (updates_df["id"].astype(str).str.strip() != "") & 
+            (updates_df["kr_id"].astype(str).isin(valid_kr_ids))
+        ].copy()
+
 
     
     # --- DYNAMIC WEEK INITIALIZATION ---

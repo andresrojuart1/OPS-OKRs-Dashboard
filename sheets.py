@@ -375,7 +375,7 @@ def delete_objective(obj_id: str) -> None:
     st.cache_data.clear()
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10)
 @gspread_retry(retries=3)
 def load_objectives() -> pd.DataFrame:
 
@@ -387,7 +387,7 @@ def load_objectives() -> pd.DataFrame:
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10)
 @gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
     ws = get_worksheet("key_results")
@@ -400,16 +400,19 @@ def load_key_results() -> pd.DataFrame:
     for col in ["target", "current_value"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
     
-    # Ensure IDs are strings
-    if "id" in df.columns:
-        df["id"] = df["id"].astype(str)
-    
+    # Filter out KRs with no ID or no title (zombie rows)
+    if not df.empty:
+        df = df[df["id"].astype(str).str.strip() != ""].copy()
+        if "title" in df.columns:
+            df = df[df["title"].astype(str).str.strip() != ""].copy()
+            
     logger.debug("Loaded %d key results", len(df))
     return df
 
 
 
-@st.cache_data(ttl=60)
+
+@st.cache_data(ttl=10)
 @gspread_retry(retries=3)
 def load_updates() -> pd.DataFrame:
     ws = get_worksheet("kr_updates")
@@ -431,7 +434,13 @@ def load_updates() -> pd.DataFrame:
         if col in df.columns:
             df[col] = df[col].astype(str)
             
+    # Filter out empty updates
+    if not df.empty:
+        df = df[df["id"].astype(str).str.strip() != ""].copy()
+        df = df[df["kr_id"].astype(str).str.strip() != ""].copy()
+            
     return df
+
 
 
 
@@ -825,7 +834,7 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
     return created_ids
 
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=10)
 @gspread_retry(retries=3)
 
 def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
