@@ -66,9 +66,8 @@ def _obj_progress_bar(pct: float) -> str:
 
 
 def _kr_compact_bar(pct: float) -> str:
-    color = _pct_color(pct)
     return f"""<div style="background:rgba(255,255,255,0.06); border-radius:999px; height:6px; overflow:hidden; margin: 2px 0 16px 0;">
-<div style="height:100%; width:{max(min(pct, 100), 0.5):.1f}%; border-radius:999px; background:{color}; transition: width 0.6s ease;"></div>
+<div style="height:100%; width:{max(min(pct, 100), 0.5):.1f}%; border-radius:999px; background:{PURPLE}; transition: width 0.6s ease;"></div>
 </div>"""
 
 
@@ -198,31 +197,28 @@ def _render_kr_block(data, active_kr: str) -> None:
     with st.container():
         st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
         
-        # --- TITLE ---
-        st.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
+        # --- HEADER: Title + Actions (Update/Gear) ---
+        h_left, h_right = st.columns([0.65, 0.35])
+        h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
         
-        # --- VALUE ROW ---
-        v_left, v_right = st.columns([0.8, 0.2])
-        cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
-        v_left.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500; margin-top:4px;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
-        v_right.markdown(f'<div style="text-align:right; font-size:16px; font-weight:800; color:{_pct_color(pct)}; margin-top:2px;">{pct:.0f}%</div>', unsafe_allow_html=True)
-
-        # --- PROGRESS BAR DIRECTLY BELOW ---
-        st.markdown(_kr_compact_bar(pct), unsafe_allow_html=True)
-
-        # --- ACTION ROW ---
-        a_left, a_right = st.columns([0.88, 0.12])
-        with a_left:
-            # ORIGINAL UPDATE BUTTON
+        with h_right:
+            act_col, gear_col = st.columns([0.75, 0.25])
             u_label = "Cancel" if active_kr == kr_id else "Update"
-            if st.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
+            if act_col.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                 st.session_state["editing_id"] = None
                 st.rerun()
-        
-        with a_right:
-            if st.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
+            if gear_col.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
                 _edit_kr_metadata_dialog(kr)
+            
+        # --- VALUE ROW ---
+        v_left, v_right = st.columns([0.8, 0.2])
+        cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
+        v_left.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500; margin-top:-4px;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
+        v_right.markdown(f'<div style="text-align:right; font-size:16px; font-weight:800; color:{_pct_color(pct)}; margin-top:-8px;">{pct:.0f}%</div>', unsafe_allow_html=True)
+
+        # --- PROGRESS BAR DIRECTLY BELOW ---
+        st.markdown(_kr_compact_bar(pct), unsafe_allow_html=True)
 
         # --- NARRATIVE ROW & PROGRESS ---
         if latest is not None:
