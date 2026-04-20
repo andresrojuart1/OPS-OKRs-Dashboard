@@ -159,6 +159,9 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
     else:
         avg_pct = 0.0; achieved = total = 0
 
+    if not is_primary:
+        st.markdown('<div style="margin-top: 72px; padding-top: 48px; border-top: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px;"></div>', unsafe_allow_html=True)
+
     with st.container():
         # Label & Header (Visual Hierarchy 14px)
         st.markdown(f'<div style="font-size:14px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:10px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
