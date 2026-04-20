@@ -725,8 +725,10 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
 
     total_krs = len(krs_info)
     if krs_info:
-        at_risk_count = sum(1 for k in krs_info if k["pct"] < expected_pct)
-        on_track_count = sum(1 for k in krs_info if k["pct"] >= expected_pct)
+        # ONLY count KRs that have at least one update record
+        active_krs = [k for k in krs_info if k.get("has_updates", False)]
+        at_risk_count = sum(1 for k in active_krs if k["pct"] < expected_pct)
+        on_track_count = sum(1 for k in active_krs if k["pct"] >= expected_pct)
         avg_prog = sum(k["pct"] for k in krs_info) / total_krs
     else:
         at_risk_count = 0
@@ -867,6 +869,7 @@ def render_dashboard() -> None:
             "unit":           str(kr["unit"]),
             "current_value":  eff_val,
             "pct":            compute_progress(calc_kr),
+            "has_updates":    latest is not None,
             "last_notes":     str(latest["week_notes"]) if latest is not None and latest.get("week_notes") else "",
             "last_blockers":  str(latest["blockers"])   if latest is not None and latest.get("blockers")   else "",
             "last_confidence": int(latest["confidence"]) if latest is not None and latest.get("confidence") else 0,
