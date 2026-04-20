@@ -433,7 +433,8 @@ QUARTERS = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"]
 # Excel template
 # ---------------------------------------------------------------------------
 
-def _generate_template_excel(quarter: str, krs_info: list = None) -> bytes:
+def _generate_template_excel(quarter: str, krs_info: list = None, objectives_df: pd.DataFrame = None,
+                               updates_df: pd.DataFrame = None) -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = f"Status {quarter}"
@@ -468,6 +469,28 @@ def _generate_template_excel(quarter: str, krs_info: list = None) -> bytes:
             tgt = kr_data.get("target", 0)
             title = k.get("title") if "title" in k else kr_data.get("title", "")
             unit = k.get("unit") if "unit" in k else kr_data.get("unit", "")
+            kr_id = str(kr_data.get("id", ""))
+
+            # Get Objective from objectives_df
+            obj_title = ""
+            if not objectives_df.empty and "id" in objectives_df.columns:
+                obj_id = str(kr_data.get("objective_id", ""))
+                obj_rows = objectives_df[objectives_df["id"].astype(str) == obj_id]
+                if not obj_rows.empty:
+                    obj_title = str(obj_rows.iloc[0].get("title", ""))[:50]
+
+            # Get Confidence, Blockers, and Week Notes from updates_df (most recent update for this KR)
+            confidence = ""
+            blockers = ""
+            week_notes = ""
+            if not updates_df.empty and kr_id:
+                kr_updates = updates_df[updates_df["kr_id"].astype(str) == kr_id]
+                if not kr_updates.empty:
+                    # Get the most recent update
+                    latest_update = kr_updates.sort_values("updated_at", ascending=False).iloc[0]
+                    confidence = str(latest_update.get("confidence", "")) if latest_update.get("confidence") else ""
+                    blockers = str(latest_update.get("blockers", ""))[:100] if latest_update.get("blockers") else ""
+                    week_notes = str(latest_update.get("week_notes", ""))[:100] if latest_update.get("week_notes") else ""
 
             # Formatting logic for Excel
             fmt = str(kr_data.get("value_format", "number")).lower() if "value_format" in kr_data else "number"
@@ -483,13 +506,13 @@ def _generate_template_excel(quarter: str, krs_info: list = None) -> bytes:
                 tgt_str = f"{tgt} {unit}".strip() if unit else str(tgt)
 
             rows.append([
-                "", # Objective
+                obj_title,
                 title,
                 tgt_str,
                 val_str,
-                "", # Confidence (user can fill in)
-                "", # Notes (user can fill in)
-                "" # Blockers (user can fill in)
+                confidence if confidence else "",
+                week_notes,
+                blockers if blockers else ""
             ])
     else:
         # Fallback to empty rows / instructions
@@ -708,7 +731,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 st.markdown(f"<div style='font-size:0.65rem; color:#6B6B7E; text-align:center; margin-top:-10px;'>Last sync: {sync_label}</div>", unsafe_allow_html=True)
 
         with cols[1]:
-            excel_bytes = _generate_template_excel(selected_quarter, krs_info_for_export)
+            excel_bytes = _generate_template_excel(selected_quarter, krs_info_for_export, objectives_df, updates_df)
             st.download_button(
                 label="Excel",
                 icon=":material/download:",
