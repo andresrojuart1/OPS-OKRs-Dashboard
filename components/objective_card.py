@@ -1,8 +1,11 @@
-"""Objective card — Clean OKR layout.
+"""Objective card — Executive Boardroom Layout.
 
 Hierarchy: Sub-team → Objective → Key Results
-Logic: Correct objective progress calculation (Average of KRs) & Time-Travel.
-Design: Minimalist rows for boardroom scannability.
+Logic: Accurate historical progress (Average of KRs) & Time-Travel navigation.
+Design Focus:
+- 15px update narrative (Critical readability)
+- Left-Right KR layout
+- Distinct value badges
 """
 
 import pandas as pd
@@ -24,7 +27,7 @@ from sheets import (
 from observability import handle_error, track_action
 
 # ---------------------------------------------------------------------------
-# Design tokens
+# Visual tokens
 # ---------------------------------------------------------------------------
 
 MUTED = "rgba(255,255,255,0.4)"
@@ -56,26 +59,34 @@ def _get_week_from_ts(ts_str: str) -> int:
 
 
 def _obj_progress_bar(pct: float) -> str:
-    return f"""<div style="background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden; margin:8px 0 4px;">
+    return f"""<div style="background:rgba(255,255,255,0.08); border-radius:999px; height:8px; overflow:hidden; margin:10px 0;">
 <div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px; background:linear-gradient(90deg, {PURPLE}, {GREEN}); transition: width 0.6s ease;"></div>
 </div>"""
 
 
 def _kr_progress_bar(pct: float) -> str:
-    return f"""<div style="background:rgba(255,255,255,0.04); border-radius:999px; height:5px; overflow:hidden; margin:10px 0 0;">
+    return f"""<div style="background:rgba(255,255,255,0.04); border-radius:999px; height:5px; overflow:hidden; margin:12px 0 0;">
 <div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px; background:{PURPLE}; transition: width 0.6s ease;"></div>
 </div>"""
 
 
-def _format_badge(value, unit: str) -> str:
+def _format_badge(value, unit: str, fmt_override: str = None) -> str:
     try: v = float(value)
     except: return str(value)
+    
     u = unit.lower().strip()
-    if u == "%": return f"{v:+.2f}%" if v != 0 else f"{v:.2f}%"
-    if u in ("$", "$/month"):
-        if v >= 1_000_000: return f"${v / 1_000_000:.1f}M"
-        if v >= 1_000: return f"${v / 1_000:.0f}K"
-        return f"${v:,.0f}"
+    f = str(fmt_override).lower().strip() if fmt_override else "number"
+    
+    if f == "percentage" or u == "%":
+        # Note: input is usually 50 for 50%, we might multiply by 100 if raw decimal, 
+        # but here UI already treats current_value as raw comparison to target.
+        return f"{v:+.2f}%" if v != 0 else f"{v:.2f}%"
+    
+    if f == "currency" or u in ("$", "$/month"):
+        if abs(v) >= 1_000_000: return f"${v / 1_000_000:.1f}M"
+        if abs(v) >= 1_000: return f"${v / 1_000:.0f}K"
+        return f"${v:,.2f}" if f == "currency" else f"${v:,.0f}"
+        
     return f"{v:g} {unit}"
 
 
@@ -87,8 +98,8 @@ def _format_current_target(current: float, target: float, unit: str) -> str:
             if v >= 1_000_000: return f"${v / 1_000_000:.1f}M"
             if v >= 1_000: return f"${v / 1_000:.0f}K"
             return f"${v:,.0f}"
-        return f"Current: {fmt(current)} / Target: {fmt(target)}"
-    return f"Current: {current:g} / Target: {target:g} {unit}"
+        return f"{fmt(current)} / {fmt(target)}"
+    return f"{current:g} / {target:g} {unit}"
 
 
 def _get_hist_val(updates_df, kr_id: str, week: int):
@@ -149,61 +160,72 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
         avg_pct = 0.0; achieved = total = 0
 
     with st.container():
-        # Header Info
-        st.markdown(f'<div style="font-size:12px; font-weight:700; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:8px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
+        # Label & Header
+        st.markdown(f'<div style="font-size:11px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
         
         c_title, c_opts = st.columns([5, 0.5])
         with c_title:
-            st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:12px;">{obj_title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:22px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:12px;">{obj_title}</div>', unsafe_allow_html=True)
         with c_opts:
             if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
                 _obj_actions_dialog(obj_id, obj_title)
 
-        # Progress
-        st.markdown(f'<div style="font-size:32px; font-weight:800; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
+        # Objective Progress Summary
+        st.markdown(f'<div style="font-size:38px; font-weight:800; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
         st.markdown(_obj_progress_bar(avg_pct), unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:24px;">{achieved} / {total} KRs achieved</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:28px; font-weight:600;">{achieved} / {total} KRs achieved</div>', unsafe_allow_html=True)
+
+        # Divider Section
+        st.markdown('<div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:16px;">Key Results Tracking</div>', unsafe_allow_html=True)
 
         if effective_data:
             for data in effective_data:
-                _render_kr_row(data, active_kr)
+                _render_kr_block(data, active_kr)
         else:
-            st.markdown(f'<div style="color:{MUTED}; padding:12px 0;">No key results tracked.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="padding:16px; text-align:center; color:{MUTED}; font-size:14px;">No key results found.</div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
-# KR Row
+# KR Render
 # ---------------------------------------------------------------------------
 
-def _render_kr_row(data, active_kr: str) -> None:
+def _render_kr_block(data, active_kr: str) -> None:
     kr, pct, val, latest = data["kr"], data["pct"], data["val"], data["latest"]
     kr_id, title = str(kr["id"]), kr["title"]
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
 
     with st.container():
-        st.markdown('<div style="padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.05); margin-top:8px;">', unsafe_allow_html=True)
+        st.markdown('<div style="margin-bottom:24px;">', unsafe_allow_html=True)
         
-        c_main, c_pct, c_act = st.columns([3.5, 0.8, 0.7])
-        with c_main:
-            st.markdown(f'<div style="font-size:15px; font-weight:600; color:#fff;">{title}</div>', unsafe_allow_html=True)
-            st.markdown(f'<div style="font-size:13px; color:{MUTED};">{_format_current_target(val, target, unit)}</div>', unsafe_allow_html=True)
+        # --- PRIMARY INFO (LEFT) vs ACTION/METRIC (RIGHT) ---
+        c_left, c_right = st.columns([3.5, 1.5])
+        with c_left:
+            st.markdown(f'<div style="font-size:16px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit)}</div>', unsafe_allow_html=True)
         
-        with c_pct:
-            st.markdown(f'<div style="text-align:right; font-size:18px; font-weight:700; color:{_pct_color(pct)};">{pct:.0f}%</div>', unsafe_allow_html=True)
-        
-        with c_act:
-            if st.button("Update", key=f"ukr_{kr_id}", type="secondary", use_container_width=True):
+        with c_right:
+            st.markdown(f'<div style="text-align:right; font-size:24px; font-weight:800; color:{_pct_color(pct)}; line-height:1; margin-bottom:6px;">{pct:.0f}%</div>', unsafe_allow_html=True)
+            if st.button("Update", key=f"upd_{kr_id}", type="primary", use_container_width=True):
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                 st.rerun()
 
-        # Update inline (Readability 15px)
+        # --- NARRATIVE ROW (15px Visibility) ---
         if latest is not None:
+            badge_color = _pct_color(pct)
+            fmt_override = latest.get("value_format", "number")
             st.markdown(f"""
-            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
-                <span style="font-size:13px; font-weight:700; color:{GREEN}; opacity:0.9;">{_format_badge(val, unit)}</span>
-                <span style="font-size:15px; color:rgba(255,255,255,0.8); line-height:1.4;">{latest.get('week_notes', '')}</span>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:14px; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border-left:4px solid {badge_color};">
+                <div style="background:{badge_color}1a; color:{badge_color}; padding:4px 10px; border-radius:6px; font-size:15px; font-weight:700; white-space:nowrap;">{_format_badge(val, unit, fmt_override)}</div>
+                <div style="flex:1; font-size:15px; color:rgba(255,255,255,0.8); line-height:1.4;">{latest.get('week_notes', '')}</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.2); white-space:nowrap;">W{latest.get('wk','?')}</div>
             </div>
             """, unsafe_allow_html=True)
+            # Show dependencies if any
+            deps = latest.get("blockers", "")
+            if deps:
+                st.markdown(f'<div style="padding-left:12px; margin-top:4px; font-size:13px; color:#f87171; font-weight:500;">⚠ Dependencies: {deps}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div style="font-size:14px; color:{MUTED}; font-style:italic; margin-top:10px; opacity:0.6;">No updates recorded for this week.</div>', unsafe_allow_html=True)
 
         st.markdown(_kr_progress_bar(pct), unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -212,22 +234,30 @@ def _render_kr_row(data, active_kr: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Update Form
 # ---------------------------------------------------------------------------
 
 def _render_update_form(kr):
     kr_id = str(kr["id"])
-    st.markdown('<div style="background:rgba(255,255,255,0.03); padding:16px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); margin:8px 0;">', unsafe_allow_html=True)
-    with st.form(key=f"f_{kr_id}"):
-        val = st.number_input("Value", value=float(kr.get("current_value", 0)))
-        notes = st.text_input("Notes")
-        if st.form_submit_button("Save", use_container_width=True):
+    st.markdown('<div style="background:rgba(122,80,247,0.05); padding:16px; border-radius:12px; border:1px solid rgba(122,80,247,0.2); margin:12px 0;">', unsafe_allow_html=True)
+    with st.form(key=f"frm_{kr_id}"):
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            val = st.number_input("Numerical Value", value=float(kr.get("current_value", 0)))
+        with c2:
+            v_fmt = st.selectbox("Value format", ["number", "percentage", "currency"])
+            
+        notes = st.text_input("Narrative (Notes)")
+        deps = st.text_input("Dependencies / Blockers")
+        
+        if st.form_submit_button("Save Update", use_container_width=True):
             try:
                 selected_week = st.session_state.get("selected_week", 1)
                 update_kr_value(
-                    kr_id, val, notes, "", 3, 
+                    kr_id, val, notes, deps, 3, 
                     st.session_state.get("user",{}).get("email","?"),
-                    selected_week
+                    selected_week,
+                    v_fmt
                 )
                 st.session_state["updating_kr"] = None; st.rerun()
             except Exception as e: handle_error(e, "Save failed", "Update")
@@ -238,7 +268,8 @@ def _obj_actions_dialog(id, title):
     st.write(f"Objective: **{title}**")
     if st.button("Edit Title"): _edit_obj_dialog(id, title)
     if st.button("Add Key Result"): add_kr_dialog(id)
-    if st.button("Delete Objective"): delete_objective(id); st.rerun()
+    st.divider()
+    if st.button("Delete Objective", type="secondary"): delete_objective(id); st.rerun()
 
 @st.dialog("Edit Title")
 def _edit_obj_dialog(id, title):

@@ -426,10 +426,10 @@ QUARTERS = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"]
 # Excel template
 # ---------------------------------------------------------------------------
 
-def _generate_template_excel(quarter: str) -> bytes:
+def _generate_template_excel(quarter: str, krs_info: list = None) -> bytes:
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = quarter
+    ws.title = f"Status {quarter}"
 
     headers = [
         "Objective",
@@ -448,30 +448,38 @@ def _generate_template_excel(quarter: str) -> bytes:
     for cell in ws[1]:
         cell.fill = hdr_fill
         cell.font = hdr_font
-        cell.alignment = Alignment(wrap_text=False)
+        cell.alignment = Alignment(horizontal="center")
 
-    rows = [
-        ["Scale Financial Products into Reliable ARR Contributors, Building a Second Revenue Engine Alongside Payroll",
-         "Revenue from new initiatives reaches $20K/month", "20000 $", "", "", "", ""],
-        ["", "Quick monthly disbursement volume reaches $500K/month", "500000 $/month", "", "", "", ""],
-        ["", "Future Fund AUM reaches $8M between CD and MMF vault", "9000000 $", "", "", "", ""],
-        ["Close the Margin Gap and Ensure Every Payment Rail Operates at Target Profitability",
-         "Pay-ins gross margin reaches 20%", "20 %", "", "", "", ""],
-        ["", "Payouts net margin reaches 85% range", "85 %", "", "", "", ""],
-        ["", "JPM integration live and processing volume by Q2 close", "1 Launched", "", "", "", ""],
-        ["Eliminate Human Intervention as Default in Support, with AI Resolving Most Volume at High CSAT",
-         "AI-resolved tickets reach 250 per month", "250 tickets/month", "", "", "", ""],
-        ["", "Automated CX resolution rate reaches 55%", "55 %", "", "", "", ""],
-        ["", "Aura CSAT score reaches at least 80%", "80 %", "", "", "", ""],
-        ["Achieve ISO 27001 Readiness and Pass Pre-Audit to Unlock Enterprise and Regulated Markets",
-         "ISO 27001 pre-audit completed with PASS result", "1 PASS (binary)", "", "", "", ""],
-        ["Launch Revenue-Generating AI Products That Create a New Direct Monetization Layer",
-         "AI Lead Scraper MQL-to-SQL conversion rate reaches 50%", "50 %", "", "", "", ""],
-        ["", "AI Money Manager reaches $10K MRR by Dec 2026", "10000 $/month", "", "", "", ""],
-        ["Empower the Entire Ontop Organization with the AI Agentic Workflow Framework",
-         "Core operational workflows migrated to AI Agentic Workflow framework and live in production",
-         "5 workflows", "", "", "", ""],
-    ]
+    rows = []
+    if krs_info:
+        for k in krs_info:
+            # Formatting logic for Excel
+            fmt = str(k.get("value_format", "number")).lower()
+            val = k.get("current_value", 0)
+            tgt = k.get("target", 0)
+            
+            if fmt == "percentage":
+                val_str = f"{val}%"
+                tgt_str = f"{tgt}%"
+            elif fmt == "currency":
+                val_str = f"${val:,.2f}"
+                tgt_str = f"${tgt:,.2f}"
+            else:
+                val_str = str(val)
+                tgt_str = f"{tgt} {k.get('unit', '')}"
+
+            rows.append([
+                "", # Objective (can be filled if needed, but keeping it minimal)
+                k.get("title", ""),
+                tgt_str,
+                val_str,
+                k.get("last_confidence", ""),
+                k.get("last_notes", ""),
+                k.get("last_blockers", "")
+            ])
+    else:
+        # Fallback to empty rows / instructions
+        rows.append(["[No data found for this selection]", "", "", "", "", "", ""])
 
     fill_a = PatternFill(start_color="13152A", end_color="13152A", fill_type="solid")
     fill_b = PatternFill(start_color="0D0E1A", end_color="0D0E1A", fill_type="solid")
@@ -681,7 +689,7 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
                 st.markdown(f"<div style='font-size:0.65rem; color:#6B6B7E; text-align:center; margin-top:-10px;'>Last sync: {sync_label}</div>", unsafe_allow_html=True)
 
         with cols[1]:
-            excel_bytes = _generate_template_excel(selected_quarter)
+            excel_bytes = _generate_template_excel(selected_quarter, krs_info)
             st.download_button(
                 label="Excel",
                 icon=":material/download:",
@@ -855,6 +863,7 @@ def render_dashboard() -> None:
             "last_notes":     str(latest["week_notes"]) if latest is not None and latest.get("week_notes") else "",
             "last_blockers":  str(latest["blockers"])   if latest is not None and latest.get("blockers")   else "",
             "last_confidence": int(latest["confidence"]) if latest is not None and latest.get("confidence") else 0,
+            "value_format":   str(latest["value_format"]) if latest is not None and latest.get("value_format") else "number",
         })
     st.session_state["_krs_for_ai"] = krs_info
     

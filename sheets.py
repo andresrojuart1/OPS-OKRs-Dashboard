@@ -170,7 +170,7 @@ SEED_KEY_RESULTS = [
 
 OBJ_HEADERS = ["id", "title", "sub_team", "quarter", "company_vision"]
 KR_HEADERS  = ["id", "objective_id", "title", "target", "unit", "current_value"]
-UPD_HEADERS    = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at", "week_number"]
+UPD_HEADERS    = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at", "week_number", "value_format"]
 NOTES_HEADERS  = ["id", "sub_team", "quarter", "week_number", "content", "updated_by", "updated_at"]
 CHARTS_HEADERS = ["id", "sub_team", "quarter", "week_number", "filename", "drive_file_id", "drive_url", "uploaded_by", "uploaded_at"]
 
@@ -370,6 +370,7 @@ def update_kr_value(
     confidence: int,
     updated_by: str,
     week_number: int,
+    value_format: str = "number",
 ) -> None:
     """Atomically append update log row and update current_value in key_results."""
     spreadsheet = get_spreadsheet()
@@ -393,7 +394,7 @@ def update_kr_value(
     update_id = str(uuid.uuid4())[:8]
 
     upd_ws.append_row(
-        [update_id, kr_id, new_value, week_notes, blockers, confidence, updated_by, now, week_number],
+        [update_id, kr_id, new_value, week_notes, blockers, confidence, updated_by, now, week_number, value_format],
         value_input_option="RAW",
     )
     kr_ws.update_cell(row_index, col_index, new_value)
