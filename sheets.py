@@ -403,11 +403,12 @@ def load_key_results() -> pd.DataFrame:
     
     # Strict filtering: remove any row with empty ID or Title
     if not df.empty:
-        df = df[df["id"].astype(str).str.strip().str.len() > 0].copy()
+        df = df[df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
         if "title" in df.columns:
-            df = df[df["title"].astype(str).str.strip().str.len() > 0].copy()
+            df = df[df["title"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
         if "objective_id" in df.columns:
-            df = df[df["objective_id"].astype(str).str.strip().str.len() > 0].copy()
+            df = df[df["objective_id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
+
             
     logger.debug("Loaded %d key results", len(df))
     return df
@@ -440,8 +441,9 @@ def load_updates() -> pd.DataFrame:
             
     # Filter out empty updates
     if not df.empty:
-        df = df[df["id"].astype(str).str.strip() != ""].copy()
-        df = df[df["kr_id"].astype(str).str.strip() != ""].copy()
+        df = df[df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
+        df = df[df["kr_id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
+
             
     return df
 
@@ -674,9 +676,15 @@ def create_kr(objective_id: str, title: str, target: float, unit: str) -> None:
     """Append a new key result row and clear the read cache."""
     ws = get_spreadsheet().worksheet("key_results")
     new_id = _next_kr_id()
-    ws.append_row([new_id, objective_id, title, target, unit, 0], value_input_option="RAW")
+    
+    headers = [str(h).strip().lower() for h in ws.row_values(1)]
+    row_data = {"id": new_id, "objective_id": objective_id, "title": title, "target": target, "unit": unit, "current_value": 0}
+    row_values = [row_data.get(h, "") for h in headers]
+    
+    ws.append_row(row_values, value_input_option="RAW")
     logger.info("KR created: %s for objective %s", new_id, objective_id)
     st.cache_data.clear()
+
 
 
 # ---------------------------------------------------------------------------
@@ -719,38 +727,62 @@ def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
 
 
 @gspread_retry()
+@gspread_retry(retries=3)
 def save_weekly_note(sub_team: str, quarter: str, week_number: int, content: str, updated_by: str) -> str:
-    """Save or update a weekly note using positional indexing."""
+    """Save or update a weekly note with dynamic header mapping and sanitization."""
     ws = get_worksheet("weekly_notes")
-    all_rows = ws.get_all_values()
-    note_id = None
-    
-    # Check for existing note to update (B=1, C=2, D=3 in 0-indexed row)
-    for i, row in enumerate(all_rows[1:], start=2):
-        if (len(row) >= 4 and
-            str(row[1]).strip() == str(sub_team).strip() and
-            str(row[2]).strip() == str(quarter).strip() and
-            str(row[3]).strip() == str(week_number).strip()):
-            
-            note_id = str(row[0])
-            now_str = datetime.now(timezone.utc).isoformat()
-            ws.update_cell(i, 5, content)    # Col E: content
-            ws.update_cell(i, 6, updated_by) # Col F: updated_by
-            ws.update_cell(i, 7, now_str)    # Col G: updated_at
-            break
-            
-    if note_id is None:
-        existing_ids = [int(r[0]) for r in all_rows[1:] if str(r[0]).isdigit()]
-        new_id = max(existing_ids) + 1 if existing_ids else 1
-        note_id = str(new_id)
-        ws.append_row(
-            [new_id, sub_team, quarter, week_number, content, updated_by,
-             datetime.now(timezone.utc).isoformat()],
-            value_input_option="RAW",
-        )
-    
-    st.cache_data.clear()
-    return note_id
+    if ws is None: return ""
+
+    try:
+        # 1. Get current headers and records
+        headers = [str(h).strip().lower() for h in ws.row_values(1)]
+        records = safe_get_all_records(ws, headers)
+        
+        # 2. Find existing note
+        note_id = None
+        row_idx = None
+        for i, r in enumerate(records, start=2):
+            if (str(r.get("sub_team")).strip() == str(sub_team).strip() and
+                str(r.get("quarter")).strip() == str(quarter).strip() and
+                str(r.get("week_number")).strip() == str(week_number).strip()):
+                note_id = str(r.get("id"))
+                row_idx = i
+                break
+
+        # 3. Prepare data
+        now_str = datetime.now(timezone.utc).isoformat()
+        note_data = {
+            "id": note_id or str(uuid.uuid4())[:8],
+            "sub_team": sub_team,
+            "quarter": quarter,
+            "week_number": week_number,
+            "content": content,
+            "updated_by": updated_by,
+            "updated_at": now_str
+        }
+
+        # 4. Build sanitized row
+        def _sanitize(v):
+            if v is None: return ""
+            if isinstance(v, (list, dict)): return json.dumps(v)
+            return v
+
+        row_values = [_sanitize(note_data.get(h, "")) for h in headers]
+
+        # 5. Write to sheet
+        if row_idx:
+            # Update entire row for consistency
+            ws.update(f"A{row_idx}", [row_values], value_input_option="RAW")
+        else:
+            ws.append_row(row_values, value_input_option="RAW")
+
+        st.cache_data.clear()
+        return note_data["id"]
+
+    except Exception as e:
+        logger.error("Failed to save weekly note in sheet 'weekly_notes': %s", e)
+        raise e
+
 
 
 # ---------------------------------------------------------------------------
@@ -825,14 +857,35 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
         except Exception:
             pass
 
-        record_id = str(uuid.uuid4())[:8]
-        charts_ws.append_row(
-            [record_id, sub_team, quarter, week_number, file.name, 
-             drive_file["id"], f"https://drive.google.com/uc?export=view&id={drive_file['id']}", 
-             email, datetime.now(timezone.utc).isoformat()],
-            value_input_option="RAW",
-        )
-        created_ids.append(record_id)
+        try:
+            # 5. Build sanitized row based on dynamic headers
+            headers = [str(h).strip().lower() for h in charts_ws.row_values(1)]
+            row_data = {
+                "id": str(uuid.uuid4())[:8],
+                "sub_team": sub_team,
+                "quarter": quarter,
+                "week_number": week_number,
+                "filename": file.name,
+                "drive_file_id": drive_file["id"],
+                "drive_url": f"https://drive.google.com/uc?export=view&id={drive_file['id']}",
+                "uploaded_by": email,
+                "uploaded_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            def _sanitize(v):
+                if v is None: return ""
+                if isinstance(v, (list, dict)): return json.dumps(v)
+                return v
+
+            row_values = [_sanitize(row_data.get(h, "")) for h in headers]
+            
+            charts_ws.append_row(row_values, value_input_option="RAW")
+            created_ids.append(row_data["id"])
+        except Exception as e:
+            logger.error("Failed to write to 'weekly_charts' sheet for file %s: %s", file.name, e)
+            # We don't raise here to allow other files to proceed, per 'wrap each sheet write' requirement
+            continue
+
     
     st.cache_data.clear()
     return created_ids
@@ -959,9 +1012,18 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
                     return str(r["id"])
             return None
 
+        def _safe_float(v):
+            try:
+                # Remove common non-numeric chars
+                clean_v = str(v).replace('$', '').replace('%', '').replace(',', '').strip()
+                return float(clean_v)
+            except (ValueError, TypeError):
+                return 0.0
+
         new_updates_rows = []
         kr_cell_updates = []
         now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
 
         for obj_data in parsed_data.get("objectives", []):
             obj_id = _find_obj_in_list(obj_data["title"], sub_team, quarter)
@@ -974,13 +1036,13 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
             for kr_data in obj_data.get("key_results", []):
                 kr_id = _find_kr_in_list(obj_id, kr_data["title"])
                 if not kr_id:
-                    create_kr(obj_id, kr_data["title"], float(kr_data.get("target") or 0), kr_data.get("unit", ""))
+                    create_kr(obj_id, kr_data["title"], _safe_float(kr_data.get("target")), kr_data.get("unit", ""))
                     krs_list = safe_get_all_records(kr_ws, KR_HEADERS)
                     kr_id = krs_list[-1]["id"]
 
                 
                 if kr_data.get("current_value") is not None:
-                    new_val = float(kr_data["current_value"])
+                    new_val = _safe_float(kr_data["current_value"])
                     # Find row index for cell update
                     idx = None
                     for i, r in enumerate(krs_list, start=2):
@@ -992,15 +1054,46 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
                     
                     upd_id = str(uuid.uuid4())[:8]
                     created_ids["update_ids"].append(upd_id)
-                    new_updates_rows.append([
-                        upd_id, kr_id, new_val, 
-                        f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
-                        "", 3, updated_by, now_str
-                    ])
+                    
+                    # Prepare structured data for dynamic header mapping
+                    upd_row_data = {
+                        "id": upd_id,
+                        "kr_id": kr_id,
+                        "new_value": new_val,
+                        "week_notes": f"Imported from PDF — Status: {kr_data.get('status', 'N/A')}",
+                        "blockers": "",
+                        "confidence": 3,
+                        "updated_by": updated_by,
+                        "updated_at": now_str,
+                        "week_number": get_week_number(),
+                        "value_format": "number"
+                    }
+                    
+                    # Sanitize and map to actual headers
+                    def _sanitize(v):
+                        if v is None: return ""
+                        if isinstance(v, (list, dict)): return json.dumps(v)
+                        return v
+
+                    # Fetch actual headers for kr_updates statically once
+                    if not 'upd_headers' in locals():
+                        upd_headers = [str(h).strip().lower() for h in upd_ws.row_values(1)]
+                    
+                    row_values = [_sanitize(upd_row_data.get(h, "")) for h in upd_headers]
+                    new_updates_rows.append(row_values)
+
         
         # Batch execute updates
         if new_updates_rows:
-            upd_ws.append_rows(new_updates_rows, value_input_option="RAW")
+            try:
+                upd_ws.append_rows(new_updates_rows, value_input_option="RAW")
+            except Exception as e:
+                logger.error("Failed batch write to 'kr_updates': %s", e)
+                # Fallback to individual writes if batch fails
+                for row in new_updates_rows:
+                    try: upd_ws.append_row(row, value_input_option="RAW")
+                    except: pass
+
         if kr_cell_updates:
             kr_ws.batch_update(kr_cell_updates, value_input_option="RAW")
         

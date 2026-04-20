@@ -817,16 +817,16 @@ def render_dashboard() -> None:
     # 1. Filter Objectives
     if not objectives_df.empty:
         objectives_df = objectives_df[
-            (objectives_df["id"].astype(str).str.strip().str.len() > 0) &
-            (objectives_df["title"].astype(str).str.strip().str.len() > 0)
+            (objectives_df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0) &
+            (objectives_df["title"].astype(str).replace("nan", "").str.strip().str.len() > 0)
         ].copy()
         
     # 2. Filter KRs (Must have active Objective AND a title)
     if not krs_df.empty and not objectives_df.empty:
         valid_obj_ids = set(objectives_df["id"].astype(str).unique())
         krs_df = krs_df[
-            (krs_df["id"].astype(str).str.strip().str.len() > 0) & 
-            (krs_df["title"].astype(str).str.strip().str.len() > 0) &
+            (krs_df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0) & 
+            (krs_df["title"].astype(str).replace("nan", "").str.strip().str.len() > 0) &
             (krs_df["objective_id"].astype(str).isin(valid_obj_ids))
         ].copy()
         
@@ -834,7 +834,7 @@ def render_dashboard() -> None:
     if not updates_df.empty and not krs_df.empty:
         valid_kr_ids = set(krs_df["id"].astype(str).unique())
         updates_df = updates_df[
-            (updates_df["id"].astype(str).str.strip().str.len() > 0) & 
+            (updates_df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0) & 
             (updates_df["kr_id"].astype(str).isin(valid_kr_ids))
         ].copy()
 
@@ -844,7 +844,7 @@ def render_dashboard() -> None:
     # --- DYNAMIC WEEK INITIALIZATION ---
     if "selected_week" not in st.session_state:
         if not updates_df.empty and "week_number" in updates_df.columns:
-            latest_data_wk = pd.to_numeric(updates_df["week_number"].max(), errors="coerce")
+            latest_data_wk = pd.to_numeric(updates_df["week_number"], errors="coerce").max()
             if pd.notna(latest_data_wk) and latest_data_wk > 0:
                 st.session_state["selected_week"] = int(latest_data_wk)
 
