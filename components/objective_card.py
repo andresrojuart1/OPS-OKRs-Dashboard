@@ -214,6 +214,9 @@ def _render_kr_block(data, active_kr: str) -> None:
         prefix = "+" if diff > 0 else ""
         return f'<span style="font-size:12px; font-weight:700; color:{color}; margin-left:8px;">{prefix}{diff:.1f}pp</span>'
 
+    # Deployment Verification Marker
+    st.markdown("<!-- OKR-V1.1 -->", unsafe_allow_html=True)
+
     with st.container():
         st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
         

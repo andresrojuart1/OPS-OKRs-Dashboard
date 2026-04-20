@@ -93,4 +93,6 @@ def render_sidebar() -> Optional[str]:
             else:
                 _logout()
 
+        st.caption("v1.1 · OPS-Trend-Active")
+
     return selected
