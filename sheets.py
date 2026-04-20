@@ -81,9 +81,12 @@ def get_spreadsheet() -> gspread.Spreadsheet:
     return get_gspread_client().open_by_key(_secret("GSPREAD_SPREADSHEET_ID"))
 
 
-def get_worksheet(name: str) -> gspread.Worksheet:
-    """Always fetch a clean worksheet object from the spreadsheet."""
-    return get_spreadsheet().worksheet(name)
+def get_worksheet(name: str):
+    """Fetch a worksheet object. Return None if not found instead of crashing."""
+    try:
+        return get_spreadsheet().worksheet(name)
+    except Exception:
+        return None
 
 
 def get_service_account_credentials() -> Credentials:
@@ -322,7 +325,8 @@ def delete_objective(obj_id: str) -> None:
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 def load_objectives() -> pd.DataFrame:
-    ws = get_spreadsheet().worksheet("objectives")
+    ws = get_worksheet("objectives")
+    if ws is None: return pd.DataFrame(columns=OBJ_HEADERS)
     records = ws.get_all_records()
     logger.debug("Loaded %d objectives", len(records))
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
@@ -331,7 +335,8 @@ def load_objectives() -> pd.DataFrame:
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
-    ws = get_spreadsheet().worksheet("key_results")
+    ws = get_worksheet("key_results")
+    if ws is None: return pd.DataFrame(columns=KR_HEADERS)
     records = ws.get_all_records()
     if not records:
         return pd.DataFrame(columns=KR_HEADERS)
@@ -345,7 +350,8 @@ def load_key_results() -> pd.DataFrame:
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
 def load_updates() -> pd.DataFrame:
-    ws = get_spreadsheet().worksheet("kr_updates")
+    ws = get_worksheet("kr_updates")
+    if ws is None: return pd.DataFrame(columns=UPD_HEADERS)
     records = ws.get_all_records()
     return pd.DataFrame(records) if records else pd.DataFrame(columns=UPD_HEADERS)
 
@@ -588,6 +594,7 @@ def get_week_number() -> int:
 def get_weekly_note(sub_team: str, quarter: str, week_number: int) -> dict:
     """Read weekly note WITHOUT caching to ensure immediate visibility."""
     ws = get_worksheet("weekly_notes")
+    if ws is None: return {}
     all_rows = ws.get_all_values() 
     if len(all_rows) < 2: return {}
     
@@ -735,6 +742,7 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
 @st.cache_data(ttl=5)
 def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
     ws = get_worksheet("weekly_charts")
+    if ws is None: return []
     rows = ws.get_all_records()
     return [r for r in rows if (
         r["sub_team"] == sub_team and
