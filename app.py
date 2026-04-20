@@ -966,8 +966,9 @@ def render_dashboard() -> None:
         for i, (_, obj_row) in enumerate(display_objs.iterrows()):
             render_objective_card(obj_row, krs_df, updates_df, is_primary=(i == 0))
 
-    if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
-        add_objective_dialog(team_label, selected_quarter)
+    if team_label != "All":
+        if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
+            add_objective_dialog(team_label, selected_quarter)
 
     # Activity log for "All" view (sub-team views have it at the bottom)
     if team_label == "All":
