@@ -461,12 +461,18 @@ def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: s
         all_records = upd_ws.get_all_records()
         
         target_row = -1
+        # Normalize search ID
+        search_id = str(update_id).strip()
+        
         for i, row in enumerate(all_records, start=2):
-            if str(row.get("id")) == str(update_id):
+            stored_id = str(row.get("id", "")).strip()
+            if stored_id == search_id and search_id != "":
                 target_row = i
                 break
         
-        if target_row == -1: return False
+        if target_row == -1:
+            logger.warning(f"Edit failed: Update ID '{search_id}' not found in kr_updates.")
+            return False
 
         upd_ws.update_cell(target_row, 3, new_value)
         upd_ws.update_cell(target_row, 4, notes)
