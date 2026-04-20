@@ -893,9 +893,14 @@ def render_dashboard() -> None:
 
     latest_map = _get_latest_map(updates_df, selected_week)
     prev_latest_map = _get_latest_map(updates_df, selected_week - 1)
-    narrative_map = updates_df[updates_df["week_number"] == selected_week].sort_values(
-        ["kr_id", "updated_at"], ascending=[True, False]
-    ).drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
+
+    # ✅ FIX: Handle empty updates_df gracefully
+    if not updates_df.empty and "week_number" in updates_df.columns:
+        narrative_map = updates_df[updates_df["week_number"] == selected_week].sort_values(
+            ["kr_id", "updated_at"], ascending=[True, False]
+        ).drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
+    else:
+        narrative_map = {}
 
     krs_info_all = {}
     if not krs_df.empty:

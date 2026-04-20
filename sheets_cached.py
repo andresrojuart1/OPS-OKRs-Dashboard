@@ -45,17 +45,23 @@ def load_objectives_cached() -> pd.DataFrame:
     Manual refresh:
     - Call st.cache_data.clear() from the "Sync Data" button
     """
-    ws = get_worksheet("objectives")
-    if not ws:
-        return pd.DataFrame()
-
     try:
+        ws = get_worksheet("objectives")
+        if not ws:
+            print("[WARNING] Could not get 'objectives' worksheet")
+            return pd.DataFrame()
+
         data = ws.get_all_records()
+        if not data:
+            print("[INFO] 'objectives' worksheet is empty")
+            return pd.DataFrame()
+
         df = pd.DataFrame(data)
+        print(f"[OK] Loaded {len(df)} objectives from Sheets")
         return df
     except Exception as e:
         import traceback
-        print(f"Error loading objectives: {e}")
+        print(f"[ERROR] Failed to load objectives: {e}")
         traceback.print_exc()
         return pd.DataFrame()
 
@@ -67,17 +73,23 @@ def load_key_results_cached() -> pd.DataFrame:
 
     Same caching behavior as load_objectives_cached().
     """
-    ws = get_worksheet("key_results")
-    if not ws:
-        return pd.DataFrame()
-
     try:
+        ws = get_worksheet("key_results")
+        if not ws:
+            print("[WARNING] Could not get 'key_results' worksheet")
+            return pd.DataFrame()
+
         data = ws.get_all_records()
+        if not data:
+            print("[INFO] 'key_results' worksheet is empty")
+            return pd.DataFrame()
+
         df = pd.DataFrame(data)
+        print(f"[OK] Loaded {len(df)} key results from Sheets")
         return df
     except Exception as e:
         import traceback
-        print(f"Error loading key results: {e}")
+        print(f"[ERROR] Failed to load key results: {e}")
         traceback.print_exc()
         return pd.DataFrame()
 
@@ -85,21 +97,27 @@ def load_key_results_cached() -> pd.DataFrame:
 @st.cache_data(ttl=300)
 def load_updates_cached() -> pd.DataFrame:
     """
-    Load updates from 'updates' worksheet.
+    Load updates from 'kr_updates' worksheet.
 
     Same caching behavior as load_objectives_cached().
     """
-    ws = get_worksheet("updates")
-    if not ws:
-        return pd.DataFrame()
-
     try:
+        ws = get_worksheet("kr_updates")
+        if not ws:
+            print("[WARNING] Could not get 'kr_updates' worksheet")
+            return pd.DataFrame()
+
         data = ws.get_all_records()
+        if not data:
+            print("[INFO] 'kr_updates' worksheet is empty")
+            return pd.DataFrame()
+
         df = pd.DataFrame(data)
+        print(f"[OK] Loaded {len(df)} updates from Sheets")
         return df
     except Exception as e:
         import traceback
-        print(f"Error loading updates: {e}")
+        print(f"[ERROR] Failed to load updates: {e}")
         traceback.print_exc()
         return pd.DataFrame()
 
