@@ -454,33 +454,38 @@ def delete_update_by_id(update_id: str) -> None:
     st.cache_data.clear()
 
 def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: str, val_format: str) -> bool:
-    """Finds an update entry by ID and overwrites its numerical and narrative values."""
+    """Finds an update entry by ID and overwrites its values using explicit string matching."""
     try:
         spreadsheet = get_spreadsheet()
         upd_ws = spreadsheet.worksheet("kr_updates")
-        all_records = upd_ws.get_all_records()
         
-        target_row = -1
-        # Normalize search ID
-        search_id = str(update_id).strip()
+        # Load all records into a DataFrame for precise matching
+        records = upd_ws.get_all_records()
+        if not records: return False
         
-        for i, row in enumerate(all_records, start=2):
-            stored_id = str(row.get("id", "")).strip()
-            if stored_id == search_id and search_id != "":
-                target_row = i
-                break
+        df = pd.DataFrame(records)
+        df["id"] = df["id"].astype(str)
+        search_id = str(update_id)
         
-        if target_row == -1:
-            logger.warning(f"Edit failed: Update ID '{search_id}' not found in kr_updates.")
+        # Match using explicit ID
+        match = df[df["id"] == search_id]
+        
+        if not match.empty:
+            # Sheet row = DataFrame index + 2 (1 for header, 1 for 0-index)
+            target_row = int(match.index[0]) + 2
+            
+            # Columns: value(3), notes(4), blockers(5), val_format(10)
+            upd_ws.update_cell(target_row, 3, new_value)
+            upd_ws.update_cell(target_row, 4, notes)
+            upd_ws.update_cell(target_row, 5, dependencies)
+            upd_ws.update_cell(target_row, 10, val_format)
+            
+            st.cache_data.clear()
+            return True
+        else:
+            logger.warning(f"Edit failed: Update ID '{search_id}' not found.")
             return False
-
-        upd_ws.update_cell(target_row, 3, new_value)
-        upd_ws.update_cell(target_row, 4, notes)
-        upd_ws.update_cell(target_row, 5, dependencies)
-        upd_ws.update_cell(target_row, 10, val_format)
-        
-        st.cache_data.clear()
-        return True
+            
     except Exception as e:
         logger.error(f"Error editing update: {e}")
         return False
