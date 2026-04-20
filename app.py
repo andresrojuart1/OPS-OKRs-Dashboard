@@ -299,74 +299,64 @@ hr {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* PRIMARY OBJECTIVE CARDS */
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger-primary) {
+/* ═══════════════════════════════════════════════════
+   MASTER OBJECTIVE CARD
+   ═══════════════════════════════════════════════════ */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger) {
     background: var(--bg-surface) !important;
-    border: 1px solid rgba(122, 80, 247, 0.2) !important;
+    border: 1px solid rgba(122, 80, 247, 0.15) !important;
     border-radius: 20px !important;
-    padding: 2.5rem !important;
-    margin-bottom: 2.5rem !important;
-    box-shadow: var(--card-shadow), 0 0 40px rgba(122, 80, 247, 0.05) !important;
-    transition: all 0.2s ease !important;
+    padding: 2rem 2.25rem 1.75rem !important;
+    margin-bottom: 2rem !important;
+    box-shadow: var(--card-shadow), 0 0 40px rgba(122, 80, 247, 0.04) !important;
+    transition: all 0.25s ease !important;
+}
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger):hover {
+    border-color: rgba(122, 80, 247, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 50px rgba(122, 80, 247, 0.06) !important;
 }
 
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger-primary):hover {
-    transform: translateY(-2px);
-    border-color: rgba(122, 80, 247, 0.4) !important;
-}
-
-/* SECONDARY OBJECTIVE CARDS */
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger) {
-    background: var(--bg-surface) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 20px !important;
-    padding: 2.25rem !important;
-    margin-bottom: 2.25rem !important;
-    box-shadow: var(--card-shadow) !important;
-    transition: all 0.2s ease !important;
-}
-
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger):hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-/* Container Resets (Streamlit specific) */
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger-primary) div[data-testid="stVerticalBlock"],
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.fintech-card-trigger) div[data-testid="stVerticalBlock"],
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-card-trigger) div[data-testid="stVerticalBlock"] {
+/* Inner container resets inside objective card */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger) div[data-testid="stVerticalBlock"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
+    margin: 0 !important;
 }
 
-/* KR ROWS as actionable cards */
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-card-trigger) {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    padding: 16px 18px !important;
-    margin-bottom: 12px !important;
+/* ═══════════════════════════════════════════════════
+   KR BLOCKS (inside objective cards)
+   Higher specificity than the inner reset above
+   ═══════════════════════════════════════════════════ */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger)
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-block-trigger) {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px !important;
+    padding: 18px 20px !important;
+    margin-bottom: 10px !important;
     transition: all 0.2s ease !important;
 }
-div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-card-trigger):hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.05) !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.okr-card-trigger)
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-block-trigger):hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
-.kr-progress-track {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border-radius: 999px !important;
-    height: 8px !important;
-    margin: 16px 0 !important;
-    overflow: hidden !important;
-    border: 1px solid rgba(255, 255, 255, 0.02) !important;
+/* Inner container resets within KR blocks */
+div[data-testid="stVerticalBlock"]:has(> div:first-child div.kr-block-trigger) div[data-testid="stVerticalBlock"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
-/* Buttons and Interactions */
+/* ═══════════════════════════════════════════════════
+   BUTTONS
+   ═══════════════════════════════════════════════════ */
 div.stButton > button {
     border-radius: 10px !important;
     transition: all 0.2s ease !important;
@@ -375,8 +365,6 @@ div.stButton > button:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
-
-/* Secondary Button (Update Action) */
 div.stButton > button[kind="secondary"] {
     background: rgba(255, 255, 255, 0.08) !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -387,6 +375,18 @@ div.stButton > button[kind="secondary"] {
 div.stButton > button[kind="secondary"]:hover {
     background: rgba(255, 255, 255, 0.15) !important;
     border-color: var(--accent-purple) !important;
+}
+
+/* Expander styling for history */
+div[data-testid="stExpander"] {
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.015) !important;
+}
+div[data-testid="stExpander"] summary {
+    color: rgba(255, 255, 255, 0.5) !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
 }
 </style>
 
@@ -916,9 +916,8 @@ def render_dashboard() -> None:
             "Please create one or import from PDF."
         )
     else:
-        active_kr = st.session_state.get("updating_kr") or ""
         for i, (_, obj_row) in enumerate(display_objs.iterrows()):
-            render_objective_card(obj_row, krs_df, active_kr=active_kr, is_primary=(i == 0))
+            render_objective_card(obj_row, krs_df, updates_df, is_primary=(i == 0))
 
     if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
         add_objective_dialog(team_label, selected_quarter)
