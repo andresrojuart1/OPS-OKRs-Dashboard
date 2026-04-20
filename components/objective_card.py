@@ -179,7 +179,13 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
             st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
         with c_opts:
             if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
-                _obj_actions_dialog(obj_id, obj_title)
+                st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
+                st.rerun()
+        
+        # Check if we should render the dialog for this objective
+        settings = st.session_state.get("active_obj_settings")
+        if settings and settings["id"] == obj_id:
+            _obj_actions_dialog(settings["id"], settings["title"])
 
         # Objective Progress Summary
         st.markdown(f'<div style="font-size:32px; font-weight:700; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
@@ -332,14 +338,19 @@ def _render_update_form(data):
 def _obj_actions_dialog(id, title):
     view = st.session_state.get(f"obj_view_{id}", "menu")
     
+    # helper to close everything
+    def _close():
+        st.session_state.pop("active_obj_settings", None)
+        st.session_state.pop(f"obj_view_{id}", None)
+        st.rerun()
+
     if view == "edit_title":
         st.markdown("### Edit Objective Title")
         nt = st.text_input("Title", value=title)
         c1, c2 = st.columns(2)
         if c1.button("Save", type="primary", use_container_width=True):
             update_objective(id, nt)
-            st.session_state.pop(f"obj_view_{id}", None)
-            st.rerun()
+            _close()
         if c2.button("Back", use_container_width=True):
             st.session_state.pop(f"obj_view_{id}", None)
             st.rerun()
@@ -352,8 +363,7 @@ def _obj_actions_dialog(id, title):
         c1, c2 = st.columns(2)
         if c1.button("Create", type="primary", use_container_width=True):
             create_kr(id, t, tgt, fmt)
-            st.session_state.pop(f"obj_view_{id}", None)
-            st.rerun()
+            _close()
         if c2.button("Back", use_container_width=True):
             st.session_state.pop(f"obj_view_{id}", None)
             st.rerun()
@@ -369,7 +379,10 @@ def _obj_actions_dialog(id, title):
         st.divider()
         if st.button("Delete Objective", type="secondary", use_container_width=True):
             delete_objective(id)
-            st.rerun()
+            _close()
+
+        if st.button("Close Settings", use_container_width=True, type="tertiary"):
+            _close()
 
 @st.dialog("Edit Key Result")
 def _edit_kr_metadata_dialog(kr):
