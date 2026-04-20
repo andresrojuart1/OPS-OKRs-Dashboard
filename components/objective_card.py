@@ -167,12 +167,12 @@ def _render_kr_row(data, active_kr: str) -> None:
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                 st.rerun()
 
-        # Update inline
+        # Update inline (Readability 15px)
         if latest is not None:
             st.markdown(f"""
-            <div style="display:flex; align-items:center; gap:8px; margin-top:6px;">
-                <span style="font-size:12px; font-weight:700; color:{GREEN}; opacity:0.8;">{_format_badge(val, unit)}</span>
-                <span style="font-size:14px; color:rgba(255,255,255,0.7);">{latest.get('week_notes', '')}</span>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                <span style="font-size:13px; font-weight:700; color:{GREEN}; opacity:0.9;">{_format_badge(val, unit)}</span>
+                <span style="font-size:15px; color:rgba(255,255,255,0.8); line-height:1.4;">{latest.get('week_notes', '')}</span>
             </div>
             """, unsafe_allow_html=True)
 
