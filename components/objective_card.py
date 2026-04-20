@@ -160,6 +160,7 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
         avg_pct = 0.0; achieved = total = 0
 
     with st.container():
+        st.markdown('<div class="okr-card-trigger"></div>', unsafe_allow_html=True)
         # Label & Header (Visual Hierarchy 14px)
         st.markdown(f'<div style="font-size:14px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:10px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
         
