@@ -279,10 +279,12 @@ def _render_update_form(data):
         
         btn_label = "Update Log" if edit_id else "Save New Update"
         if st.form_submit_button(btn_label, use_container_width=True):
+            # Explicitly retrieve from state at submission time
+            curr_edit_id = st.session_state.get("editing_id")
             try:
                 success = False
-                if edit_id:
-                    success = edit_kr_update(edit_id, val, notes, deps, v_fmt)
+                if curr_edit_id:
+                    success = edit_kr_update(curr_edit_id, val, notes, deps, v_fmt)
                 else:
                     selected_week = st.session_state.get("selected_week", 1)
                     update_kr_value(
@@ -291,14 +293,14 @@ def _render_update_form(data):
                         selected_week,
                         v_fmt
                     )
-                    success = True # update_kr_value raises on failure or we should check it
+                    success = True
                 
                 if success:
                     st.session_state["updating_kr"] = None
                     st.session_state["editing_id"] = None
                     st.rerun()
                 else:
-                    st.error("Operation failed. The record may have been deleted or is unavailable.")
+                    st.error("Operation failed. Record may have been moved or deleted.")
             except Exception as e:
                 handle_error(e, "Operation failed", "Update")
     st.markdown("</div>", unsafe_allow_html=True)
