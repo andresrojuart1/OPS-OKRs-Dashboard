@@ -394,3 +394,13 @@ def _edit_kr_metadata_dialog(kr):
             st.rerun()
         except Exception as e:
             handle_error(e, "Failed to update KR metadata", "KR")
+            
+    st.divider()
+    if st.button("Delete Key Result", type="secondary", use_container_width=True):
+        try:
+            delete_kr_by_id(kr_id)
+            track_action("Deleted KR", detail=kr_id)
+            st.rerun()
+        except Exception as e:
+            handle_error(e, "Failed to delete KR", "KR")
+
