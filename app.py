@@ -640,7 +640,7 @@ def render_login_page() -> None:
 # Header
 # ---------------------------------------------------------------------------
 
-def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
+def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info) -> None:
     """Dashboard header with system-level actions and KPI summaries."""
     selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
 
@@ -960,7 +960,7 @@ def render_dashboard() -> None:
         
     st.session_state["_krs_for_ai"] = krs_info_list
     
-    render_header(objectives_df, krs_df, team_label, krs_info_list)
+    render_header(objectives_df, krs_df, updates_df, team_label, krs_info_list)
     render_last_action()
 
 
