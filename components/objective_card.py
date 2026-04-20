@@ -75,29 +75,28 @@ def _format_badge(value, unit: str, fmt_override: str = "number") -> str:
     try: v = float(value)
     except: return str(value)
     
+    # Try override first, fallback to unit label
     f = str(fmt_override).lower().strip() if fmt_override else "number"
-    if f == "percentage": return f"{v:.1f}%"
-    if f == "currency": return f"${v:,.2f}"
-    
-    # Fallback to unit hints
     u = unit.lower().strip()
-    if u == "%": return f"{v:.1f}%"
-    if u in ("$", "$/month"): return f"${v:,.2f}" if f == "currency" else f"${v:,.0f}"
     
-    return f"{v:g} {unit}"
+    if f == "percentage" or u in ("percentage", "%"): return f"{v:.1f}%"
+    if f == "currency" or u in ("currency", "$", "$/month"): return f"${v:,.2f}"
+    
+    return f"{v:g} {unit if u not in ('number', 'count') else ''}"
 
 
 def _format_current_target(current: float, target: float, unit: str, fmt: str = "number") -> str:
-    u = unit.lower().strip()
     f = fmt.lower().strip()
+    u = unit.lower().strip()
     if u == "binary": return "Done ✓" if current >= 1 else "Pending"
     
     def apply_fmt(val):
-        if f == "percentage" or u == "%": return f"{val:.1f}%"
-        if f == "currency" or u in ("$", "$/month"): return f"${val:,.0f}"
+        if f == "percentage" or u in ("percentage", "%"): return f"{val:.1f}%"
+        if f == "currency" or u in ("currency", "$", "$/month"): return f"${val:,.2f}"
         return f"{val:g}"
 
-    return f"{apply_fmt(current)} / {apply_fmt(target)} {unit if u not in ('%', '$') else ''}"
+    label = unit if u not in ("percentage", "%", "currency", "$", "number", "count") else ""
+    return f"{apply_fmt(current)} / {apply_fmt(target)} {label}"
 
 
 def _get_hist_val(updates_df, kr_id: str, week: int):
@@ -319,19 +318,34 @@ def _edit_obj_dialog(id, title):
 def add_kr_dialog(id):
     t = st.text_input("Title")
     tgt = st.number_input("Target", value=100.0)
-    unt = st.text_input("Unit", value="%")
-    if st.button("Create"): create_kr(id, t, tgt, unt); st.rerun()
+    
+    # Standardized Format Selector
+    fmt_options = ["number", "percentage", "currency"]
+    fmt = st.selectbox("Display Format", options=fmt_options, index=0)
+    
+    if st.button("Create"): 
+        create_kr(id, t, tgt, fmt)
+        st.rerun()
 
 @st.dialog("Edit Key Result")
 def _edit_kr_metadata_dialog(kr):
     kr_id = str(kr["id"])
     t_val = st.text_input("Title", value=kr["title"])
     tgt_val = st.number_input("Target Value", value=float(kr["target"]))
-    u_val = st.text_input("Unit", value=kr["unit"])
+    
+    # Standardized Format Selector with Mapping
+    fmt_options = ["number", "percentage", "currency"]
+    # Map existing unit to format for compatibility
+    curr_u = str(kr.get("unit", "number")).lower().strip()
+    idx = 0
+    if curr_u in ("percentage", "%"): idx = 1
+    elif curr_u in ("currency", "$", "$/month"): idx = 2
+    
+    f_val = st.selectbox("Display Format", options=fmt_options, index=idx)
     
     if st.button("Save Metadata", use_container_width=True):
         try:
-            update_kr_fields(kr_id, t_val, tgt_val, u_val)
+            update_kr_fields(kr_id, t_val, tgt_val, f_val)
             st.rerun()
         except Exception as e:
             handle_error(e, "Failed to update KR metadata", "KR")
