@@ -454,43 +454,45 @@ def delete_update_by_id(update_id: str) -> None:
     st.cache_data.clear()
 
 def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: str, val_format: str) -> bool:
-    """Finds an update entry by its unique stable ID and overwrites values."""
+    """Finds an update by ID, modifies the master dataframe, and saves the whole set back to Sheets."""
     try:
         spreadsheet = get_spreadsheet()
         upd_ws = spreadsheet.worksheet("kr_updates")
         
-        # 1. Fetch raw records and load into DataFrame
+        # 1. Load the ENTIRE master dataset
         records = upd_ws.get_all_records()
         if not records: return False
         
         df = pd.DataFrame(records)
         
-        # 2. Normalize identifier column and search term to string
-        df["id"] = df["id"].astype(str).str.strip()
-        search_id = str(update_id).strip()
+        # 2. Normalize ID types for explicit matching
+        df["id"] = df["id"].astype(str)
+        search_id = str(update_id)
         
-        # 3. Locate record via explicit id match
-        match = df[df["id"] == search_id]
-        
-        if not match.empty:
-            # target_row: index + 2 (1 for header, 1 for 0-indexing)
-            target_row = int(match.index[0]) + 2
-            
-            # 4. Atomic updates for modified fields
-            # Columns in UPD_HEADERS: new_value(3), week_notes(4), blockers(5), value_format(10)
-            upd_ws.update_cell(target_row, 3, new_value)
-            upd_ws.update_cell(target_row, 4, notes)
-            upd_ws.update_cell(target_row, 5, dependencies)
-            upd_ws.update_cell(target_row, 10, val_format)
-            
-            st.cache_data.clear()
-            return True
-        else:
-            logger.warning(f"Record with ID '{search_id}' not found for editing.")
+        # 3. Verify existence before updating
+        if search_id not in df["id"].values:
+            logger.warning(f"Record '{search_id}' not found in master dataframe.")
             return False
             
+        # 4. Apply updates to the master dataframe using .loc
+        # Columns: new_value, week_notes, blockers, value_format
+        mask = df["id"] == search_id
+        df.loc[mask, "new_value"] = new_value
+        df.loc[mask, "week_notes"] = notes
+        df.loc[mask, "blockers"]   = dependencies
+        df.loc[mask, "value_format"] = val_format
+        
+        # 5. Persist the ENTIRE modified dataframe back to Sheets
+        # We clear and rewrite to ensure the master source matches our memory exactly
+        rows = [df.columns.values.tolist()] + df.values.tolist()
+        upd_ws.clear()
+        upd_ws.update(rows)
+        
+        st.cache_data.clear()
+        return True
+            
     except Exception as e:
-        logger.error(f"Save failed in edit mode: {e}")
+        logger.error(f"Full-sync save failed in edit mode: {e}")
         return False
 
 
