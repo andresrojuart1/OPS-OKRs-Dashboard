@@ -207,6 +207,55 @@ def _wipe_worksheets(spreadsheet) -> None:
             pass
 
 
+def safe_get_all_records(ws: gspread.Worksheet, expected_headers: list[str]) -> list[dict]:
+    """
+    Robustly read all records from a worksheet using get_all_values().
+    - Manually map headers to rows
+    - Handle missing or malformed headers safely
+    - Skip empty rows
+    """
+    if ws is None:
+        return []
+    try:
+        data = ws.get_all_values()
+    except Exception as e:
+        logger.error("Failed to read values from sheet '%s': %s", ws.title, e)
+        return []
+
+    if not data or len(data) < 1:
+        return []
+
+    # 1. Validate that header row exists and normalize it
+    actual_headers = [str(h).strip().lower() for h in data[0]]
+    rows = data[1:]
+
+    # 2. Map expected headers to their indices in the actual sheet
+    header_to_idx = {}
+    for h in expected_headers:
+        try:
+            header_to_idx[h] = actual_headers.index(h.lower())
+        except ValueError:
+            header_to_idx[h] = None
+
+    records = []
+    for row in rows:
+        # 3. Skip empty rows
+        if not any(str(cell).strip() for cell in row):
+            continue
+
+        record = {}
+        for h in expected_headers:
+            idx = header_to_idx[h]
+            if idx is not None and idx < len(row):
+                record[h] = row[idx]
+            else:
+                record[h] = ""
+        records.append(record)
+    
+    return records
+
+
+
 def seed_if_empty() -> None:
     if st.session_state.get("seed_checked"):
         return
@@ -223,19 +272,20 @@ def seed_if_empty() -> None:
     _ensure_worksheet(spreadsheet, "weekly_notes",  NOTES_HEADERS)
     _ensure_worksheet(spreadsheet, "weekly_charts", CHARTS_HEADERS)
 
-    if not obj_ws.get_all_records():
+    if not safe_get_all_records(obj_ws, OBJ_HEADERS):
         obj_ws.append_rows(
             [[o["id"], o["title"], o["sub_team"], o["quarter"], o["company_vision"]]
              for o in SEED_OBJECTIVES],
             value_input_option="RAW",
         )
 
-    if not kr_ws.get_all_records():
+    if not safe_get_all_records(kr_ws, KR_HEADERS):
         kr_ws.append_rows(
             [[kr["id"], kr["objective_id"], kr["title"], kr["target"], kr["unit"], kr["current_value"]]
              for kr in SEED_KEY_RESULTS],
             value_input_option="RAW",
         )
+
 
     # Migration for week_number in updates
     _migrate_updates_schema(spreadsheet)
@@ -255,7 +305,8 @@ def _migrate_updates_schema(spreadsheet) -> None:
             ws.update_cell(1, len(headers), "week_number")
             
             # Backfill existing data
-            records = ws.get_all_records()
+            records = safe_get_all_records(ws, UPD_HEADERS)
+
             if records:
                 updates = []
                 for i, row in enumerate(records, start=2):
@@ -297,14 +348,15 @@ def delete_objective(obj_id: str) -> None:
     upd_ws = spreadsheet.worksheet("kr_updates")
     
     # 1. Delete Objectives
-    all_objs = obj_ws.get_all_records()
+    all_objs = safe_get_all_records(obj_ws, OBJ_HEADERS)
+
     for i, r in enumerate(all_objs, start=2):
         if str(r.get("id")) == str(obj_id):
             obj_ws.delete_rows(i)
             break
             
     # 2. Delete Associated KRs and their updates
-    all_krs = kr_ws.get_all_records()
+    all_krs = safe_get_all_records(kr_ws, KR_HEADERS)
     associated_kr_ids = [str(r.get("id")) for r in all_krs if str(r.get("objective_id")) == str(obj_id)]
     
     if associated_kr_ids:
@@ -314,10 +366,11 @@ def delete_objective(obj_id: str) -> None:
             kr_ws.delete_rows(r)
             
         # Delete Updates
-        all_upd = upd_ws.get_all_records()
+        all_upd = safe_get_all_records(upd_ws, UPD_HEADERS)
         rows_to_del_upd = [i for i, r in enumerate(all_upd, start=2) if str(r.get("kr_id")) in associated_kr_ids]
         for r in reversed(rows_to_del_upd):
             upd_ws.delete_rows(r)
+
         
     st.cache_data.clear()
 
@@ -327,7 +380,8 @@ def delete_objective(obj_id: str) -> None:
 def load_objectives() -> pd.DataFrame:
     ws = get_worksheet("objectives")
     if ws is None: return pd.DataFrame(columns=OBJ_HEADERS)
-    records = ws.get_all_records()
+    records = safe_get_all_records(ws, OBJ_HEADERS)
+
     logger.debug("Loaded %d objectives", len(records))
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
@@ -337,7 +391,8 @@ def load_objectives() -> pd.DataFrame:
 def load_key_results() -> pd.DataFrame:
     ws = get_worksheet("key_results")
     if ws is None: return pd.DataFrame(columns=KR_HEADERS)
-    records = ws.get_all_records()
+    records = safe_get_all_records(ws, KR_HEADERS)
+
     if not records:
         return pd.DataFrame(columns=KR_HEADERS)
     df = pd.DataFrame(records)
@@ -352,7 +407,8 @@ def load_key_results() -> pd.DataFrame:
 def load_updates() -> pd.DataFrame:
     ws = get_worksheet("kr_updates")
     if ws is None: return pd.DataFrame(columns=UPD_HEADERS)
-    records = ws.get_all_records()
+    records = safe_get_all_records(ws, UPD_HEADERS)
+
     return pd.DataFrame(records) if records else pd.DataFrame(columns=UPD_HEADERS)
 
 
@@ -383,7 +439,8 @@ def update_kr_value(
     kr_ws  = spreadsheet.worksheet("key_results")
     upd_ws = spreadsheet.worksheet("kr_updates")
 
-    all_krs = kr_ws.get_all_records()
+    all_krs = safe_get_all_records(kr_ws, KR_HEADERS)
+
     row_index = None
     for i, row in enumerate(all_krs, start=2):
         if str(row.get("id", "")) == str(kr_id):
@@ -429,7 +486,8 @@ def delete_update_by_id(update_id: str) -> None:
     """Delete a kr_update row by ID and recalculate the parent KR's current_value."""
     spreadsheet = get_spreadsheet()
     upd_ws = spreadsheet.worksheet("kr_updates")
-    all_updates = upd_ws.get_all_records()
+    all_updates = safe_get_all_records(upd_ws, UPD_HEADERS)
+
 
     kr_id = None
     for row in all_updates:
@@ -451,7 +509,8 @@ def delete_update_by_id(update_id: str) -> None:
         new_val = float(kr_updates.sort_values("updated_at").iloc[-1]["new_value"])
 
     kr_ws = spreadsheet.worksheet("key_results")
-    all_krs = kr_ws.get_all_records()
+    all_krs = safe_get_all_records(kr_ws, KR_HEADERS)
+
     for i, kr_row in enumerate(all_krs, start=2):
         if str(kr_row.get("id")) == kr_id:
             kr_ws.update_cell(i, 6, new_val)
@@ -466,7 +525,8 @@ def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: s
         upd_ws = spreadsheet.worksheet("kr_updates")
         
         # 1. Load master records for identification
-        records = upd_ws.get_all_records()
+        records = safe_get_all_records(upd_ws, UPD_HEADERS)
+
         if not records:
             logger.error("Safeguard: Could not retrieve records from 'kr_updates'. Aborting to prevent data loss.")
             return False
@@ -511,7 +571,8 @@ def delete_kr_by_id(kr_id: str) -> None:
     if cell:
         kr_ws.delete_rows(cell.row)
 
-    all_updates = upd_ws.get_all_records()
+    all_updates = safe_get_all_records(upd_ws, UPD_HEADERS)
+
     rows_to_delete = [
         i for i, row in enumerate(all_updates, start=2)
         if str(row.get("kr_id", "")) == str(kr_id)
@@ -526,7 +587,8 @@ def update_kr_fields(kr_id: str, title: str, target: float, unit: str) -> None:
     """Update a KR's title, target, and unit in Google Sheets."""
     spreadsheet = get_spreadsheet()
     kr_ws = spreadsheet.worksheet("key_results")
-    all_krs = kr_ws.get_all_records()
+    all_krs = safe_get_all_records(kr_ws, KR_HEADERS)
+
     headers = kr_ws.row_values(1)
 
     for i, row in enumerate(all_krs, start=2):
@@ -547,7 +609,7 @@ def update_kr_fields(kr_id: str, title: str, target: float, unit: str) -> None:
 # ---------------------------------------------------------------------------
 
 def _next_obj_id() -> str:
-    records = get_spreadsheet().worksheet("objectives").get_all_records()
+    records = safe_get_all_records(get_spreadsheet().worksheet("objectives"), OBJ_HEADERS)
     nums = [int(str(r.get("id", ""))[1:])
             for r in records
             if str(r.get("id", "")).startswith("O") and str(r.get("id", ""))[1:].isdigit()]
@@ -555,11 +617,12 @@ def _next_obj_id() -> str:
 
 
 def _next_kr_id() -> str:
-    records = get_spreadsheet().worksheet("key_results").get_all_records()
+    records = safe_get_all_records(get_spreadsheet().worksheet("key_results"), KR_HEADERS)
     nums = [int(str(r.get("id", ""))[2:])
             for r in records
             if str(r.get("id", "")).startswith("KR") and str(r.get("id", ""))[2:].isdigit()]
     return f"KR{max(nums, default=0) + 1}"
+
 
 
 def create_objective(title: str, sub_team: str, quarter: str) -> None:
@@ -743,7 +806,8 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
 def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
     ws = get_worksheet("weekly_charts")
     if ws is None: return []
-    rows = ws.get_all_records()
+    rows = safe_get_all_records(ws, CHARTS_HEADERS)
+
     return [r for r in rows if (
         r["sub_team"] == sub_team and
         r["quarter"] == quarter and
@@ -776,7 +840,8 @@ def delete_chart_from_drive(chart_id: str) -> None:
     drive_service = build("drive", "v3", credentials=creds)
 
     ws = get_worksheet("weekly_charts")
-    rows = ws.get_all_records()
+    rows = safe_get_all_records(ws, CHARTS_HEADERS)
+
     for i, row in enumerate(rows, start=2):
         if str(row["id"]) == str(chart_id):
             try:
@@ -800,27 +865,28 @@ def delete_chart_from_drive(chart_id: str) -> None:
 
 def find_or_create_objective(title: str, sub_team: str, quarter: str) -> str:
     ws = get_worksheet("objectives")
-    rows = ws.get_all_records()
+    rows = safe_get_all_records(ws, OBJ_HEADERS)
     for row in rows:
         if (str(row["title"]).strip() == title.strip() and
                 row["sub_team"] == sub_team and
                 row["quarter"] == quarter):
             return str(row["id"])
     create_objective(title, sub_team, quarter)
-    rows = ws.get_all_records()
+    rows = safe_get_all_records(ws, OBJ_HEADERS)
     return str(rows[-1]["id"])
 
 
 def find_or_create_kr(objective_id: str, title: str, target: float, unit: str) -> str:
     ws = get_worksheet("key_results")
-    rows = ws.get_all_records()
+    rows = safe_get_all_records(ws, KR_HEADERS)
     for row in rows:
         if (str(row["objective_id"]) == str(objective_id) and
                 str(row["title"]).strip() == title.strip()):
             return str(row["id"])
     create_kr(objective_id, title, float(target or 0), unit)
-    rows = ws.get_all_records()
+    rows = safe_get_all_records(ws, KR_HEADERS)
     return str(rows[-1]["id"])
+
 
 
 @gspread_retry(retries=3)
@@ -834,8 +900,9 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
         kr_ws  = spreadsheet.worksheet("key_results")
         upd_ws = spreadsheet.worksheet("kr_updates")
         
-        objs_list = obj_ws.get_all_records()
-        krs_list  = kr_ws.get_all_records()
+        objs_list = safe_get_all_records(obj_ws, OBJ_HEADERS)
+        krs_list  = safe_get_all_records(kr_ws, KR_HEADERS)
+
         kr_headers = kr_ws.row_values(1)
         val_col = kr_headers.index("current_value") + 1
 
@@ -861,15 +928,17 @@ def save_parsed_pdf_data(parsed_data: dict, sub_team: str, quarter: str, updated
             obj_id = _find_obj_in_list(obj_data["title"], sub_team, quarter)
             if not obj_id:
                 create_objective(obj_data["title"], sub_team, quarter)
-                objs_list = obj_ws.get_all_records()
+                objs_list = safe_get_all_records(obj_ws, OBJ_HEADERS)
                 obj_id = objs_list[-1]["id"]
+
             
             for kr_data in obj_data.get("key_results", []):
                 kr_id = _find_kr_in_list(obj_id, kr_data["title"])
                 if not kr_id:
                     create_kr(obj_id, kr_data["title"], float(kr_data.get("target") or 0), kr_data.get("unit", ""))
-                    krs_list = kr_ws.get_all_records()
+                    krs_list = safe_get_all_records(kr_ws, KR_HEADERS)
                     kr_id = krs_list[-1]["id"]
+
                 
                 if kr_data.get("current_value") is not None:
                     new_val = float(kr_data["current_value"])
@@ -923,16 +992,18 @@ def undo_last_import(import_summary: dict) -> None:
     # 1. Delete KR Updates
     update_ids = import_summary.get("update_ids", [])
     if update_ids:
-        all_upd = upd_ws.get_all_records()
+        all_upd = safe_get_all_records(upd_ws, UPD_HEADERS)
         rows_to_del = [i for i, r in enumerate(all_upd, start=2) if str(r.get("id")) in update_ids]
+
         for r in reversed(rows_to_del):
              upd_ws.delete_rows(r)
             
     # 2. Delete Weekly Note
     note_id = import_summary.get("note_id")
     if note_id:
-        all_notes = notes_ws.get_all_records()
+        all_notes = safe_get_all_records(notes_ws, NOTES_HEADERS)
         for i, row in enumerate(all_notes, start=2):
+
             if str(row.get("id")) == str(note_id):
                 notes_ws.delete_rows(i)
                 break
@@ -940,8 +1011,9 @@ def undo_last_import(import_summary: dict) -> None:
     # 3. Delete Charts (Drive & Sheet)
     chart_ids = import_summary.get("chart_ids", [])
     if chart_ids:
-        all_charts = charts_ws.get_all_records()
+        all_charts = safe_get_all_records(charts_ws, CHARTS_HEADERS)
         for i, row in enumerate(all_charts, start=2):
+
             if str(row.get("id")) in chart_ids:
                 try:
                     delete_chart_from_drive(str(row.get("id")))
