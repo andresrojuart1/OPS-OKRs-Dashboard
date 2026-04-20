@@ -85,16 +85,32 @@ def _format_current_target(current: float, target: float, unit: str) -> str:
 
 def _get_hist_val(updates_df, kr_id: str, week: int):
     if updates_df.empty: return 0.0, None
-    f = updates_df[updates_df["kr_id"].astype(str) == kr_id].copy()
+    f = updates_df[updates_df["kr_id"].astype(str) == str(kr_id)].copy()
+    
+    # Normalize selected week to string for comparison
+    sel_wk = str(week).strip()
+
     # Use explicit week_number column for filtering
     if "week_number" in f.columns:
-        res = f[f["week_number"] <= week].sort_values("updated_at", ascending=False)
+        # Normalize column to string and strip
+        f["week_number_str"] = f["week_number"].astype(str).str.strip()
+        
+        # For VALUE: we want latest up to this week
+        val_res = f[f["week_number_str"].astype(float) <= float(sel_wk)].sort_values("updated_at", ascending=False)
+        
+        # For NARRATIVE: the user wants to see the update ONLY for the selected week
+        # based on latest request "Show those updates ONLY when Week 14 is selected"
+        narr_res = f[f["week_number_str"] == sel_wk].sort_values("updated_at", ascending=False)
     else:
-        # Fallback to derivation if column not yet active in this session
-        f["wk"] = f["updated_at"].apply(_get_week_from_ts)
-        res = f[f["wk"] <= week].sort_values("updated_at", ascending=False)
-    if not res.empty: return float(res.iloc[0].get("new_value", 0)), res.iloc[0]
-    return 0.0, None
+        # Fallback to derivation
+        f["wk"] = f["updated_at"].apply(_get_week_from_ts).astype(str).str.strip()
+        val_res = f[f["wk"].astype(float) <= float(sel_wk)].sort_values("updated_at", ascending=False)
+        narr_res = f[f["wk"] == sel_wk].sort_values("updated_at", ascending=False)
+
+    effective_val = float(val_res.iloc[0].get("new_value", 0)) if not val_res.empty else 0.0
+    latest_narrative = narr_res.iloc[0] if not narr_res.empty else None
+    
+    return effective_val, latest_narrative
 
 
 # ---------------------------------------------------------------------------
