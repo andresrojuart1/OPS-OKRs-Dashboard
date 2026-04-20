@@ -637,12 +637,12 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
     """Dashboard header with system-level actions and KPI summaries."""
     selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
 
-    col_l, col_r = st.columns([1.5, 3.5])
+    col_l, col_r = st.columns([2.2, 2.8])
     with col_l:
         sub = f" · {selected_team}" if selected_team != "All" else ""
         st.markdown(f"""
-        <div style="margin-bottom:8px; overflow:hidden;">
-            <div style="font-size:24px; font-weight:800; color:#fff; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="Operations OKRs{sub}">
+        <div style="display:flex; align-items:center; width:100%; overflow:hidden; margin-bottom:8px;">
+            <div style="font-size:24px; font-weight:800; color:#fff; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0;" title="Operations OKRs{sub}">
                 Operations OKRs{sub}
             </div>
         </div>
