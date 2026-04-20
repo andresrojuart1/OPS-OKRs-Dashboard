@@ -47,6 +47,27 @@ def render_sidebar() -> Optional[str]:
                 st.session_state["selected_team"] = team
                 st.rerun()
 
+        st.markdown('<div class="ontop-sidebar-section-label" style="margin-top:24px;">Reporting Week</div>', unsafe_allow_html=True)
+        
+        # Week Selector with Arrows
+        current_week = st.session_state["selected_week"]
+        wk_cols = st.columns([1, 2, 1])
+        with wk_cols[0]:
+            if st.button("←", key="prev_wk", use_container_width=True):
+                st.session_state["selected_week"] = max(1, current_week - 1)
+                st.rerun()
+        with wk_cols[1]:
+            st.markdown(f"""
+            <div style="background:rgba(122,80,247,0.1); border:1px solid rgba(122,80,247,0.3); 
+                        border-radius:10px; padding:6px 0; text-align:center; font-weight:700; color:#fff; font-size:14px;">
+                Week {current_week}
+            </div>
+            """, unsafe_allow_html=True)
+        with wk_cols[2]:
+            if st.button("→", key="next_wk", use_container_width=True):
+                st.session_state["selected_week"] = min(53, current_week + 1)
+                st.rerun()
+
         # User card
         if picture:
             avatar_html = f'<img src="{picture}" style="width:2.5rem;height:2.5rem;border-radius:999px;object-fit:cover;" />'

@@ -414,6 +414,7 @@ for key, default in [
     ("selected_quarter",  "Q2 2026"),
     ("ai_dialog_stale",   True),
     ("show_pdf_import",   False),
+    ("selected_week",     get_week_number()),
     ("last_sync_time",    None),
 ]:
     if key not in st.session_state:
@@ -624,7 +625,8 @@ def render_login_page() -> None:
 # Header
 # ---------------------------------------------------------------------------
 
-def render_header(objectives_df, krs_df, selected_team: str) -> None:
+def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
+    """Dashboard header with system-level actions and KPI summaries."""
     selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
 
     col_l, col_r = st.columns([1.5, 3.5])
@@ -701,27 +703,16 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
                 if st.button("from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn_hdr", type="secondary"):
                     st.session_state["show_pdf_import"] = True
 
-    # Metrics — filter by quarter + selected team
-    filtered_objs = objectives_df
-    if not objectives_df.empty and "quarter" in objectives_df.columns:
-        filtered_objs = filtered_objs[filtered_objs["quarter"] == selected_quarter]
-    if selected_team != "All" and not filtered_objs.empty and "sub_team" in filtered_objs.columns:
-        filtered_objs = filtered_objs[filtered_objs["sub_team"] == selected_team]
+    # Metrics from krs_info
+    num_objs = len(objectives_df[objectives_df["quarter"] == selected_quarter]) if not objectives_df.empty else 0
+    if selected_team != "All":
+        num_objs = len(objectives_df[(objectives_df["quarter"] == selected_quarter) & (objectives_df["sub_team"] == selected_team)])
 
-    if not filtered_objs.empty and not krs_df.empty:
-        obj_ids   = set(filtered_objs["id"].astype(str).tolist())
-        team_krs  = krs_df[krs_df["objective_id"].astype(str).isin(obj_ids)]
-    else:
-        team_krs = krs_df.iloc[:0]
-
-    num_objs = len(filtered_objs) if not filtered_objs.empty else 0
-    total_krs = len(team_krs) if not team_krs.empty else 0
-
-    if not team_krs.empty:
-        all_pct = team_krs.apply(compute_progress, axis=1)
-        at_risk_count = int((all_pct < 70).sum())
-        on_track_count = int((all_pct >= 70).sum())
-        avg_prog = all_pct.mean()
+    total_krs = len(krs_info)
+    if krs_info:
+        at_risk_count = sum(1 for k in krs_info if k["pct"] < 70)
+        on_track_count = sum(1 for k in krs_info if k["pct"] >= 70)
+        avg_prog = sum(k["pct"] for k in krs_info) / total_krs
     else:
         at_risk_count = 0
         on_track_count = 0
@@ -822,26 +813,45 @@ def render_dashboard() -> None:
     else:
         ai_krs = krs_df.iloc[:0]
 
+    # Use global week for AI and KPIs
+    selected_week = st.session_state.get("selected_week", get_week_number())
+    
+    def get_wk(ts):
+        try:
+            return datetime.strptime(str(ts).strip(), "%Y-%m-%d %H:%M UTC").isocalendar()[1]
+        except: return 0
+
     krs_info = []
     for _, kr in ai_krs.iterrows():
-        kr_upds = updates_df[updates_df["kr_id"] == str(kr["id"])].sort_values(
-            "updated_at", ascending=False
-        ) if not updates_df.empty else updates_df
-        latest = kr_upds.iloc[0] if not kr_upds.empty else None
+        kr_id = str(kr["id"])
+        # Find latest update on or before selected week
+        if not updates_df.empty:
+            valid_upds = updates_df[updates_df["kr_id"].astype(str) == kr_id].copy()
+            valid_upds["wk"] = valid_upds["updated_at"].apply(get_wk)
+            up_to_week = valid_upds[valid_upds["wk"] <= selected_week].sort_values("updated_at", ascending=False)
+            latest = up_to_week.iloc[0] if not up_to_week.empty else None
+        else:
+            latest = None
+            
+        eff_val = float(latest["new_value"]) if latest is not None else 0.0
+        # Temporary KR for pct calculation
+        calc_kr = kr.copy()
+        calc_kr["current_value"] = eff_val
+        
         krs_info.append({
-            "id":             str(kr["id"]),
+            "id":             kr_id,
             "title":          str(kr["title"]),
             "target":         float(kr["target"]),
             "unit":           str(kr["unit"]),
-            "current_value":  float(kr.get("current_value", 0)),
-            "pct":            compute_progress(kr),
+            "current_value":  eff_val,
+            "pct":            compute_progress(calc_kr),
             "last_notes":     str(latest["week_notes"]) if latest is not None and latest.get("week_notes") else "",
             "last_blockers":  str(latest["blockers"])   if latest is not None and latest.get("blockers")   else "",
             "last_confidence": int(latest["confidence"]) if latest is not None and latest.get("confidence") else 0,
         })
     st.session_state["_krs_for_ai"] = krs_info
-
-    render_header(objectives_df, krs_df, team_label)
+    
+    render_header(objectives_df, krs_df, team_label, krs_info)
     render_last_action()
 
     # PDF import section (sub-team views only)
@@ -933,7 +943,12 @@ def render_dashboard() -> None:
         st.subheader("📝 Additional Weekly Notes")
         st.caption("Document important updates, decisions or context not tied to specific KRs")
 
-        week_number   = get_week_number()
+        week_number   = st.session_state.get("selected_week", get_week_number())
+        is_past_week = week_number < get_week_number()
+        
+        if is_past_week:
+            st.warning(f"Viewing history for **Week {week_number}**. Updates made now will be recorded for **Week {get_week_number()}**.")
+            
         existing_note = get_weekly_note(team_label, selected_quarter, week_number)
         note_content  = existing_note.get("content", "")
 
