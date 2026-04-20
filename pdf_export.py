@@ -15,20 +15,12 @@ Usage:
         updates_df=updates_df,
         krs_info=krs_info_list,
     )
-
-    # Download in Streamlit:
-    st.download_button(
-        "Download PDF",
-        pdf_bytes,
-        file_name=f"OKRs_{team_name}_{quarter}.pdf",
-        mime="application/pdf"
-    )
 """
 
 import io
 from datetime import datetime
 import pandas as pd
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -49,10 +41,11 @@ COLOR_TEAL = colors.HexColor("#2DD4BF")
 COLOR_RED = colors.HexColor("#EF4444")
 COLOR_YELLOW = colors.HexColor("#FCD34D")
 COLOR_GREEN = colors.HexColor("#10B981")
-COLOR_DARK_BG = colors.HexColor("#0B0B0F")
-COLOR_SURFACE = colors.HexColor("#111118")
-COLOR_TEXT = colors.HexColor("#FFFFFF")
-COLOR_TEXT_MUTED = colors.HexColor("#B8B8C8")
+COLOR_ORANGE = colors.HexColor("#F59E0B")
+COLOR_WHITE = colors.HexColor("#FFFFFF")
+COLOR_TEXT_DARK = colors.HexColor("#1F2937")
+COLOR_LIGHT_GRAY = colors.HexColor("#F3F4F6")
+COLOR_BORDER = colors.HexColor("#E5E7EB")
 
 
 # ─────────────────────────────────────────────────────────
@@ -60,16 +53,16 @@ COLOR_TEXT_MUTED = colors.HexColor("#B8B8C8")
 # ─────────────────────────────────────────────────────────
 
 def get_custom_styles():
-    """Return custom ReportLab styles matching Ontop brand."""
+    """Return custom ReportLab styles."""
     styles = getSampleStyleSheet()
 
     # Title
     styles.add(ParagraphStyle(
         name='CustomTitle',
         parent=styles['Heading1'],
-        fontSize=28,
-        textColor=COLOR_TEXT,
-        spaceAfter=6,
+        fontSize=24,
+        textColor=COLOR_TEXT_DARK,
+        spaceAfter=4,
         fontName='Helvetica-Bold',
         alignment=TA_LEFT,
     ))
@@ -79,7 +72,7 @@ def get_custom_styles():
         name='CustomSubtitle',
         parent=styles['Heading2'],
         fontSize=14,
-        textColor=COLOR_TEXT_MUTED,
+        textColor=colors.HexColor("#6B7280"),
         spaceAfter=12,
         fontName='Helvetica',
     ))
@@ -88,20 +81,10 @@ def get_custom_styles():
     styles.add(ParagraphStyle(
         name='SectionHeader',
         parent=styles['Heading2'],
-        fontSize=16,
+        fontSize=14,
         textColor=COLOR_PURPLE,
-        spaceAfter=12,
-        spaceBefore=12,
-        fontName='Helvetica-Bold',
-    ))
-
-    # KR title
-    styles.add(ParagraphStyle(
-        name='KRTitle',
-        parent=styles['Normal'],
-        fontSize=11,
-        textColor=COLOR_TEXT,
-        spaceAfter=4,
+        spaceAfter=10,
+        spaceBefore=10,
         fontName='Helvetica-Bold',
     ))
 
@@ -109,10 +92,10 @@ def get_custom_styles():
     styles.add(ParagraphStyle(
         name='CustomNormal',
         parent=styles['Normal'],
-        fontSize=10,
-        textColor=COLOR_TEXT_MUTED,
+        fontSize=9,
+        textColor=COLOR_TEXT_DARK,
         spaceAfter=6,
-        leading=12,
+        leading=11,
     ))
 
     return styles
@@ -122,42 +105,24 @@ def get_custom_styles():
 # Helper functions
 # ─────────────────────────────────────────────────────────
 
-def get_status_color(status: str) -> colors.Color:
-    """Return color based on status."""
-    status_lower = str(status).lower().strip()
-
-    if "completed" in status_lower or "maintain" in status_lower:
+def get_status_color(pct: float):
+    """Return color based on progress percentage."""
+    if pct >= 75:
         return COLOR_GREEN
-    elif "in progress" in status_lower:
+    elif pct >= 50:
         return COLOR_TEAL
-    elif "blocked" in status_lower:
-        return COLOR_RED
-    elif "not started" in status_lower:
+    elif pct >= 25:
         return COLOR_YELLOW
     else:
-        return COLOR_TEXT_MUTED
+        return COLOR_RED
 
 
-def get_progress_bar(percentage: float, width: float = 2.0) -> Table:
-    """Create a simple progress bar as a table."""
-    pct = min(100, max(0, float(percentage)))
-    filled_width = (pct / 100.0) * width
-
-    bar_data = [
-        [
-            Table([["▓" * int(filled_width * 10)]],
-                  style=TableStyle([
-                      ('BACKGROUND', (0, 0), (-1, -1), COLOR_GREEN),
-                      ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                      ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                      ('TOPPADDING', (0, 0), (-1, -1), 2),
-                      ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-                  ])),
-            f"{pct:.0f}%"
-        ]
-    ]
-
-    return Table(bar_data, colWidths=[1.5*inch, 0.5*inch])
+def truncate_text(text: str, max_len: int = 40) -> str:
+    """Truncate text with ellipsis."""
+    text = str(text).strip()
+    if len(text) > max_len:
+        return text[:max_len - 3] + "..."
+    return text
 
 
 # ─────────────────────────────────────────────────────────
@@ -176,7 +141,7 @@ def generate_okr_pdf(
     Generate a professional PDF report of OKRs.
 
     Args:
-        team_name: Name of the team (e.g., "Payments Team")
+        team_name: Name of the team
         quarter: Quarter string (e.g., "Q2 2026")
         objectives_df: DataFrame with objectives
         krs_df: DataFrame with key results
@@ -192,10 +157,10 @@ def generate_okr_pdf(
     doc = SimpleDocTemplate(
         pdf_buffer,
         pagesize=letter,
-        rightMargin=0.75*inch,
-        leftMargin=0.75*inch,
-        topMargin=0.75*inch,
-        bottomMargin=0.75*inch,
+        rightMargin=0.6*inch,
+        leftMargin=0.6*inch,
+        topMargin=0.6*inch,
+        bottomMargin=0.5*inch,
     )
 
     styles = get_custom_styles()
@@ -205,16 +170,15 @@ def generate_okr_pdf(
     # HEADER
     # ─────────────────────────────────────────────────────────
 
-    story.append(Paragraph(f"{team_name}", styles['CustomTitle']))
+    title = team_name if team_name != "All" else "Operations"
+    story.append(Paragraph(f"{title}", styles['CustomTitle']))
     story.append(Paragraph(f"{quarter} OKR Progress Dashboard", styles['CustomSubtitle']))
-    story.append(Spacer(1, 0.2*inch))
+    story.append(Spacer(1, 0.15*inch))
 
     # Generated date
-    story.append(Paragraph(
-        f"Generated: {datetime.now().strftime('%B %d, %Y')}",
-        styles['CustomNormal']
-    ))
-    story.append(Spacer(1, 0.3*inch))
+    gen_date = datetime.now().strftime('%B %d, %Y')
+    story.append(Paragraph(f"Generated: {gen_date}", styles['CustomNormal']))
+    story.append(Spacer(1, 0.2*inch))
 
     # ─────────────────────────────────────────────────────────
     # KPI CARDS
@@ -234,53 +198,71 @@ def generate_okr_pdf(
         at_risk = 0
 
     kpi_data = [
-        ["Objectives", str(num_objs)],
-        ["Key Results", str(num_krs)],
+        ["Objectives", f"{num_objs}"],
+        ["Key Results", f"{num_krs}"],
         ["Avg Progress", f"{avg_progress:.0f}%"],
-        ["On Track", str(on_track)],
-        ["At Risk", str(at_risk)],
+        ["On Track", f"{on_track}"],
+        ["At Risk", f"{at_risk}"],
     ]
 
-    kpi_table = Table(kpi_data, colWidths=[2.5*inch, 1.5*inch])
+    kpi_table = Table(kpi_data, colWidths=[2.5*inch, 1.2*inch])
     kpi_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), COLOR_SURFACE),
-        ('TEXTCOLOR', (0, 0), (-1, -1), COLOR_TEXT),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BACKGROUND', (0, 0), (-1, -1), COLOR_LIGHT_GRAY),
+        ('TEXTCOLOR', (0, 0), (-1, -1), COLOR_TEXT_DARK),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (1, 0), (1, -1), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('GRID', (0, 0), (-1, -1), 1, COLOR_PURPLE),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 1, COLOR_BORDER),
     ]))
 
     story.append(kpi_table)
-    story.append(Spacer(1, 0.3*inch))
+    story.append(Spacer(1, 0.25*inch))
 
     # ─────────────────────────────────────────────────────────
-    # OBJECTIVES & KEY RESULTS TABLE
+    # KEY RESULTS TABLE
     # ─────────────────────────────────────────────────────────
 
     story.append(Paragraph("Key Results Summary", styles['SectionHeader']))
+    story.append(Spacer(1, 0.08*inch))
 
+    # Table header
     table_data = [
         ["Objective", "Key Result", "Target", "Current", "Progress", "Status"]
     ]
 
-    if not krs_df.empty and krs_info:
+    # Add KR rows
+    if krs_info:
         for kr_info in krs_info:
             kr = kr_info.get("kr", {})
 
-            obj_title = objectives_df[
-                objectives_df["id"] == kr.get("objective_id", "")
-            ]["title"].values
-            obj_title = str(obj_title[0][:40]) if len(obj_title) > 0 else "—"
+            # Get objective title
+            obj_id = kr.get("objective_id", "")
+            if not objectives_df.empty and "id" in objectives_df.columns:
+                obj_rows = objectives_df[objectives_df["id"] == obj_id]
+                if not obj_rows.empty:
+                    obj_title = truncate_text(str(obj_rows.iloc[0]["title"]), 25)
+                else:
+                    obj_title = "—"
+            else:
+                obj_title = "—"
 
-            kr_title = str(kr.get("title", ""))[:35]
-            target = f"{kr.get('target', 0)} {kr.get('unit', '')}"
-            current = f"{kr_info.get('val', 0):.1f}"
+            # KR details
+            kr_title = truncate_text(str(kr.get("title", "")), 25)
+            target = str(kr.get("target", 0))
+            unit = str(kr.get("unit", "")).strip()
+            if unit and unit.lower() != "none":
+                target = f"{target} {unit}"
+
+            current = f"{kr_info.get('val', 0):.0f}"
             pct = kr_info.get("pct", 0)
 
-            # Status badge
+            # Status
             status = "✓ On Track" if pct >= 50 else "⚠ At Risk"
 
             table_data.append([
@@ -291,82 +273,67 @@ def generate_okr_pdf(
                 f"{pct:.0f}%",
                 status,
             ])
+    else:
+        table_data.append(["No data available", "", "", "", "", ""])
 
+    # Create table with better proportions
     krs_table = Table(
         table_data,
-        colWidths=[1.5*inch, 1.8*inch, 0.8*inch, 0.8*inch, 0.7*inch, 1.0*inch]
+        colWidths=[1.3*inch, 1.5*inch, 0.85*inch, 0.7*inch, 0.65*inch, 0.85*inch]
     )
-    krs_table.setStyle(TableStyle([
-        # Header
-        ('BACKGROUND', (0, 0), (-1, 0), COLOR_PURPLE),
-        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_TEXT),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
 
-        # Body
-        ('BACKGROUND', (0, 1), (-1, -1), COLOR_SURFACE),
-        ('TEXTCOLOR', (0, 1), (-1, -1), COLOR_TEXT),
-        ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-        ('FONTSIZE', (0, 1), (-1, -1), 9),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_SURFACE, colors.HexColor("#0D0E1A")]),
-        ('GRID', (0, 0), (-1, -1), 1, COLOR_PURPLE),
+    # Table styling - light theme
+    krs_table.setStyle(TableStyle([
+        # Header row
+        ('BACKGROUND', (0, 0), (-1, 0), COLOR_PURPLE),
+        ('TEXTCOLOR', (0, 0), (-1, 0), COLOR_WHITE),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('ALIGN', (0, 0), (1, 0), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('TOPPADDING', (0, 0), (-1, 0), 10),
+
+        # Body rows - alternating colors
+        ('BACKGROUND', (0, 1), (-1, -1), COLOR_WHITE),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [COLOR_WHITE, COLOR_LIGHT_GRAY]),
+        ('TEXTCOLOR', (0, 1), (-1, -1), COLOR_TEXT_DARK),
+        ('ALIGN', (0, 1), (1, -1), 'LEFT'),
+        ('ALIGN', (2, 1), (-1, -1), 'CENTER'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+
+        # Grid
+        ('GRID', (0, 0), (-1, -1), 0.5, COLOR_BORDER),
     ]))
 
     story.append(krs_table)
-    story.append(Spacer(1, 0.3*inch))
 
     # ─────────────────────────────────────────────────────────
     # FOOTER
     # ─────────────────────────────────────────────────────────
 
-    story.append(Spacer(1, 0.2*inch))
+    story.append(Spacer(1, 0.3*inch))
     story.append(Paragraph(
         "Ontop Operations OKRs Dashboard",
         ParagraphStyle(
             'Footer',
             parent=styles['Normal'],
             fontSize=8,
-            textColor=COLOR_TEXT_MUTED,
+            textColor=colors.HexColor("#9CA3AF"),
             alignment=TA_CENTER,
         )
     ))
 
     # Build PDF
-    doc.build(story)
+    try:
+        doc.build(story)
+    except Exception as e:
+        print(f"Error building PDF: {e}")
+        return b""
+
     pdf_buffer.seek(0)
-
     return pdf_buffer.getvalue()
-
-
-# ─────────────────────────────────────────────────────────
-# Streamlit helper
-# ─────────────────────────────────────────────────────────
-
-def add_pdf_download_button(team_name: str, quarter: str, objectives_df, krs_df, updates_df, krs_info):
-    """
-    Add a download button to Streamlit for PDF export.
-
-    Usage in app.py:
-        from pdf_export import add_pdf_download_button
-
-        with st.container():
-            add_pdf_download_button(team_name, quarter, objectives_df, krs_df, updates_df, krs_info)
-    """
-    import streamlit as st
-
-    pdf_bytes = generate_okr_pdf(team_name, quarter, objectives_df, krs_df, updates_df, krs_info)
-
-    st.download_button(
-        label="📥 Download PDF",
-        data=pdf_bytes,
-        file_name=f"OKRs_{team_name}_{quarter}.pdf",
-        mime="application/pdf",
-        key=f"pdf_download_{team_name}_{quarter}",
-        use_container_width=True,
-    )
