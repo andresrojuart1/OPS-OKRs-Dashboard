@@ -260,10 +260,11 @@ def _render_update_form(data):
     init_fmt = "number"
     
     if edit_id and latest is not None and str(latest.get("id")) == str(edit_id):
-        init_val = float(latest.get("new_value", init_val))
-        init_notes = latest.get("week_notes", "")
-        init_deps = latest.get("blockers", "")
-        init_fmt = latest.get("value_format", "number")
+        # Explicit schema mapping (Standardizing field names)
+        init_val = float(latest.get("value", latest.get("new_value", init_val)))
+        init_notes = str(latest.get("notes", latest.get("week_notes", "")))
+        init_deps = str(latest.get("dependencies", latest.get("blockers", "")))
+        init_fmt = str(latest.get("value_format", "number"))
 
     st.markdown('<div style="background:rgba(122,80,247,0.05); padding:16px; border-radius:12px; border:1px solid rgba(122,80,247,0.2); margin:12px 0;">', unsafe_allow_html=True)
     with st.form(key=f"frm_{kr_id}"):
@@ -279,12 +280,10 @@ def _render_update_form(data):
         
         btn_label = "Update Log" if edit_id else "Save New Update"
         if st.form_submit_button(btn_label, use_container_width=True):
-            # Explicitly retrieve from state at submission time
             curr_edit_id = st.session_state.get("editing_id")
             try:
-                success = False
                 if curr_edit_id:
-                    success = edit_kr_update(curr_edit_id, val, notes, deps, v_fmt)
+                    edit_kr_update(curr_edit_id, val, notes, deps, v_fmt)
                 else:
                     selected_week = st.session_state.get("selected_week", 1)
                     update_kr_value(
@@ -293,14 +292,11 @@ def _render_update_form(data):
                         selected_week,
                         v_fmt
                     )
-                    success = True
                 
-                if success:
-                    st.session_state["updating_kr"] = None
-                    st.session_state["editing_id"] = None
-                    st.rerun()
-                else:
-                    st.error("Operation failed. Record may have been moved or deleted.")
+                # Assume success if no exception raised
+                st.session_state["updating_kr"] = None
+                st.session_state["editing_id"] = None
+                st.rerun()
             except Exception as e:
                 handle_error(e, "Operation failed", "Update")
     st.markdown("</div>", unsafe_allow_html=True)
