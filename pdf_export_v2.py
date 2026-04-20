@@ -91,8 +91,9 @@ def get_styles():
     """Get custom report styles."""
     styles = getSampleStyleSheet()
 
+    # Use unique names to avoid conflicts with default styles
     styles.add(ParagraphStyle(
-        name='Title',
+        name='CustomTitle',
         fontSize=28,
         textColor=COLOR_TEXT_WHITE,
         fontName='Helvetica-Bold',
@@ -101,7 +102,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='Subtitle',
+        name='CustomSubtitle',
         fontSize=13,
         textColor=COLOR_TEXT_MUTED,
         fontName='Helvetica',
@@ -109,7 +110,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='SectionTitle',
+        name='CustomSectionTitle',
         fontSize=11,
         textColor=COLOR_PURPLE_LIGHT,
         fontName='Helvetica-Bold',
@@ -118,7 +119,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='Normal',
+        name='CustomNormal',
         fontSize=9,
         textColor=COLOR_TEXT_MUTED,
         fontName='Helvetica',
@@ -128,7 +129,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='NoteHeader',
+        name='CustomNoteHeader',
         fontSize=9,
         textColor=COLOR_PURPLE,
         fontName='Helvetica-Bold',
@@ -253,8 +254,8 @@ def generate_okr_pdf_with_ai(
     # ─────────────────────────────────────────────────────────
 
     title = team_name if team_name != "All" else "Operations"
-    story.append(Paragraph(f"{title.upper()}", styles['Title']))
-    story.append(Paragraph(f"{quarter} OKR Progress Dashboard", styles['Subtitle']))
+    story.append(Paragraph(f"{title.upper()}", styles['CustomTitle']))
+    story.append(Paragraph(f"{quarter} OKR Progress Dashboard", styles['CustomSubtitle']))
     story.append(Spacer(1, 0.15*inch))
 
     # ─────────────────────────────────────────────────────────
@@ -369,10 +370,10 @@ def generate_okr_pdf_with_ai(
     # ─────────────────────────────────────────────────────────
 
     if openai_api_key:
-        story.append(Paragraph("EXECUTIVE SUMMARY", styles['SectionTitle']))
+        story.append(Paragraph("EXECUTIVE SUMMARY", styles['CustomSectionTitle']))
         insights = generate_ai_insights(team_name, krs_info, openai_api_key)
         if insights:
-            story.append(Paragraph(insights, styles['Normal']))
+            story.append(Paragraph(insights, styles['CustomNormal']))
         story.append(Spacer(1, 0.15*inch))
 
     # ─────────────────────────────────────────────────────────
