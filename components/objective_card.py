@@ -179,6 +179,8 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
             st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
         with c_opts:
             if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
+                # Clear any active KR update when opening objective settings
+                st.session_state["updating_kr"] = None
                 st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
                 st.rerun()
         
@@ -231,10 +233,14 @@ def _render_kr_block(data, active_kr: str) -> None:
             act_col, gear_col = st.columns([0.75, 0.25])
             u_label = "Cancel" if active_kr == kr_id else "Update"
             if act_col.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
+                # Ensure we clear objective settings when updating a KR
+                st.session_state.pop("active_obj_settings", None)
                 st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                 st.session_state["editing_id"] = None
                 st.rerun()
             if gear_col.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
+                # Also clear KR update state when opening metadata dialog
+                st.session_state["updating_kr"] = None
                 _edit_kr_metadata_dialog(kr)
             
         # --- VALUE ROW ---
