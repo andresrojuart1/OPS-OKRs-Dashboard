@@ -388,6 +388,7 @@ def load_objectives() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=1)
+
 @gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
     ws = get_worksheet("key_results")
