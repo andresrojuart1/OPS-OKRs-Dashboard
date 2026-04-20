@@ -258,7 +258,7 @@ def _render_update_form(data):
     init_deps = ""
     init_fmt = "number"
     
-    if edit_id and latest and str(latest.get("id")) == str(edit_id):
+    if edit_id and latest is not None and str(latest.get("id")) == str(edit_id):
         init_val = float(latest.get("new_value", init_val))
         init_notes = latest.get("week_notes", "")
         init_deps = latest.get("blockers", "")
