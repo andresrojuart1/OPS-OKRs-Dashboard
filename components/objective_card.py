@@ -168,13 +168,13 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
         
         c_title, c_opts = st.columns([5, 0.5])
         with c_title:
-            st.markdown(f'<div style="font-size:22px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
         with c_opts:
             if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
                 _obj_actions_dialog(obj_id, obj_title)
 
         # Objective Progress Summary
-        st.markdown(f'<div style="font-size:38px; font-weight:800; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:32px; font-weight:700; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
         st.markdown(_obj_progress_bar(avg_pct), unsafe_allow_html=True)
         st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:20px; font-weight:600;">{achieved} / {total} KRs achieved</div>', unsafe_allow_html=True)
 
