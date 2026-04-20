@@ -460,11 +460,18 @@ def _generate_template_excel(quarter: str, krs_info: list = None) -> bytes:
     rows = []
     if krs_info:
         for k in krs_info:
+            # Handle both dict structures: direct dict and nested dict with "kr" key
+            kr_data = k.get("kr") if "kr" in k else k
+
+            # Get values from the appropriate source
+            val = k.get("val") if "val" in k else kr_data.get("current_value", 0)
+            tgt = kr_data.get("target", 0)
+            title = k.get("title") if "title" in k else kr_data.get("title", "")
+            unit = k.get("unit") if "unit" in k else kr_data.get("unit", "")
+
             # Formatting logic for Excel
-            fmt = str(k.get("value_format", "number")).lower()
-            val = k.get("current_value", 0)
-            tgt = k.get("target", 0)
-            
+            fmt = str(kr_data.get("value_format", "number")).lower() if "value_format" in kr_data else "number"
+
             if fmt == "percentage":
                 val_str = f"{val}%"
                 tgt_str = f"{tgt}%"
@@ -473,16 +480,16 @@ def _generate_template_excel(quarter: str, krs_info: list = None) -> bytes:
                 tgt_str = f"${tgt:,.2f}"
             else:
                 val_str = str(val)
-                tgt_str = f"{tgt} {k.get('unit', '')}"
+                tgt_str = f"{tgt} {unit}".strip() if unit else str(tgt)
 
             rows.append([
-                "", # Objective (can be filled if needed, but keeping it minimal)
-                k.get("title", ""),
+                "", # Objective
+                title,
                 tgt_str,
                 val_str,
-                k.get("last_confidence", ""),
-                k.get("last_notes", ""),
-                k.get("last_blockers", "")
+                "", # Confidence (user can fill in)
+                "", # Notes (user can fill in)
+                "" # Blockers (user can fill in)
             ])
     else:
         # Fallback to empty rows / instructions
