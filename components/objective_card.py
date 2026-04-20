@@ -112,15 +112,18 @@ def _get_hist_val(updates_df, kr_id: str, week: int):
         f["week_number_str"] = f["week_number"].astype(str).str.strip()
         
         # For VALUE: we want latest up to this week
-        val_res = f[f["week_number_str"].astype(float) <= float(sel_wk)].sort_values("updated_at", ascending=False)
+        f["week_num_numeric"] = pd.to_numeric(f["week_number_str"], errors="coerce")
+        val_res = f[f["week_num_numeric"] <= float(sel_wk)].sort_values("updated_at", ascending=False)
+
         
         # For NARRATIVE: the user wants to see the update ONLY for the selected week
         # based on latest request "Show those updates ONLY when Week 14 is selected"
         narr_res = f[f["week_number_str"] == sel_wk].sort_values("updated_at", ascending=False)
     else:
         # Fallback to derivation
-        f["wk"] = f["updated_at"].apply(_get_week_from_ts).astype(str).str.strip()
-        val_res = f[f["wk"].astype(float) <= float(sel_wk)].sort_values("updated_at", ascending=False)
+        f["wk_numeric"] = pd.to_numeric(f["updated_at"].apply(_get_week_from_ts), errors="coerce")
+        val_res = f[f["wk_numeric"] <= float(sel_wk)].sort_values("updated_at", ascending=False)
+
         narr_res = f[f["wk"] == sel_wk].sort_values("updated_at", ascending=False)
 
     effective_val = float(val_res.iloc[0].get("new_value", 0)) if not val_res.empty else 0.0
