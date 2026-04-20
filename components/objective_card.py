@@ -203,7 +203,7 @@ def _render_kr_block(data, active_kr: str) -> None:
         # --- PRIMARY INFO (LEFT) vs ACTION/METRIC (RIGHT) ---
         c_left, c_right = st.columns([3.5, 1.5])
         with c_left:
-            st.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:19px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
             st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit)}</div>', unsafe_allow_html=True)
         
         with c_right:
@@ -220,8 +220,7 @@ def _render_kr_block(data, active_kr: str) -> None:
             st.markdown(f"""
             <div style="display:flex; align-items:center; gap:12px; margin-top:14px; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border-left:4px solid {badge_color};">
                 <div style="background:{badge_color}1a; color:{badge_color}; padding:4px 10px; border-radius:6px; font-size:16px; font-weight:700; white-space:nowrap;">{_format_badge(val, unit, fmt_override)}</div>
-                <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.4;">{latest.get('week_notes', '')}</div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.2); white-space:nowrap;">W{latest.get('wk','?')}</div>
+                <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.55;">{latest.get('week_notes', '')}</div>
             </div>
             """, unsafe_allow_html=True)
             # Show dependencies if any
