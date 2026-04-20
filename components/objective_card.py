@@ -65,10 +65,9 @@ def _obj_progress_bar(pct: float) -> str:
 </div>"""
 
 
-def _kr_compact_bar(pct: float) -> str:
-    color = _pct_color(pct)
-    return f"""<div style="background:rgba(255,255,255,0.06); border-radius:999px; height:6px; overflow:hidden; margin: 2px 0 16px 0;">
-<div style="height:100%; width:{max(min(pct, 100), 0.5):.1f}%; border-radius:999px; background:{color}; transition: width 0.6s ease;"></div>
+def _kr_progress_bar(pct: float) -> str:
+    return f"""<div style="background:rgba(255,255,255,0.04); border-radius:999px; height:5px; overflow:hidden; margin:12px 0 0;">
+<div style="height:100%; width:{max(pct, 0.5):.1f}%; border-radius:999px; background:{PURPLE}; transition: width 0.6s ease;"></div>
 </div>"""
 
 
@@ -196,32 +195,25 @@ def _render_kr_block(data, active_kr: str) -> None:
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
 
     with st.container():
-        st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
+        st.markdown('<div style="margin-bottom:16px;">', unsafe_allow_html=True)
         
-        # --- TITLE & SETTINGS ---
-        h_left, h_right = st.columns([0.92, 0.08])
-        h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff;">{title}</div>', unsafe_allow_html=True)
-        if h_right.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
-            _edit_kr_metadata_dialog(kr)
-            
-        # --- METRIC ROW ---
-        m_left, m_right = st.columns([1, 1])
-        cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
-        curr_str = _format_badge(val, unit, cur_fmt)
-        tgt_str = f"Target: {_format_badge(target, unit, cur_fmt).replace('+', '')}"
+        # --- PRIMARY INFO (LEFT) vs ACTION/METRIC (RIGHT) ---
+        c_left, c_right = st.columns([3.5, 1.5])
+        with c_left:
+            header_col, edit_kr_col = st.columns([0.9, 0.1])
+            header_col.markdown(f'<div style="font-size:19px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
+            if edit_kr_col.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
+                _edit_kr_metadata_dialog(kr)
+            cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
+            st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
         
-        m_left.markdown(f'<div style="font-size:26px; font-weight:800; color:{_pct_color(pct)}; line-height:1;">{curr_str}</div>', unsafe_allow_html=True)
-        m_right.markdown(f'<div style="text-align:right; font-size:12px; color:rgba(255,255,255,0.4); font-weight:500; margin-top:8px;">{tgt_str}</div>', unsafe_allow_html=True)
-
-        # --- COMPACT BAR ---
-        st.markdown(_kr_compact_bar(pct), unsafe_allow_html=True)
-
-        # --- LOG BUTTON ---
-        u_label = "Cancel Update" if active_kr == kr_id else "Log Progress"
-        if st.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
-            st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
-            st.session_state["editing_id"] = None
-            st.rerun()
+        with c_right:
+            st.markdown(f'<div style="text-align:right; font-size:24px; font-weight:800; color:{_pct_color(pct)}; line-height:1; margin-bottom:6px;">{pct:.0f}%</div>', unsafe_allow_html=True)
+            u_label = "Cancel" if active_kr == kr_id else "Update"
+            if st.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
+                st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
+                st.session_state["editing_id"] = None
+                st.rerun()
 
         # --- NARRATIVE ROW & PROGRESS ---
         if latest is not None:
@@ -245,8 +237,9 @@ def _render_kr_block(data, active_kr: str) -> None:
             if deps:
                 st.markdown(f'<div style="padding-left:12px; margin-top:4px; font-size:13px; color:#f87171; font-weight:500;">⚠ Dependencies: {deps}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f'<div style="font-size:14px; color:{MUTED}; font-style:italic; margin-top:10px; opacity:0.6; margin-bottom:12px;">No updates recorded for this week.</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:14px; color:{MUTED}; font-style:italic; margin-top:10px; opacity:0.6;">No updates recorded for this week.</div>', unsafe_allow_html=True)
 
+        st.markdown(_kr_progress_bar(pct), unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     if active_kr == kr_id: _render_update_form(data)
