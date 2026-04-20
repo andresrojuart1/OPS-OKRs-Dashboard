@@ -364,6 +364,16 @@ def _obj_actions_dialog(id, title):
         if c2.button("Back", use_container_width=True):
             st.session_state.pop(f"obj_view_{id}", None)
             st.rerun()
+
+    elif view == "delete_confirm":
+        st.error("⚠️ **Delete Objective?** This will also delete all associated Key Results and cannot be undone.")
+        c1, c2 = st.columns(2)
+        if c1.button("Yes, delete", type="primary", use_container_width=True):
+            delete_objective(id)
+            _close()
+        if c2.button("No, cancel", use_container_width=True):
+            st.session_state[f"obj_view_{id}"] = "menu"
+            st.rerun()
             
     else:
         st.write(f"Objective: **{title}**")
@@ -380,16 +390,6 @@ def _obj_actions_dialog(id, title):
 
         if st.button("Close Settings", use_container_width=True, type="tertiary"):
             _close()
-            
-    elif view == "delete_confirm":
-        st.error("⚠️ **Delete Objective?** This will also delete all associated Key Results and cannot be undone.")
-        c1, c2 = st.columns(2)
-        if c1.button("Yes, delete", type="primary", use_container_width=True):
-            delete_objective(id)
-            _close()
-        if c2.button("No, cancel", use_container_width=True):
-            st.session_state[f"obj_view_{id}"] = "menu"
-            st.rerun()
 
 @st.dialog("Edit Key Result")
 def _edit_kr_metadata_dialog(kr):
