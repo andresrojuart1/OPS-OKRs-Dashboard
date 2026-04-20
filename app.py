@@ -412,6 +412,7 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
+from pdf_export import generate_okr_pdf
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -670,8 +671,10 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
         
         # Determine columns based on view
-        show_pdf = selected_team != "All"
-        cols = st.columns(4 if show_pdf else 3)
+        # Buttons: Sync | Excel | AI | [PDF Import if subteam] | PDF Export
+        show_pdf_import = selected_team != "All"
+        num_cols = 5 if show_pdf_import else 4
+        cols = st.columns(num_cols)
         
         with cols[0]:
             if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", use_container_width=True, type="secondary"):
@@ -711,9 +714,30 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
                 st.session_state["ai_dialog_stale"] = True
                 track_action("Opened AI summary")
                 _ai_update_dialog()
-                
-        if show_pdf:
-            with cols[3]:
+
+        with cols[3]:
+            # PDF Download button (available for all teams)
+            pdf_bytes = generate_okr_pdf(
+                team_name=selected_team if selected_team != "All" else "Operations",
+                quarter=selected_quarter,
+                objectives_df=objectives_df,
+                krs_df=krs_df,
+                updates_df=updates_df,
+                krs_info=krs_info,
+            )
+            st.download_button(
+                label="PDF",
+                icon=":material/file_download:",
+                data=pdf_bytes,
+                file_name=f"OKRs_{selected_team}_{selected_quarter}.pdf",
+                mime="application/pdf",
+                key="hdr_pdf",
+                use_container_width=True,
+                type="secondary",
+            )
+
+        if show_pdf_import:
+            with cols[4]:
                 if st.button("from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn_hdr", type="secondary"):
                     st.session_state["show_pdf_import"] = True
 
