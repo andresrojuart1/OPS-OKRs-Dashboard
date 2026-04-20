@@ -375,7 +375,7 @@ def delete_objective(obj_id: str) -> None:
     st.cache_data.clear()
 
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=1)
 @gspread_retry(retries=3)
 def load_objectives() -> pd.DataFrame:
 
@@ -387,7 +387,7 @@ def load_objectives() -> pd.DataFrame:
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=1)
 @gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
     ws = get_worksheet("key_results")
@@ -400,11 +400,13 @@ def load_key_results() -> pd.DataFrame:
     for col in ["target", "current_value"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
     
-    # Filter out KRs with no ID or no title (zombie rows)
+    # Strict filtering: remove any row with empty ID or Title
     if not df.empty:
-        df = df[df["id"].astype(str).str.strip() != ""].copy()
+        df = df[df["id"].astype(str).str.strip().str.len() > 0].copy()
         if "title" in df.columns:
-            df = df[df["title"].astype(str).str.strip() != ""].copy()
+            df = df[df["title"].astype(str).str.strip().str.len() > 0].copy()
+        if "objective_id" in df.columns:
+            df = df[df["objective_id"].astype(str).str.strip().str.len() > 0].copy()
             
     logger.debug("Loaded %d key results", len(df))
     return df
@@ -412,7 +414,8 @@ def load_key_results() -> pd.DataFrame:
 
 
 
-@st.cache_data(ttl=10)
+
+@st.cache_data(ttl=1)
 @gspread_retry(retries=3)
 def load_updates() -> pd.DataFrame:
     ws = get_worksheet("kr_updates")
@@ -834,7 +837,7 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
     return created_ids
 
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=1)
 @gspread_retry(retries=3)
 
 def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
