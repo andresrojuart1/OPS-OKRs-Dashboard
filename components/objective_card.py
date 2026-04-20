@@ -86,8 +86,13 @@ def _format_current_target(current: float, target: float, unit: str) -> str:
 def _get_hist_val(updates_df, kr_id: str, week: int):
     if updates_df.empty: return 0.0, None
     f = updates_df[updates_df["kr_id"].astype(str) == kr_id].copy()
-    f["wk"] = f["updated_at"].apply(_get_week_from_ts)
-    res = f[f["wk"] <= week].sort_values("updated_at", ascending=False)
+    # Use explicit week_number column for filtering
+    if "week_number" in f.columns:
+        res = f[f["week_number"] <= week].sort_values("updated_at", ascending=False)
+    else:
+        # Fallback to derivation if column not yet active in this session
+        f["wk"] = f["updated_at"].apply(_get_week_from_ts)
+        res = f[f["wk"] <= week].sort_values("updated_at", ascending=False)
     if not res.empty: return float(res.iloc[0].get("new_value", 0)), res.iloc[0]
     return 0.0, None
 
@@ -194,7 +199,12 @@ def _render_update_form(kr):
         notes = st.text_input("Notes")
         if st.form_submit_button("Save", use_container_width=True):
             try:
-                update_kr_value(kr_id, val, notes, "", 3, st.session_state.get("user",{}).get("email","?"))
+                selected_week = st.session_state.get("selected_week", 1)
+                update_kr_value(
+                    kr_id, val, notes, "", 3, 
+                    st.session_state.get("user",{}).get("email","?"),
+                    selected_week
+                )
                 st.session_state["updating_kr"] = None; st.rerun()
             except Exception as e: handle_error(e, "Save failed", "Update")
     st.markdown("</div>", unsafe_allow_html=True)

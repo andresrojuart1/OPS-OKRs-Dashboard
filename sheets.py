@@ -170,7 +170,7 @@ SEED_KEY_RESULTS = [
 
 OBJ_HEADERS = ["id", "title", "sub_team", "quarter", "company_vision"]
 KR_HEADERS  = ["id", "objective_id", "title", "target", "unit", "current_value"]
-UPD_HEADERS    = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at"]
+UPD_HEADERS    = ["id", "kr_id", "new_value", "week_notes", "blockers", "confidence", "updated_by", "updated_at", "week_number"]
 NOTES_HEADERS  = ["id", "sub_team", "quarter", "week_number", "content", "updated_by", "updated_at"]
 CHARTS_HEADERS = ["id", "sub_team", "quarter", "week_number", "filename", "drive_file_id", "drive_url", "uploaded_by", "uploaded_at"]
 
@@ -234,7 +234,42 @@ def seed_if_empty() -> None:
             value_input_option="RAW",
         )
 
+    # Migration for week_number in updates
+    _migrate_updates_schema(spreadsheet)
+
     st.session_state["seed_checked"] = True
+
+
+def _migrate_updates_schema(spreadsheet) -> None:
+    """Ensure kr_updates has week_number column and backfill if needed."""
+    try:
+        ws = spreadsheet.worksheet("kr_updates")
+        headers = ws.row_values(1)
+        if "week_number" not in headers:
+            # Add header
+            headers.append("week_number")
+            ws.resize(cols=len(headers))
+            ws.update_cell(1, len(headers), "week_number")
+            
+            # Backfill existing data
+            records = ws.get_all_records()
+            if records:
+                updates = []
+                for i, row in enumerate(records, start=2):
+                    ts = row.get("updated_at", "")
+                    try:
+                        dt = datetime.strptime(str(ts).strip(), "%Y-%m-%d %H:%M UTC")
+                        wk = dt.isocalendar()[1]
+                    except: wk = 0
+                    updates.append({
+                        "range": gspread.utils.rowcol_to_a1(i, len(headers)),
+                        "values": [[wk]]
+                    })
+                if updates:
+                    ws.batch_update(updates)
+            logger.info("Migrated kr_updates schema to include week_number")
+    except Exception as e:
+        logger.error("Migration failed: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +369,7 @@ def update_kr_value(
     blockers: str,
     confidence: int,
     updated_by: str,
+    week_number: int,
 ) -> None:
     """Atomically append update log row and update current_value in key_results."""
     spreadsheet = get_spreadsheet()
@@ -357,7 +393,7 @@ def update_kr_value(
     update_id = str(uuid.uuid4())[:8]
 
     upd_ws.append_row(
-        [update_id, kr_id, new_value, week_notes, blockers, confidence, updated_by, now],
+        [update_id, kr_id, new_value, week_notes, blockers, confidence, updated_by, now, week_number],
         value_input_option="RAW",
     )
     kr_ws.update_cell(row_index, col_index, new_value)
