@@ -164,11 +164,11 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
 
     with st.container():
         # Label & Header (Visual Hierarchy 14px)
-        st.markdown(f'<div style="font-size:14px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:10px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:14px; font-weight:800; color:{PURPLE}; text-transform:uppercase; letter-spacing:0.12em; margin-bottom:6px;">{sub_team} · WEEK {selected_week}</div>', unsafe_allow_html=True)
         
         c_title, c_opts = st.columns([5, 0.5])
         with c_title:
-            st.markdown(f'<div style="font-size:22px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:12px;">{obj_title}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:22px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
         with c_opts:
             if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
                 _obj_actions_dialog(obj_id, obj_title)
@@ -176,10 +176,10 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
         # Objective Progress Summary
         st.markdown(f'<div style="font-size:38px; font-weight:800; color:#fff; line-height:1;">{avg_pct:.0f}%</div>', unsafe_allow_html=True)
         st.markdown(_obj_progress_bar(avg_pct), unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:28px; font-weight:600;">{achieved} / {total} KRs achieved</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:13px; color:{MUTED}; margin-bottom:20px; font-weight:600;">{achieved} / {total} KRs achieved</div>', unsafe_allow_html=True)
 
         # Divider Section
-        st.markdown('<div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.25); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:16px;">Key Results Tracking</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:12px;">Key Results Tracking</div>', unsafe_allow_html=True)
 
         if effective_data:
             for data in effective_data:
@@ -198,7 +198,7 @@ def _render_kr_block(data, active_kr: str) -> None:
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
 
     with st.container():
-        st.markdown('<div style="margin-bottom:24px;">', unsafe_allow_html=True)
+        st.markdown('<div style="margin-bottom:16px;">', unsafe_allow_html=True)
         
         # --- PRIMARY INFO (LEFT) vs ACTION/METRIC (RIGHT) ---
         c_left, c_right = st.columns([3.5, 1.5])
