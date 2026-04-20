@@ -139,11 +139,20 @@ def _render_update_form(kr) -> None:
     with st.form(key=f"f_{kr_id}", clear_on_submit=True):
         c1, c2 = st.columns([2, 1])
         with c1: new_val = st.number_input("Value", value=float(kr.get("current_value",0)))
-        with c2: st.slider("Conf", 1, 5, 3, key=f"cv_{kr_id}")
+        with c2: conf = st.slider("Conf", 1, 5, 3)
         notes = st.text_input("Narrative")
+        blockers = st.text_input("Blockers")
+        
         if st.form_submit_button("Register", use_container_width=True):
             from sheets import update_kr_value
-            update_kr_value(kr_id=kr_id, new_value=float(new_val), week_notes=notes, updated_by=st.session_state.get("user",{}).get("email","?"))
+            update_kr_value(
+                kr_id=kr_id, 
+                new_value=float(new_val), 
+                week_notes=notes, 
+                blockers=blockers,
+                confidence=conf,
+                updated_by=st.session_state.get("user",{}).get("email","?")
+            )
             st.session_state["updating_kr"] = None
             st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
@@ -171,10 +180,20 @@ def _confirm_delete_obj_dialog(obj_id: str, title: str) -> None:
         delete_objective(obj_id)
         st.rerun()
 
-@st.dialog("Edit KR")
+@st.dialog("Edit Key Result")
 def _edit_kr_dialog(kr_id: str, title: str) -> None:
-    st.text_input("Name", value=title)
-    st.button("Update", type="primary")
+    from sheets import load_key_results, update_kr_fields
+    df = load_key_results()
+    kr = df[df["id"] == kr_id].iloc[0] if not df.empty else {}
+    
+    nt = st.text_input("Title", value=kr.get("title", title))
+    c1, c2 = st.columns(2)
+    with c1: ntgt = st.number_input("Target", value=float(kr.get("target", 0)))
+    with c2: nunit = st.text_input("Unit", value=kr.get("unit", ""))
+    
+    if st.button("Save Changes", type="primary", use_container_width=True):
+        update_kr_fields(kr_id, nt.strip(), float(ntgt), nunit.strip())
+        st.rerun()
 
 @st.dialog("Delete KR")
 def _confirm_delete_kr_dialog(kr_id: str, title: str) -> None:
