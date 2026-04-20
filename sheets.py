@@ -18,6 +18,8 @@ from functools import wraps
 load_dotenv(override=True)
 _here = os.path.dirname(os.path.abspath(__file__))
 
+from observability import logger
+
 def gspread_retry(retries=5, backoff_in_seconds=2):
     def decorator(func):
         @wraps(func)
@@ -287,6 +289,7 @@ def delete_objective(obj_id: str) -> None:
 def load_objectives() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("objectives")
     records = ws.get_all_records()
+    logger.debug("Loaded %d objectives", len(records))
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
 
@@ -300,6 +303,7 @@ def load_key_results() -> pd.DataFrame:
     df = pd.DataFrame(records)
     for col in ["target", "current_value"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+    logger.debug("Loaded %d key results", len(df))
     return df
 
 
@@ -357,6 +361,7 @@ def update_kr_value(
         value_input_option="RAW",
     )
     kr_ws.update_cell(row_index, col_index, new_value)
+    logger.info("KR updated: %s → %s by %s", kr_id, new_value, updated_by)
 
     st.cache_data.clear()
 
@@ -484,6 +489,7 @@ def create_objective(title: str, sub_team: str, quarter: str) -> None:
     ws = get_spreadsheet().worksheet("objectives")
     new_id = _next_obj_id()
     ws.append_row([new_id, title, sub_team, quarter, ""], value_input_option="RAW")
+    logger.info("Objective created: %s (%s / %s)", new_id, sub_team, quarter)
     st.cache_data.clear()
 
 
@@ -492,6 +498,7 @@ def create_kr(objective_id: str, title: str, target: float, unit: str) -> None:
     ws = get_spreadsheet().worksheet("key_results")
     new_id = _next_kr_id()
     ws.append_row([new_id, objective_id, title, target, unit, 0], value_input_option="RAW")
+    logger.info("KR created: %s for objective %s", new_id, objective_id)
     st.cache_data.clear()
 
 

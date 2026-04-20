@@ -405,6 +405,7 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
+from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
 for key, default in [
@@ -660,6 +661,7 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
             if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", use_container_width=True, type="secondary"):
                 st.cache_data.clear()
                 st.session_state["last_sync_time"] = datetime.now()
+                track_action("Synced data")
                 st.toast("Data synchronized", icon="✅")
                 st.rerun()
             
@@ -691,6 +693,7 @@ def render_header(objectives_df, krs_df, selected_team: str) -> None:
         with cols[2]:
             if st.button("AI", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
                 st.session_state["ai_dialog_stale"] = True
+                track_action("Opened AI summary")
                 _ai_update_dialog()
                 
         if show_pdf:
@@ -839,6 +842,7 @@ def render_dashboard() -> None:
     st.session_state["_krs_for_ai"] = krs_info
 
     render_header(objectives_df, krs_df, team_label)
+    render_last_action()
 
     # PDF import section (sub-team views only)
     if team_label != "All":
@@ -868,6 +872,7 @@ def render_dashboard() -> None:
                                     st.secrets["OPENAI_API_KEY"],
                                 )
                                 st.session_state["parsed_pdf_data"] = parsed_data
+                                track_action("Parsed PDF", detail=team_label)
                                 st.toast("PDF successfully analyzed", icon="🔍")
                             except Exception as exc:
                                 st.error(f"Error parsing PDF: {exc}")
@@ -918,6 +923,11 @@ def render_dashboard() -> None:
     if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
         add_objective_dialog(team_label, selected_quarter)
 
+    # Activity log for "All" view (sub-team views have it at the bottom)
+    if team_label == "All":
+        st.divider()
+        render_activity_log()
+
     # Weekly Notes + Charts section (sub-team views only)
     if team_label != "All":
         st.divider()
@@ -954,6 +964,7 @@ def render_dashboard() -> None:
                     with st.spinner("Saving..."):
                         save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
                         st.cache_data.clear()
+                        track_action("Saved weekly note", detail=f"{team_label} W{week_number}")
                         st.toast("Changes saved!", icon="✅")
                         st.rerun()
 
@@ -974,6 +985,7 @@ def render_dashboard() -> None:
                 with st.spinner("Uploading images to Google Drive..."):
                     email = st.session_state.get("user", {}).get("email", "unknown")
                     upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
+                    track_action("Uploaded charts", detail=f"{len(uploaded_files)} file(s)")
                     st.toast("✅ Images uploaded successfully", icon="📊")
                 st.rerun()
 
@@ -992,8 +1004,13 @@ def render_dashboard() -> None:
                     if st.button("Remove", icon=":material/delete:", key=f"del_chart_{chart['id']}", type="secondary"):
                         with st.spinner("Deleting image..."):
                             delete_chart_from_drive(str(chart["id"]))
+                            track_action("Deleted chart", detail=chart.get("filename", ""))
                             st.toast("Image deleted", icon="🗑️")
                         st.rerun()
+
+        # Activity log at the bottom of sub-team views
+        st.divider()
+        render_activity_log()
 
 
 # ---------------------------------------------------------------------------

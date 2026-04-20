@@ -13,6 +13,7 @@ from sheets import (
     update_objective,
     delete_objective,
 )
+from observability import handle_error, track_action
 
 MUTED = "#A1A1AA"
 PURPLE = "#7A50F7"
@@ -197,10 +198,11 @@ def _render_update_form(kr) -> None:
                     confidence=conf,
                     updated_by=st.session_state.get("user", {}).get("email", "?"),
                 )
+                track_action("Updated KR", detail=f"{kr_id} → {new_val}")
                 st.session_state["updating_kr"] = None
                 st.rerun()
             except Exception as exc:
-                st.error(f"Failed to save update: {exc}")
+                handle_error(exc, "Failed to save update", "Update KR")
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -232,9 +234,10 @@ def _render_history(kr_id: str) -> None:
         if row_id and st.button(" ", icon=":material/delete:", key=f"delu_{row_id}", type="tertiary", help="Delete update"):
             try:
                 delete_update_by_id(row_id)
+                track_action("Deleted update", detail=row_id)
                 st.rerun()
             except Exception as exc:
-                st.error(f"Failed to delete update: {exc}")
+                handle_error(exc, "Failed to delete update", "Delete update")
 
 
 # ---------------------------------------------------------------------------
@@ -247,9 +250,10 @@ def _edit_obj_dialog(obj_id: str, title: str) -> None:
     if st.button("Save", type="primary", use_container_width=True):
         try:
             update_objective(obj_id, nt.strip())
+            track_action("Edited objective", detail=obj_id)
             st.rerun()
         except Exception as exc:
-            st.error(f"Failed to save: {exc}")
+            handle_error(exc, "Failed to save objective", "Edit objective")
 
 
 @st.dialog("Delete Objective")
@@ -258,9 +262,10 @@ def _confirm_delete_obj_dialog(obj_id: str, title: str) -> None:
     if st.button("Confirm Delete", type="primary", use_container_width=True):
         try:
             delete_objective(obj_id)
+            track_action("Deleted objective", detail=f"{obj_id}: {title}")
             st.rerun()
         except Exception as exc:
-            st.error(f"Failed to delete: {exc}")
+            handle_error(exc, "Failed to delete objective", "Delete objective")
 
 
 @st.dialog("Edit Key Result")
@@ -281,9 +286,10 @@ def _edit_kr_dialog(kr_id: str, title: str) -> None:
     if st.button("Save Changes", type="primary", use_container_width=True):
         try:
             update_kr_fields(kr_id, nt.strip(), float(ntgt), nunit.strip())
+            track_action("Edited KR", detail=kr_id)
             st.rerun()
         except Exception as exc:
-            st.error(f"Failed to save: {exc}")
+            handle_error(exc, "Failed to save KR changes", "Edit KR")
 
 
 @st.dialog("Delete KR")
@@ -292,9 +298,10 @@ def _confirm_delete_kr_dialog(kr_id: str, title: str) -> None:
     if st.button("Delete", type="primary", use_container_width=True):
         try:
             delete_kr_by_id(kr_id)
+            track_action("Deleted KR", detail=f"{kr_id}: {title}")
             st.rerun()
         except Exception as exc:
-            st.error(f"Failed to delete: {exc}")
+            handle_error(exc, "Failed to delete KR", "Delete KR")
 
 
 @st.dialog("New KR")
@@ -311,6 +318,7 @@ def add_kr_dialog(obj_id: str, title: str) -> None:
             return
         try:
             create_kr(obj_id, name.strip(), float(tgt), unit.strip())
+            track_action("Created KR", detail=f"for {obj_id}")
             st.rerun()
         except Exception as exc:
-            st.error(f"Failed to create KR: {exc}")
+            handle_error(exc, "Failed to create KR", "Create KR")
