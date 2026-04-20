@@ -205,6 +205,7 @@ def _render_kr_block(data, active_kr: str) -> None:
             header_col.markdown(f'<div style="font-size:19px; font-weight:600; color:#fff; margin-bottom:2px;">{title}</div>', unsafe_allow_html=True)
             if edit_kr_col.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
                 _edit_kr_metadata_dialog(kr)
+            cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
             st.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
         
         with c_right:
