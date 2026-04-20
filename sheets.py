@@ -383,8 +383,14 @@ def load_objectives() -> pd.DataFrame:
     if ws is None: return pd.DataFrame(columns=OBJ_HEADERS)
     records = safe_get_all_records(ws, OBJ_HEADERS)
 
-    logger.debug("Loaded %d objectives", len(records))
-    return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
+    df = pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
+    if not df.empty:
+        df = df[df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
+        df = df.drop_duplicates(subset=["id"], keep="first")
+
+    logger.debug("Loaded %d objectives", len(df))
+    return df
+
 
 
 @st.cache_data(ttl=1)
@@ -409,6 +415,7 @@ def load_key_results() -> pd.DataFrame:
         if "objective_id" in df.columns:
             df = df[df["objective_id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
 
+        df = df.drop_duplicates(subset=["id"], keep="first")
             
     logger.debug("Loaded %d key results", len(df))
     return df
@@ -443,9 +450,10 @@ def load_updates() -> pd.DataFrame:
     if not df.empty:
         df = df[df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
         df = df[df["kr_id"].astype(str).replace("nan", "").str.strip().str.len() > 0].copy()
-
+        df = df.drop_duplicates(subset=["id"], keep="first")
             
     return df
+
 
 
 
