@@ -708,10 +708,17 @@ def render_header(objectives_df, krs_df, selected_team, krs_info) -> None:
     if selected_team != "All":
         num_objs = len(objectives_df[(objectives_df["quarter"] == selected_quarter) & (objectives_df["sub_team"] == selected_team)])
 
+    # Dynamic Progress Threshold (Linear target per quarter week)
+    selected_week = st.session_state.get("selected_week", 1)
+    q_starts = {"Q1 2026": 1, "Q2 2026": 14, "Q3 2026": 27, "Q4 2026": 40}
+    start_wk = q_starts.get(selected_quarter, 1)
+    weeks_elapsed = max(1, selected_week - start_wk + 1)
+    expected_pct = (weeks_elapsed / 13.0) * 100
+
     total_krs = len(krs_info)
     if krs_info:
-        at_risk_count = sum(1 for k in krs_info if k["pct"] < 70)
-        on_track_count = sum(1 for k in krs_info if k["pct"] >= 70)
+        at_risk_count = sum(1 for k in krs_info if k["pct"] < expected_pct)
+        on_track_count = sum(1 for k in krs_info if k["pct"] >= expected_pct)
         avg_prog = sum(k["pct"] for k in krs_info) / total_krs
     else:
         at_risk_count = 0

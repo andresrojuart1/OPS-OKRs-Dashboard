@@ -35,8 +35,16 @@ RED = "#ff4b4b"
 
 
 def _pct_color(pct: float) -> str:
-    if pct >= 70: return GREEN
-    if pct >= 40: return YELLOW
+    # Use dynamic timeline threshold for executive status
+    sel_week = st.session_state.get("selected_week", 1)
+    sel_q = st.session_state.get("selected_quarter", "Q1 2026")
+    q_starts = {"Q1 2026": 1, "Q2 2026": 14, "Q3 2026": 27, "Q4 2026": 40}
+    start_wk = q_starts.get(sel_q, 1)
+    weeks_elapsed = max(1, sel_week - start_wk + 1)
+    expected_pct = (weeks_elapsed / 13.0) * 100
+    
+    if pct >= expected_pct: return GREEN
+    if pct >= expected_pct * 0.6: return YELLOW
     return RED
 
 
