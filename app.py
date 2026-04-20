@@ -412,7 +412,7 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
-from pdf_export import generate_okr_pdf
+from pdf_export_v2 import generate_okr_pdf_with_ai
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -717,13 +717,15 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info) ->
 
         with cols[3]:
             # PDF Download button (available for all teams)
-            pdf_bytes = generate_okr_pdf(
+            # Generate with AI insights
+            pdf_bytes = generate_okr_pdf_with_ai(
                 team_name=selected_team if selected_team != "All" else "Operations",
                 quarter=selected_quarter,
                 objectives_df=objectives_df,
                 krs_df=krs_df,
                 updates_df=updates_df,
                 krs_info=krs_info,
+                openai_api_key=st.secrets.get("OPENAI_API_KEY"),
             )
             st.download_button(
                 label="PDF",
