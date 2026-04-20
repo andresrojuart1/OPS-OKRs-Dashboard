@@ -144,10 +144,21 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
     effective_data = []
     
     for _, kr in obj_krs.iterrows():
+        # Current Week
         val, latest = _get_hist_val(updates_df, str(kr["id"]), selected_week)
         calc_kr = kr.copy(); calc_kr["current_value"] = val
         pct = compute_progress(calc_kr)
-        effective_data.append({"kr": kr, "pct": pct, "val": val, "latest": latest})
+        
+        # Previous Week Trend
+        prev_pct = None
+        if selected_week > 1:
+            pv, _ = _get_hist_val(updates_df, str(kr["id"]), selected_week - 1)
+            p_kr = kr.copy(); p_kr["current_value"] = pv
+            prev_pct = compute_progress(p_kr)
+
+        effective_data.append({
+            "kr": kr, "pct": pct, "val": val, "latest": latest, "prev_pct": prev_pct
+        })
 
     if effective_data:
         avg_pct = sum(d["pct"] for d in effective_data) / len(effective_data)
@@ -191,8 +202,17 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
 
 def _render_kr_block(data, active_kr: str) -> None:
     kr, pct, val, latest = data["kr"], data["pct"], data["val"], data["latest"]
+    prev_pct = data.get("prev_pct")
     kr_id, title = str(kr["id"]), kr["title"]
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
+
+    def _render_trend():
+        if prev_pct is None: return ""
+        diff = pct - prev_pct
+        if abs(diff) < 0.1: return ""
+        color = "#10b981" if diff > 0 else "#ef4444"
+        prefix = "+" if diff > 0 else ""
+        return f'<span style="font-size:12px; font-weight:700; color:{color}; margin-left:8px;">{prefix}{diff:.1f}pp</span>'
 
     with st.container():
         st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
@@ -212,10 +232,10 @@ def _render_kr_block(data, active_kr: str) -> None:
                 _edit_kr_metadata_dialog(kr)
             
         # --- VALUE ROW ---
-        v_left, v_right = st.columns([0.8, 0.2])
+        v_left, v_right = st.columns([0.7, 0.3])
         cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
         v_left.markdown(f'<div style="font-size:13px; color:rgba(255,255,255,0.45); font-weight:500; margin-top:-4px;">{_format_current_target(val, target, unit, cur_fmt)}</div>', unsafe_allow_html=True)
-        v_right.markdown(f'<div style="text-align:right; font-size:16px; font-weight:800; color:{_pct_color(pct)}; margin-top:-8px;">{pct:.0f}%</div>', unsafe_allow_html=True)
+        v_right.markdown(f'<div style="text-align:right; font-size:15px; font-weight:800; color:{_pct_color(pct)}; margin-top:-8px;">{pct:.0f}% progress{_render_trend()}</div>', unsafe_allow_html=True)
 
         # --- PROGRESS BAR DIRECTLY BELOW ---
         st.markdown(_kr_compact_bar(pct), unsafe_allow_html=True)
