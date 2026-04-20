@@ -17,6 +17,7 @@ from sheets import (
     create_kr,
     delete_kr_by_id,
     delete_update_by_id,
+    edit_kr_update,
     format_value,
     load_updates_for_kr,
     update_kr_fields,
@@ -296,7 +297,10 @@ def _render_update_form(data):
                     st.session_state["updating_kr"] = None
                     st.session_state["editing_id"] = None
                     st.rerun()
-            except Exception as e: handle_error(e, "Operation failed", "Update")
+                else:
+                    st.error("Operation failed. The record may have been deleted or is unavailable.")
+            except Exception as e:
+                handle_error(e, "Operation failed", "Update")
     st.markdown("</div>", unsafe_allow_html=True)
 
 @st.dialog("Objective Actions")
