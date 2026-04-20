@@ -99,69 +99,28 @@ def _format_current_target(current: float, target: float, unit: str, fmt: str = 
     return f"{apply_fmt(current)} / {apply_fmt(target)} {label}"
 
 
-def _get_hist_val(updates_df, kr_id: str, week: int):
-    if updates_df.empty: return 0.0, None
-    f = updates_df[updates_df["kr_id"].astype(str) == str(kr_id)].copy()
-    
-    # Normalize selected week to string for comparison
-    sel_wk = str(week).strip()
-
-    # Use explicit week_number column for filtering
-    if "week_number" in f.columns:
-        # Normalize column to string and strip
-        f["week_number_str"] = f["week_number"].astype(str).str.strip()
-        
-        # For VALUE: we want latest up to this week
-        f["week_num_numeric"] = pd.to_numeric(f["week_number_str"], errors="coerce")
-        val_res = f[f["week_num_numeric"] <= float(sel_wk)].sort_values("updated_at", ascending=False)
-
-        
-        # For NARRATIVE: the user wants to see the update ONLY for the selected week
-        # based on latest request "Show those updates ONLY when Week 14 is selected"
-        narr_res = f[f["week_number_str"] == sel_wk].sort_values("updated_at", ascending=False)
-    else:
-        # Fallback to derivation
-        f["wk_numeric"] = pd.to_numeric(f["updated_at"].apply(_get_week_from_ts), errors="coerce")
-        val_res = f[f["wk_numeric"] <= float(sel_wk)].sort_values("updated_at", ascending=False)
-
-        narr_res = f[f["wk"] == sel_wk].sort_values("updated_at", ascending=False)
-
-    effective_val = float(val_res.iloc[0].get("new_value", 0)) if not val_res.empty else 0.0
-    latest_narrative = narr_res.iloc[0] if not narr_res.empty else None
-    
-    return effective_val, latest_narrative
-
-
 # ---------------------------------------------------------------------------
 # Main Component
 # ---------------------------------------------------------------------------
 
-def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False) -> None:
+def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_primary: bool = False, read_only: bool = False) -> None:
     obj_id, obj_title = str(obj_row["id"]), obj_row["title"]
     sub_team = obj_row.get("sub_team", "")
     selected_week = st.session_state.get("selected_week", 1)
     active_kr = st.session_state.get("updating_kr") or ""
+    is_read_only = st.session_state.get("selected_team", "All") == "All"
 
-    # Logic: Filter KRs and compute historical/average progress
+    # Logic: Use precomputed historical/average progress passed from app.py
     obj_krs = krs_df[krs_df["objective_id"].astype(str) == obj_id] if not krs_df.empty else pd.DataFrame()
     effective_data = []
     
     for _, kr in obj_krs.iterrows():
-        # Current Week
-        val, latest = _get_hist_val(updates_df, str(kr["id"]), selected_week)
-        calc_kr = kr.copy(); calc_kr["current_value"] = val
-        pct = compute_progress(calc_kr)
-        
-        # Previous Week Trend
-        prev_pct = None
-        if selected_week > 1:
-            pv, _ = _get_hist_val(updates_df, str(kr["id"]), selected_week - 1)
-            p_kr = kr.copy(); p_kr["current_value"] = pv
-            prev_pct = compute_progress(p_kr)
-
-        effective_data.append({
-            "kr": kr, "pct": pct, "val": val, "latest": latest, "prev_pct": prev_pct
+        kr_id = str(kr["id"])
+        info = krs_info_all.get(kr_id, {
+            "kr": kr, "pct": 0.0, "val": float(kr.get("current_value", 0)), 
+            "latest": None, "narrative": None, "prev_pct": None
         })
+        effective_data.append(info)
 
     if effective_data:
         avg_pct = sum(d["pct"] for d in effective_data) / len(effective_data)
@@ -169,6 +128,7 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
         total = len(effective_data)
     else:
         avg_pct = 0.0; achieved = total = 0
+
 
     if not is_primary:
         st.markdown('<div style="margin-top: 72px; padding-top: 48px; border-top: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px;"></div>', unsafe_allow_html=True)
@@ -202,7 +162,8 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
 
         if effective_data:
             for data in effective_data:
-                _render_kr_block(data, active_kr)
+                _render_kr_block(data, active_kr, is_read_only)
+
         else:
             st.markdown(f'<div style="padding:16px; text-align:center; color:{MUTED}; font-size:14px;">No key results found.</div>', unsafe_allow_html=True)
 
@@ -211,11 +172,13 @@ def render_objective_card(obj_row, krs_df, updates_df, is_primary: bool = False)
 # KR Render
 # ---------------------------------------------------------------------------
 
-def _render_kr_block(data, active_kr: str) -> None:
+def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
     kr, pct, val, latest = data["kr"], data["pct"], data["val"], data["latest"]
+    narrative = data.get("narrative") # Specifically for current week display
     prev_pct = data.get("prev_pct")
     kr_id, title = str(kr["id"]), kr["title"]
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
+
 
     def _render_trend():
         if prev_pct is None: return ""
@@ -231,13 +194,12 @@ def _render_kr_block(data, active_kr: str) -> None:
     with st.container():
         st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
         
-        # --- HEADER: Title + Actions (Update/Gear) ---
-        is_read_only = st.session_state.get("selected_team", "All") == "All"
-        h_left_width = 0.65 if not is_read_only else 1.0
-        h_left, h_right = st.columns([h_left_width, 0.35 if not is_read_only else 0.01])
+        is_read_only_view = st.session_state.get("selected_team", "All") == "All"
+        h_left_width = 0.65 if not is_read_only_view else 1.0
+        h_left, h_right = st.columns([h_left_width, 0.35 if not is_read_only_view else 0.01])
         h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
         
-        if not is_read_only:
+        if not is_read_only_view:
             with h_right:
                 act_col, gear_col = st.columns([0.75, 0.25])
                 u_label = "Cancel" if active_kr == kr_id else "Update"
@@ -251,6 +213,7 @@ def _render_kr_block(data, active_kr: str) -> None:
                     # Also clear KR update state when opening metadata dialog
                     st.session_state["updating_kr"] = None
                     _edit_kr_metadata_dialog(kr)
+
             
         # --- VALUE ROW ---
         v_left, v_right = st.columns([0.7, 0.3])
@@ -262,33 +225,35 @@ def _render_kr_block(data, active_kr: str) -> None:
         st.markdown(_kr_compact_bar(pct), unsafe_allow_html=True)
 
         # --- NARRATIVE ROW & PROGRESS ---
-        if latest is not None:
+        if narrative is not None:
             badge_color = _pct_color(pct)
-            fmt_override = latest.get("value_format", "number")
+            fmt_override = narrative.get("value_format", "number")
             st.markdown(f"""
             <div style="display:flex; align-items:center; gap:12px; margin-top:14px; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border-left:4px solid {badge_color};">
                 <div style="background:{badge_color}1a; color:{badge_color}; padding:4px 10px; border-radius:6px; font-size:16px; font-weight:700; white-space:nowrap;">{_format_badge(val, unit, fmt_override)}</div>
-                <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.55;">{latest.get('week_notes', '')}</div>
+                <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.55;">{narrative.get('week_notes', '')}</div>
             </div>
             """, unsafe_allow_html=True)
             
             # Action Row (Edit/Deps)
-            if not st.session_state.get("selected_team", "All") == "All":
+            if not is_read_only:
                 col_edit, col_empty = st.columns([0.15, 0.85])
-                if col_edit.button("Edit", key=f"edit_btn_{latest.get('id')}", type="tertiary"):
+                if col_edit.button("Edit", key=f"edit_btn_{narrative.get('id')}", type="tertiary"):
                     st.session_state["updating_kr"] = kr_id
-                    st.session_state["editing_id"] = latest.get("id")
+                    st.session_state["editing_id"] = narrative.get("id")
                     st.rerun()
 
-            deps = latest.get("blockers", "")
+            deps = narrative.get("blockers", "")
             if deps:
                 st.markdown(f'<div style="padding-left:12px; margin-top:4px; font-size:13px; color:#f87171; font-weight:500;">⚠ Dependencies: {deps}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div style="font-size:14px; color:{MUTED}; font-style:italic; margin-top:10px; opacity:0.6; margin-bottom:12px;">No updates recorded for this week.</div>', unsafe_allow_html=True)
 
+
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if active_kr == kr_id: _render_update_form(data)
+    if not is_read_only and active_kr == kr_id: _render_update_form(data)
+
 
 # ---------------------------------------------------------------------------
 # Update Form

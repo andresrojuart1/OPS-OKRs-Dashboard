@@ -849,48 +849,57 @@ def render_dashboard() -> None:
     else:
         ai_krs = krs_df.iloc[:0]
 
-    # Use global week for AI and KPIs
+    # --- PRECOMPUTE KR DATA ---
     selected_week = st.session_state.get("selected_week", get_week_number())
     
-    def get_wk(ts):
-        try:
-            return datetime.strptime(str(ts).strip(), "%Y-%m-%d %H:%M UTC").isocalendar()[1]
-        except: return 0
+    def _get_latest_map(df, week_limit):
+        if df.empty: return {}
+        rev = df[df["week_number"] <= week_limit].sort_values(["kr_id", "updated_at"], ascending=[True, False])
+        return rev.drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
 
-    krs_info = []
-    for _, kr in ai_krs.iterrows():
-        kr_id = str(kr["id"])
-        # Find latest update on or before selected week
-        if not updates_df.empty:
-            valid_upds = updates_df[updates_df["kr_id"].astype(str) == kr_id].copy()
-            valid_upds["wk"] = valid_upds["updated_at"].apply(get_wk)
-            up_to_week = valid_upds[valid_upds["wk"] <= selected_week].sort_values("updated_at", ascending=False)
-            latest = up_to_week.iloc[0] if not up_to_week.empty else None
-        else:
-            latest = None
+    latest_map = _get_latest_map(updates_df, selected_week)
+    prev_latest_map = _get_latest_map(updates_df, selected_week - 1)
+    narrative_map = updates_df[updates_df["week_number"] == selected_week].sort_values(
+        ["kr_id", "updated_at"], ascending=[True, False]
+    ).drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
+
+    krs_info_all = {}
+    if not krs_df.empty:
+        for _, kr in krs_df.iterrows():
+            kid = str(kr["id"])
+            latest = latest_map.get(kid)
+            narrative = narrative_map.get(kid)
+            prev_latest = prev_latest_map.get(kid)
             
-        eff_val = float(latest["new_value"]) if latest is not None else float(kr.get("current_value", 0))
-        # Temporary KR for pct calculation
-        calc_kr = kr.copy()
-        calc_kr["current_value"] = eff_val
+            eff_val = float(latest["new_value"]) if latest else float(kr.get("current_value", 0))
+            calc_kr = kr.copy(); calc_kr["current_value"] = eff_val
+            pct = compute_progress(calc_kr)
+            
+            prev_pct = None
+            if selected_week > 1:
+                pv = float(prev_latest["new_value"]) if prev_latest else float(kr.get("current_value", 0))
+                p_kr = kr.copy(); p_kr["current_value"] = pv
+                prev_pct = compute_progress(p_kr)
+                
+            krs_info_all[kid] = {
+                "kr": kr, "val": eff_val, "pct": pct, 
+                "latest": latest, "narrative": narrative, "prev_pct": prev_pct,
+                "has_updates": latest is not None,
+                "title": str(kr["title"]), "target": float(kr["target"]), "unit": str(kr["unit"]), # compatibility
+            }
+
+    # Filter for Header and AI summaries based on the current team/quarter selection
+    if not ai_krs.empty:
+        ai_krs_ids = set(ai_krs["id"].astype(str).tolist())
+        krs_info_list = [krs_info_all[kid] for kid in ai_krs_ids if kid in krs_info_all]
+    else:
+        krs_info_list = []
         
-        krs_info.append({
-            "id":             kr_id,
-            "title":          str(kr["title"]),
-            "target":         float(kr["target"]),
-            "unit":           str(kr["unit"]),
-            "current_value":  eff_val,
-            "pct":            compute_progress(calc_kr),
-            "has_updates":    latest is not None,
-            "last_notes":     str(latest["week_notes"]) if latest is not None and latest.get("week_notes") else "",
-            "last_blockers":  str(latest["blockers"])   if latest is not None and latest.get("blockers")   else "",
-            "last_confidence": int(latest["confidence"]) if latest is not None and latest.get("confidence") else 0,
-            "value_format":   str(latest["value_format"]) if latest is not None and latest.get("value_format") else "number",
-        })
-    st.session_state["_krs_for_ai"] = krs_info
+    st.session_state["_krs_for_ai"] = krs_info_list
     
-    render_header(objectives_df, krs_df, team_label, krs_info)
+    render_header(objectives_df, krs_df, team_label, krs_info_list)
     render_last_action()
+
 
     # PDF import section (sub-team views only)
     if team_label != "All":
@@ -965,7 +974,8 @@ def render_dashboard() -> None:
         )
     else:
         for i, (_, obj_row) in enumerate(display_objs.iterrows()):
-            render_objective_card(obj_row, krs_df, updates_df, is_primary=(i == 0))
+            render_objective_card(obj_row, krs_df, updates_df, krs_info_all, is_primary=(i == 0))
+
 
     if team_label != "All":
         if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):

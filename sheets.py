@@ -375,9 +375,10 @@ def delete_objective(obj_id: str) -> None:
     st.cache_data.clear()
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60)
 @gspread_retry(retries=3)
 def load_objectives() -> pd.DataFrame:
+
     ws = get_worksheet("objectives")
     if ws is None: return pd.DataFrame(columns=OBJ_HEADERS)
     records = safe_get_all_records(ws, OBJ_HEADERS)
@@ -386,7 +387,7 @@ def load_objectives() -> pd.DataFrame:
     return pd.DataFrame(records) if records else pd.DataFrame(columns=OBJ_HEADERS)
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60)
 @gspread_retry(retries=3)
 def load_key_results() -> pd.DataFrame:
     ws = get_worksheet("key_results")
@@ -398,18 +399,40 @@ def load_key_results() -> pd.DataFrame:
     df = pd.DataFrame(records)
     for col in ["target", "current_value"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+    
+    # Ensure IDs are strings
+    if "id" in df.columns:
+        df["id"] = df["id"].astype(str)
+    
     logger.debug("Loaded %d key results", len(df))
     return df
 
 
-@st.cache_data(ttl=5)
+
+@st.cache_data(ttl=60)
 @gspread_retry(retries=3)
 def load_updates() -> pd.DataFrame:
     ws = get_worksheet("kr_updates")
     if ws is None: return pd.DataFrame(columns=UPD_HEADERS)
     records = safe_get_all_records(ws, UPD_HEADERS)
 
-    return pd.DataFrame(records) if records else pd.DataFrame(columns=UPD_HEADERS)
+    if not records:
+        return pd.DataFrame(columns=UPD_HEADERS)
+        
+    df = pd.DataFrame(records)
+    
+    # Robust numeric conversion for all relevant fields
+    for col in ["new_value", "confidence", "week_number"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+            
+    # Ensure IDs are strings for reliable mapping
+    for col in ["id", "kr_id"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
+            
+    return df
+
 
 
 def load_updates_for_kr(kr_id: str) -> pd.DataFrame:
@@ -802,8 +825,11 @@ def upload_charts_to_drive(files, sub_team: str, quarter: str, week_number: int,
     return created_ids
 
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60)
+@gspread_retry(retries=3)
+
 def get_weekly_charts(sub_team: str, quarter: str, week_number: int) -> list:
+
     ws = get_worksheet("weekly_charts")
     if ws is None: return []
     rows = safe_get_all_records(ws, CHARTS_HEADERS)
