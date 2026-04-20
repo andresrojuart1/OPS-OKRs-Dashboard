@@ -1043,8 +1043,8 @@ def render_dashboard() -> None:
         # Map subteam to order, use 999 for unknown teams (put them at the end)
         display_objs = display_objs.copy()
         display_objs["_order"] = display_objs["sub_team"].map(lambda x: subteam_order.get(x, 999))
-        # Sort by order, then by creation order (index)
-        display_objs = display_objs.sort_values(["_order", display_objs.index])
+        # Sort by order, preserving the original row order within each subteam
+        display_objs = display_objs.sort_values("_order", kind="stable")
         display_objs = display_objs.drop(columns=["_order"])
     elif team_label != "All" and not display_objs.empty and "sub_team" in display_objs.columns:
         display_objs = display_objs[display_objs["sub_team"] == team_label]
