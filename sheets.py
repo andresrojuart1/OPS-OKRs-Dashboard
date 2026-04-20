@@ -284,7 +284,6 @@ def delete_objective(obj_id: str) -> None:
 
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
-@gspread_retry()
 def load_objectives() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("objectives")
     records = ws.get_all_records()
@@ -293,7 +292,6 @@ def load_objectives() -> pd.DataFrame:
 
 @st.cache_data(ttl=5)
 @gspread_retry(retries=3)
-@gspread_retry()
 def load_key_results() -> pd.DataFrame:
     ws = get_spreadsheet().worksheet("key_results")
     records = ws.get_all_records()

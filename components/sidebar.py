@@ -72,4 +72,4 @@ def render_sidebar() -> Optional[str]:
             else:
                 _logout()
 
-    return None if selected == "All" else selected
+    return selected

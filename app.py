@@ -6,6 +6,7 @@ Entry point: streamlit run app.py
 from datetime import datetime
 import io
 import os
+import time
 
 import openai
 import openpyxl
@@ -411,6 +412,8 @@ for key, default in [
     ("selected_team",     "All"),
     ("selected_quarter",  "Q2 2026"),
     ("ai_dialog_stale",   True),
+    ("show_pdf_import",   False),
+    ("last_sync_time",    None),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -799,7 +802,7 @@ def render_dashboard() -> None:
     krs_df        = load_key_results()
     updates_df    = load_updates()
     selected_team = render_sidebar()
-    team_label    = selected_team or "All"
+    team_label    = selected_team if selected_team else "All"
 
     # Pre-compute KRs info for the AI Update dialog
     selected_quarter = st.session_state.get("selected_quarter", "Q2 2026")
@@ -858,7 +861,7 @@ def render_dashboard() -> None:
                 )
                 if pdf_file:
                     if st.button("Parse PDF", icon=":material/search:", type="primary", key=f"parse_pdf_btn_{team_label}"):
-                        with st.spinner("Leyendo y analizando PDF con IA (esto puede tardar un momento)..."):
+                        with st.spinner("Reading and analyzing PDF with AI (this may take a moment)..."):
                             try:
                                 parsed_data = parse_okr_pdf_with_ai(
                                     pdf_file, team_label, selected_quarter,
@@ -876,7 +879,6 @@ def render_dashboard() -> None:
 
         # Undo button visible on main dashboard after import
         if "last_import_summary" in st.session_state:
-            import time
             import_summary = st.session_state["last_import_summary"]
             import_time = import_summary.get("timestamp", 0)
             
@@ -900,8 +902,8 @@ def render_dashboard() -> None:
     display_objs = objectives_df
     if not objectives_df.empty and "quarter" in objectives_df.columns:
         display_objs = display_objs[display_objs["quarter"] == selected_quarter]
-    if selected_team and not display_objs.empty and "sub_team" in display_objs.columns:
-        display_objs = display_objs[display_objs["sub_team"] == selected_team]
+    if team_label != "All" and not display_objs.empty and "sub_team" in display_objs.columns:
+        display_objs = display_objs[display_objs["sub_team"] == team_label]
 
     if display_objs.empty:
         st.info(
@@ -952,9 +954,7 @@ def render_dashboard() -> None:
                     with st.spinner("Saving..."):
                         save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
                         st.cache_data.clear()
-                        st.success("Changes saved!")
-                        import time
-                        time.sleep(1)
+                        st.toast("Changes saved!", icon="✅")
                         st.rerun()
 
         st.markdown("#### 📊 Charts & Screenshots")
