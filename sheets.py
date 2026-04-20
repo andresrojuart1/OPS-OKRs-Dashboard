@@ -454,27 +454,30 @@ def delete_update_by_id(update_id: str) -> None:
     st.cache_data.clear()
 
 def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: str, val_format: str) -> bool:
-    """Finds an update entry by ID and overwrites its values using explicit string matching."""
+    """Finds an update entry by its unique stable ID and overwrites values."""
     try:
         spreadsheet = get_spreadsheet()
         upd_ws = spreadsheet.worksheet("kr_updates")
         
-        # Load all records into a DataFrame for precise matching
+        # 1. Fetch raw records and load into DataFrame
         records = upd_ws.get_all_records()
         if not records: return False
         
         df = pd.DataFrame(records)
-        df["id"] = df["id"].astype(str)
-        search_id = str(update_id)
         
-        # Match using explicit ID
+        # 2. Normalize identifier column and search term to string
+        df["id"] = df["id"].astype(str).str.strip()
+        search_id = str(update_id).strip()
+        
+        # 3. Locate record via explicit id match
         match = df[df["id"] == search_id]
         
         if not match.empty:
-            # Sheet row = DataFrame index + 2 (1 for header, 1 for 0-index)
+            # target_row: index + 2 (1 for header, 1 for 0-indexing)
             target_row = int(match.index[0]) + 2
             
-            # Columns: value(3), notes(4), blockers(5), val_format(10)
+            # 4. Atomic updates for modified fields
+            # Columns in UPD_HEADERS: new_value(3), week_notes(4), blockers(5), value_format(10)
             upd_ws.update_cell(target_row, 3, new_value)
             upd_ws.update_cell(target_row, 4, notes)
             upd_ws.update_cell(target_row, 5, dependencies)
@@ -483,11 +486,11 @@ def edit_kr_update(update_id: str, new_value: float, notes: str, dependencies: s
             st.cache_data.clear()
             return True
         else:
-            logger.warning(f"Edit failed: Update ID '{search_id}' not found.")
+            logger.warning(f"Record with ID '{search_id}' not found for editing.")
             return False
             
     except Exception as e:
-        logger.error(f"Error editing update: {e}")
+        logger.error(f"Save failed in edit mode: {e}")
         return False
 
 
