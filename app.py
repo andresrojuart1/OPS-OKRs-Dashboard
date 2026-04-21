@@ -74,8 +74,8 @@ st.markdown("""
 
 [data-testid="stSidebar"] {
     background:
-        linear-gradient(180deg, rgba(38,28,148,0.18), rgba(6,6,9,0.94) 26%),
-        #060609;
+        linear-gradient(180deg, rgba(124,94,255,0.12), rgba(10,14,39,0.96) 26%),
+        #111633;
     border-right: 1px solid var(--border-color);
 }
 
@@ -124,20 +124,21 @@ p, li, label, .stMarkdown, .stCaption { color: var(--text-secondary); }
 }
 .stButton > button:hover { filter: brightness(1.07); }
 
-/* Secondary button — glassmorphism */
+/* Secondary button — glassmorphism with better visibility */
 .stButton > button[kind="secondary"] {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    backdrop-filter: blur(10px) !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+    border: 1px solid rgba(255, 255, 255, 0.20) !important;
+    backdrop-filter: blur(12px) !important;
     color: #FFFFFF !important;
     border-radius: 12px !important;
-    box-shadow: none !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
     transition: all 0.2s ease !important;
+    font-weight: 500 !important;
 }
 .stButton > button[kind="secondary"]:hover {
-    background: rgba(255, 255, 255, 0.15) !important;
-    border-color: rgba(255, 255, 255, 0.30) !important;
-    filter: none !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
 }
 
 /* Tertiary — pill style */
@@ -889,11 +890,11 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
         
     def _get_status_color(ratio, inverse=False):
         if inverse:
-            # Low is good (for At Risk)
-            if ratio <= 0.1: return "#10b981" # Green
-            if ratio <= 0.25: return "#fbbf24" # Yellow
-            if ratio <= 0.5: return "#f59e0b" # Orange
-            return "#ef4444" # Red
+            # Low is good (for At Risk) — fewer at-risk = better
+            if ratio <= 0.1: return "#10b981" # Green — 0-10% at risk
+            if ratio <= 0.25: return "#fbbf24" # Yellow — 10-25% at risk
+            if ratio <= 0.5: return "#f59e0b" # Orange — 25-50% at risk
+            return "#ef4444" # Red — 50%+ at risk
         else:
             # High is good
             if ratio >= 0.8: return "#10b981" # Green
@@ -906,7 +907,9 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
     ar_ratio = at_risk_count / total_krs if total_krs > 0 else 0
 
     prog_kpi_color = _get_status_color(prog_ratio)
-    ot_kpi_color = _get_status_color(ot_ratio)
+    # On Track is always GREEN (if there are on-track KRs, that's good)
+    ot_kpi_color = "#10b981" if on_track_count > 0 else "#6B6B7E"
+    # At Risk scales: less at-risk = greener, more at-risk = redder
     ar_kpi_color = _get_status_color(ar_ratio, inverse=True)
     # KPI Cards
     st.markdown(f"""
