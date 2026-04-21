@@ -471,35 +471,24 @@ div[data-testid="stExpander"] summary {
 
 """, unsafe_allow_html=True)
 
-# CSS Override — Attack Streamlit's baseweb buttons
+# CSS Override — Fire and forget (executed after Streamlit renders)
 st.markdown("""
 <style>
-/* Target Streamlit's button wrapper */
-.stButton > button[kind="secondary"],
-.stButton > button[kind="primary"],
-div[data-testid="stButton"] button,
-[data-testid="stButton"] button,
-button[data-baseweb="button"] {
-    background-color: #111633 !important;
+/* NUCLEAR OVERRIDE FOR BUTTONS */
+button {
+    background: #111633 !important;
     color: #FFFFFF !important;
-    border-color: #2A3555 !important;
     border: 1px solid #2A3555 !important;
+    border-radius: 10px !important;
 }
 
-.stButton > button[kind="secondary"]:hover,
-div[data-testid="stButton"] button:hover,
-[data-testid="stButton"] button:hover,
-button[data-baseweb="button"]:hover {
-    background-color: #1F2954 !important;
+button:hover {
+    background: #1F2954 !important;
     border-color: #7C5EFF !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
 }
 
-/* Avatar — absolute hack */
-div[class*="css-"]> div > div > div[class*="css-"] {
-    background: linear-gradient(135deg, #6B5FD8, #4F47A8) !important;
-}
-
+/* Sidebar avatar — absolute override */
+div[class*="sidebar-avatar"],
 .ontop-sidebar-avatar {
     background: linear-gradient(135deg, #6B5FD8, #4F47A8) !important;
 }
@@ -526,7 +515,6 @@ from sheets import (
 )
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
-from components.hybrid_buttons import hybrid_button
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
 from html_export import generate_html_report
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
@@ -839,7 +827,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
         # 1. Sync
         with cols[0]:
-            if hybrid_button("Sync", key="hdr_sync", icon="🔄", help_text="Refresh data from Sheets"):
+            if st.button("Sync", icon=":material/refresh:", key="hdr_sync", width="stretch", type="secondary", help="Refresh data from Sheets"):
                 clear_sheets_cache()
                 st.session_state["last_sync_time"] = datetime.now()
                 track_action("Synced data")
@@ -887,7 +875,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
         # 4. PDF (Upload)
         with cols[3]:
-            if hybrid_button("PDF", key="pdf_import_btn_hdr", icon="⬆️", help_text="Upload from PDF"):
+            if st.button("PDF", icon=":material/upload:", key="pdf_import_btn_hdr", width="stretch", type="secondary", help="Upload from PDF"):
                 st.session_state["show_pdf_import"] = True
 
         # 5. Present/Edit Mode toggle (only for subteams)
