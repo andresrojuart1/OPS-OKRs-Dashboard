@@ -204,19 +204,22 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
 
         if not is_read_only:
             with h_right:
-                act_col, gear_col = st.columns([0.5, 0.5])
+                # Two icon buttons: edit (✏️) and settings (⚙️)
+                col1, col2 = st.columns([0.08, 0.08], gap="small")
                 button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
                 button_help = "Cancel update" if active_kr == kr_id else "Update KR"
-                if act_col.button("", icon=button_icon, key=f"upd_{kr_id}", type="secondary", width="stretch", help=button_help):
-                    # Ensure we clear objective settings when updating a KR
-                    st.session_state.pop("active_obj_settings", None)
-                    st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
-                    st.session_state["editing_id"] = None
-                    st.rerun()
-                if gear_col.button("", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary", width="stretch", help="KR settings"):
-                    # Also clear KR update state when opening metadata dialog
-                    st.session_state["updating_kr"] = None
-                    _edit_kr_metadata_dialog(kr)
+                with col1:
+                    if st.button("", icon=button_icon, key=f"upd_{kr_id}", type="secondary", help=button_help):
+                        # Ensure we clear objective settings when updating a KR
+                        st.session_state.pop("active_obj_settings", None)
+                        st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
+                        st.session_state["editing_id"] = None
+                        st.rerun()
+                with col2:
+                    if st.button("", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary", help="KR settings"):
+                        # Also clear KR update state when opening metadata dialog
+                        st.session_state["updating_kr"] = None
+                        _edit_kr_metadata_dialog(kr)
 
             
         # --- VALUE ROW ---
