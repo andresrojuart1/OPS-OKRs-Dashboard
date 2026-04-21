@@ -143,13 +143,15 @@ def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_pr
         with c_title:
             st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
         
-        if st.session_state.get("selected_team", "All") != "All" and not is_read_only:
+        if st.session_state.get("selected_team", "All") != "All":
             with c_opts:
-                if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
-                    # Clear any active KR update when opening objective settings
-                    st.session_state["updating_kr"] = None
-                    st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
-                    st.rerun()
+                # Only show objective menu button when not in presentation mode
+                if not is_read_only:
+                    if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
+                        # Clear any active KR update when opening objective settings
+                        st.session_state["updating_kr"] = None
+                        st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
+                        st.rerun()
         
         # Dialog is now triggered globally in app.py for persistence
 
@@ -194,13 +196,13 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
 
     with st.container():
         st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
-        
-        is_read_only_view = st.session_state.get("selected_team", "All") == "All"
-        h_left_width = 0.65 if not is_read_only_view else 1.0
-        h_left, h_right = st.columns([h_left_width, 0.35 if not is_read_only_view else 0.01])
+
+        # Use the is_read_only parameter passed from render_objective_card (includes presentation mode)
+        h_left_width = 0.65 if not is_read_only else 1.0
+        h_left, h_right = st.columns([h_left_width, 0.35 if not is_read_only else 0.01])
         h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
-        
-        if not is_read_only_view:
+
+        if not is_read_only:
             with h_right:
                 act_col, gear_col = st.columns([0.75, 0.25])
                 u_label = "Cancel" if active_kr == kr_id else "Update"
