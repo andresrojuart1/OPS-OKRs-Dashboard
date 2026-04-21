@@ -565,11 +565,29 @@ def generate_html_report(
 """
             for _, chart in team_charts.iterrows():
                 drive_url = str(chart.get("drive_url", "")).strip()
+                drive_file_id = str(chart.get("drive_file_id", "")).strip()
                 filename = str(chart.get("filename", "Chart")).strip()
-                if drive_url and drive_url.lower() != "nan":
+
+                # Convert Google Drive URL to direct image URL if we have file ID
+                if drive_file_id and drive_file_id.lower() != "nan":
+                    # Google Drive direct image URL format
+                    img_url = f"https://drive.google.com/uc?export=view&id={drive_file_id}"
+                elif drive_url and drive_url.lower() != "nan" and "drive.google.com" in drive_url:
+                    # Extract file ID from URL and convert to direct URL
+                    import re
+                    match = re.search(r'/d/([a-zA-Z0-9-_]+)', drive_url)
+                    if match:
+                        file_id = match.group(1)
+                        img_url = f"https://drive.google.com/uc?export=view&id={file_id}"
+                    else:
+                        img_url = drive_url
+                else:
+                    img_url = drive_url
+
+                if img_url and img_url.lower() != "nan":
                     html += f"""
                 <div>
-                    <img src="{drive_url}" alt="{filename}" class="chart-image">
+                    <img src="{img_url}" alt="{filename}" class="chart-image" loading="lazy">
                     <p style="font-size: 12px; color: #B8B8C8; margin-top: 8px; text-align: center;">{filename}</p>
                 </div>
 """
