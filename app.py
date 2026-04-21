@@ -413,7 +413,7 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
-from pdf_export_professional import generate_professional_pdf
+from html_export import generate_html_report
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -753,10 +753,10 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 _ai_update_dialog()
 
         with cols[3]:
-            # PDF Download button (available for all teams)
-            # Generate professional multi-page PDF
+            # HTML Report Download button (available for all teams)
+            # Generate beautiful interactive HTML report
             notes_df = load_weekly_notes_cached()
-            pdf_bytes = generate_professional_pdf(
+            html_content = generate_html_report(
                 objectives_df=objectives_df,
                 krs_df=krs_df,
                 updates_df=updates_df,
@@ -764,12 +764,12 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 quarter=selected_quarter,
             )
             st.download_button(
-                label="PDF",
+                label="Report",
                 icon=":material/file_download:",
-                data=pdf_bytes,
-                file_name=f"OKRs_{selected_team}_{selected_quarter}.pdf",
-                mime="application/pdf",
-                key="hdr_pdf",
+                data=html_content.encode('utf-8'),
+                file_name=f"OKRs_{selected_quarter}.html",
+                mime="text/html",
+                key="hdr_report",
                 use_container_width=True,
                 type="secondary",
             )
