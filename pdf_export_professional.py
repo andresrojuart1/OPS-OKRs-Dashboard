@@ -51,8 +51,9 @@ def get_styles():
     """Get custom styles for professional PDF."""
     styles = getSampleStyleSheet()
 
+    # Use unique names to avoid conflicts
     styles.add(ParagraphStyle(
-        name='MainTitle',
+        name='ProfMainTitle',
         fontSize=24,
         textColor=COLOR_TEXT_WHITE,
         fontName='Helvetica-Bold',
@@ -61,7 +62,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='TeamTitle',
+        name='ProfTeamTitle',
         fontSize=16,
         textColor=COLOR_ACCENT,
         fontName='Helvetica-Bold',
@@ -70,7 +71,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='SectionHeader',
+        name='ProfSectionHeader',
         fontSize=11,
         textColor=COLOR_ACCENT,
         fontName='Helvetica-Bold',
@@ -79,7 +80,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='BodyText',
+        name='ProfBodyText',
         fontSize=9,
         textColor=COLOR_TEXT_GRAY,
         fontName='Helvetica',
@@ -89,7 +90,7 @@ def get_styles():
     ))
 
     styles.add(ParagraphStyle(
-        name='SmallText',
+        name='ProfSmallText',
         fontSize=8,
         textColor=COLOR_TEXT_GRAY,
         fontName='Helvetica',
@@ -134,7 +135,7 @@ def generate_professional_pdf(
     story = []
 
     # Title
-    story.append(Paragraph(f"{quarter} OKR Progress Dashboard", styles['MainTitle']))
+    story.append(Paragraph(f"{quarter} OKR Progress Dashboard", styles['ProfMainTitle']))
     story.append(Spacer(1, 0.2*inch))
 
     # Get unique teams
@@ -152,7 +153,7 @@ def generate_professional_pdf(
         # Team section
         team_objs = objectives_df[objectives_df["sub_team"] == team] if "sub_team" in objectives_df.columns else objectives_df
 
-        story.append(Paragraph(team, styles['TeamTitle']))
+        story.append(Paragraph(team, styles['ProfTeamTitle']))
         story.append(Spacer(1, 0.1*inch))
 
         # KR Table for this team
@@ -229,7 +230,7 @@ def generate_professional_pdf(
                 story.append(Spacer(1, 0.15*inch))
 
         # Notes section
-        story.append(Paragraph("NARRATIVE", styles['SectionHeader']))
+        story.append(Paragraph("NARRATIVE", styles['ProfSectionHeader']))
 
         team_notes = notes_df[notes_df["sub_team"] == team] if not notes_df.empty else pd.DataFrame()
         if not team_notes.empty:
@@ -240,13 +241,13 @@ def generate_professional_pdf(
                 latest_note = quarter_notes.sort_values("week_number", ascending=False).iloc[0]
                 note_content = str(latest_note.get("content", ""))
                 if note_content:
-                    story.append(Paragraph(note_content, styles['BodyText']))
+                    story.append(Paragraph(note_content, styles['ProfBodyText']))
                 else:
-                    story.append(Paragraph("No notes available.", styles['SmallText']))
+                    story.append(Paragraph("No notes available.", styles['ProfSmallText']))
             else:
-                story.append(Paragraph("No notes available for this quarter.", styles['SmallText']))
+                story.append(Paragraph("No notes available for this quarter.", styles['ProfSmallText']))
         else:
-            story.append(Paragraph("No notes available.", styles['SmallText']))
+            story.append(Paragraph("No notes available.", styles['ProfSmallText']))
 
         story.append(Spacer(1, 0.1*inch))
 
