@@ -1117,21 +1117,22 @@ def render_dashboard() -> None:
         )
     else:
         # Presentation mode toggle (only for subteams, not for "All")
+        presentation_key = f"presentation_mode_{team_label}"
+
         if team_label != "All":
-            col_pres, col_spacer = st.columns([1, 4])
+            col_pres, col_spacer = st.columns([0.8, 4.2])
             with col_pres:
-                presentation_key = f"presentation_mode_{team_label}"
                 is_presentation = st.session_state.get(presentation_key, False)
                 button_label = "📊 Exit Presentation" if is_presentation else "📊 Presentation Mode"
                 button_type = "secondary" if is_presentation else "primary"
 
-                if st.button(button_label, key=f"pres_toggle_{team_label}", use_container_width=True, type=button_type):
-                    st.session_state[presentation_key] = not st.session_state[presentation_key]
-                    st.rerun()
+                def toggle_presentation():
+                    st.session_state[presentation_key] = not st.session_state.get(presentation_key, False)
+
+                st.button(button_label, key=f"pres_toggle_{team_label}", use_container_width=True, type=button_type, on_click=toggle_presentation)
             st.divider()
 
         # Render objectives
-        presentation_key = f"presentation_mode_{team_label}"
         is_presentation_mode = st.session_state.get(presentation_key, False)
 
         for i, (_, obj_row) in enumerate(display_objs.iterrows()):
