@@ -400,6 +400,7 @@ from sheets_cached import (
     load_key_results_cached as load_key_results,
     load_updates_cached as load_updates,
     clear_sheets_cache,
+    load_weekly_notes_cached,
 )
 from sheets import (
     seed_if_empty,
@@ -412,7 +413,7 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
-from pdf_export_v2 import generate_okr_pdf_with_ai
+from pdf_export_professional import generate_professional_pdf
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -753,15 +754,14 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
         with cols[3]:
             # PDF Download button (available for all teams)
-            # Generate with AI insights
-            pdf_bytes = generate_okr_pdf_with_ai(
-                team_name=selected_team if selected_team != "All" else "Operations",
-                quarter=selected_quarter,
+            # Generate professional multi-page PDF
+            notes_df = load_weekly_notes_cached()
+            pdf_bytes = generate_professional_pdf(
                 objectives_df=objectives_df,
                 krs_df=krs_df,
                 updates_df=updates_df,
-                krs_info=krs_info,
-                openai_api_key=st.secrets.get("OPENAI_API_KEY"),
+                notes_df=notes_df,
+                quarter=selected_quarter,
             )
             st.download_button(
                 label="PDF",

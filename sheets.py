@@ -466,6 +466,28 @@ def load_updates_for_kr(kr_id: str) -> pd.DataFrame:
     return filtered.sort_values("updated_at", ascending=False) if not filtered.empty else filtered
 
 
+@st.cache_data(ttl=300)
+@gspread_retry(retries=3)
+def load_weekly_notes() -> pd.DataFrame:
+    """Load weekly notes/narratives from 'weekly_notes' worksheet."""
+    ws = get_worksheet("weekly_notes")
+    if ws is None: return pd.DataFrame(columns=NOTES_HEADERS)
+    records = safe_get_all_records(ws, NOTES_HEADERS)
+    df = pd.DataFrame(records)
+    return df
+
+
+@st.cache_data(ttl=300)
+@gspread_retry(retries=3)
+def load_weekly_charts() -> pd.DataFrame:
+    """Load weekly charts metadata from 'weekly_charts' worksheet."""
+    ws = get_worksheet("weekly_charts")
+    if ws is None: return pd.DataFrame(columns=CHARTS_HEADERS)
+    records = safe_get_all_records(ws, CHARTS_HEADERS)
+    df = pd.DataFrame(records)
+    return df
+
+
 # ---------------------------------------------------------------------------
 # Write
 # ---------------------------------------------------------------------------

@@ -171,6 +171,13 @@ def count_krs_by_team() -> dict:
     return {}
 
 
+@st.cache_data(ttl=300)
+def load_weekly_notes_cached() -> pd.DataFrame:
+    """Load weekly notes with 5-minute cache."""
+    from sheets import load_weekly_notes
+    return load_weekly_notes()
+
+
 # ─────────────────────────────────────────────────────────
 # 🔄 Cache invalidation (called by "Sync Data" button)
 # ─────────────────────────────────────────────────────────
