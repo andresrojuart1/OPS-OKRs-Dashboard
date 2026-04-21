@@ -1163,13 +1163,6 @@ def render_dashboard() -> None:
             st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:24px;">📝 Additional Weekly Notes</div>', unsafe_allow_html=True)
             st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Important context and decisions for this period</div>', unsafe_allow_html=True)
 
-            if is_past_week:
-                st.markdown(f"""
-                <div style="background:rgba(255,255,255,0.03); padding:10px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:16px;">
-                    💡 Viewing history for <b>Week {week_number}</b>. Updates made now will be recorded for <b>Week {get_week_number()}</b>.
-                </div>
-                """, unsafe_allow_html=True)
-
             # Display Mode (Card)
             if note_content:
                 formatted_note = note_content.replace('\n', '<br>')
