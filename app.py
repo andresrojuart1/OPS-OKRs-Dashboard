@@ -887,16 +887,18 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
     if st.session_state[ai_summary_key] is None:
         with st.spinner("Generating summary..."):
             try:
-                # Collect narratives + dependencies from current week's updates
+                # Collect narratives + dependencies from current week AND last week (for trends)
                 current_week_updates = updates_df[updates_df["week_number"] == selected_week] if not updates_df.empty else pd.DataFrame()
+                last_week_updates = updates_df[updates_df["week_number"] == selected_week - 1] if not updates_df.empty else pd.DataFrame()
 
                 narratives = []
                 dependencies = []
 
+                # Current week narratives
                 if not current_week_updates.empty:
                     narratives = current_week_updates["week_notes"].dropna().tolist()
 
-                # Get dependencies from objectives/KRs
+                # Get dependencies from current week
                 for _, kr_row in krs_df.iterrows():
                     kr_id = str(kr_row["id"])
                     kr_updates = current_week_updates[current_week_updates["kr_id"].astype(str) == kr_id]
@@ -905,6 +907,11 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                         if deps:
                             dependencies.extend(deps)
 
+                # Calculate week-over-week changes
+                current_avg_pct = current_week_updates["new_value"].astype(float).mean() if not current_week_updates.empty else 0
+                last_avg_pct = last_week_updates["new_value"].astype(float).mean() if not last_week_updates.empty else 0
+                pct_change = current_avg_pct - last_avg_pct
+
                 # Build prompt for AI
                 prompt = f"""Summarize what changed this week in the Operations team OKRs in a brief, executive-friendly paragraph (2-3 sentences max).
 
@@ -912,7 +919,9 @@ Current Week: Week {selected_week}
 Team: {selected_team}
 Quarter: {selected_quarter}
 
-Key Updates:
+Trend: {'↑ Up' if pct_change > 0 else '↓ Down' if pct_change < 0 else '→ Stable'} {abs(pct_change):.1f}pp from last week
+
+Key Updates This Week:
 {chr(10).join([f"- {n}" for n in narratives[:5]]) if narratives else "No updates recorded"}
 
 Dependencies/Blockers:
