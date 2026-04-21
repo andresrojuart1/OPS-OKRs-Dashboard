@@ -471,6 +471,30 @@ div[data-testid="stExpander"] summary {
 
 """, unsafe_allow_html=True)
 
+# CSS Override — Fire and forget (executed after Streamlit renders)
+st.markdown("""
+<style>
+/* NUCLEAR OVERRIDE FOR BUTTONS */
+button {
+    background: #111633 !important;
+    color: #FFFFFF !important;
+    border: 1px solid #2A3555 !important;
+    border-radius: 10px !important;
+}
+
+button:hover {
+    background: #1F2954 !important;
+    border-color: #7C5EFF !important;
+}
+
+/* Sidebar avatar — absolute override */
+div[class*="sidebar-avatar"],
+.ontop-sidebar-avatar {
+    background: linear-gradient(135deg, #6B5FD8, #4F47A8) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------------------------------------------------------------------
 from auth import require_login, get_user, logout
 from sheets_cached import (
