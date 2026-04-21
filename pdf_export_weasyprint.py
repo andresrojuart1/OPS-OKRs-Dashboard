@@ -9,6 +9,8 @@ import pandas as pd
 from jinja2 import Template
 from weasyprint import HTML, CSS
 
+from html_export import _team_narrative_block_html
+
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -320,15 +322,12 @@ HTML_TEMPLATE = """
                 {% endfor %}
             </tbody>
         </table>
-
-        {% if obj.narrative %}
-        <div class="narrative">
-            <div class="narrative-title">Context</div>
-            {{ obj.narrative }}
-        </div>
-        {% endif %}
     </div>
     {% endfor %}
+
+    {% if team_data.narrative_block %}
+    {{ team_data.narrative_block|safe }}
+    {% endif %}
 </div>
 {% endfor %}
 
@@ -426,21 +425,10 @@ def generate_weasyprint_pdf(
                     "target": target_str,
                 })
 
-            # Get narrative for this objective
-            narrative = ""
-            if not notes_df.empty:
-                obj_notes = notes_df[notes_df["sub_team"] == team]
-                if not obj_notes.empty:
-                    quarter_notes = obj_notes[obj_notes["quarter"] == quarter]
-                    if not quarter_notes.empty:
-                        latest_note = quarter_notes.sort_values("week_number", ascending=False).iloc[0]
-                        narrative = str(latest_note.get("content", ""))
-
             objectives_list.append({
                 "title": str(obj["title"]),
                 "description": "",
                 "krs": krs_list,
-                "narrative": narrative,
             })
 
         # Calculate team metrics
@@ -458,6 +446,7 @@ def generate_weasyprint_pdf(
         teams_data[team] = {
             "objectives": objectives_list,
             "metrics": metrics,
+            "narrative_block": _team_narrative_block_html(notes_df, team, quarter),
         }
 
     # Render template

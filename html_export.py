@@ -5,11 +5,43 @@ Styled with Ontop brand colors and responsive design.
 """
 
 from datetime import datetime
+import html
 import pandas as pd
 import base64
 import re
 import requests
 from io import BytesIO
+
+
+def _team_narrative_block_html(notes_df: pd.DataFrame, team: str, quarter: str) -> str:
+    """
+    Build a single "Context & Updates" section for a sub-team (weekly_notes sheet).
+    Must not be called inside a per-objective loop — the note is team-level, not per OKR.
+    """
+    if notes_df is None or notes_df.empty:
+        return ""
+    team_notes = notes_df[notes_df["sub_team"] == team]
+    if team_notes.empty:
+        return ""
+    quarter_notes = team_notes[team_notes["quarter"] == quarter]
+    if quarter_notes.empty:
+        return ""
+    latest_note = quarter_notes.sort_values("week_number", ascending=False).iloc[0]
+    note_content = str(latest_note.get("content", "")).strip()
+    if note_content:
+        body = html.escape(note_content).replace("\n", "<br>\n")
+        return f"""
+        <div class="narrative" style="margin-top: 20px;">
+            <div class="narrative-title">Context & Updates</div>
+            <div class="narrative-text">{body}</div>
+        </div>
+"""
+    return """
+        <div class="narrative" style="margin-top: 20px;">
+            <div class="narrative-title">Context & Updates</div>
+            <div class="no-notes">No notes available.</div>
+        </div>
+"""
 
 
 def get_image_data_url(drive_url: str, drive_file_id: str) -> str:
@@ -566,31 +598,12 @@ def generate_html_report(
                 </table>
 """
 
-            # Add narrative
-            team_notes = notes_df[notes_df["sub_team"] == team] if not notes_df.empty else pd.DataFrame()
-            if not team_notes.empty:
-                quarter_notes = team_notes[team_notes["quarter"] == quarter]
-                if not quarter_notes.empty:
-                    latest_note = quarter_notes.sort_values("week_number", ascending=False).iloc[0]
-                    note_content = str(latest_note.get("content", ""))
-                    if note_content:
-                        html += f"""
-                <div class="narrative">
-                    <div class="narrative-title">Context & Updates</div>
-                    <div class="narrative-text">{note_content}</div>
-                </div>
-"""
-                    else:
-                        html += """
-                <div class="narrative">
-                    <div class="narrative-title">Context & Updates</div>
-                    <div class="no-notes">No notes available.</div>
-                </div>
-"""
-
             html += """
             </div>
 """
+
+        # Team-level weekly note (weekly_notes) — once per sub-team, not per objective
+        html += _team_narrative_block_html(notes_df, team, quarter)
 
         html += """
         </div>
