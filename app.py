@@ -33,22 +33,40 @@ st.set_page_config(
 st.markdown("""
 <style>
 :root {
-    --ontop-purple: #261C94;
-    --ontop-coral:  #E35276;
-    --bg-primary:   #000000;
-    --bg-card:      #060609;
-    --bg-input:     #1A1A24;
-    --text-primary: #FFFFFF;
-    --text-secondary: #B8B8C8;
-    --text-muted:   #6B6B7E;
-    --border-color: #2A2A3E;
+    /* Brand */
+    --ontop-purple: #7C5EFF;
+    --ontop-coral:  #FF6B7A;
+
+    /* Backgrounds with depth */
+    --bg-primary:   #0A0E27;
+    --bg-card:      #111633;
+    --bg-input:     #1A2247;
+    --bg-hover:     #1F2954;
+
+    /* Text hierarchy */
+    --text-primary:    #FFFFFF;
+    --text-secondary:  #D1D5E0;
+    --text-tertiary:   #8B94B3;
+    --text-muted:      #5F6B8F;
+
+    /* Borders */
+    --border-color: #2A3555;
+
+    /* Status system */
+    --status-green:    #10B981;
+    --status-yellow:   #FBBF24;
+    --status-red:      #EF4444;
+    --status-purple:   #A78BFA;
+
+    /* Accent neutral */
+    --accent-subtle: rgba(167, 139, 250, 0.08);
 }
 
 .stApp {
     background:
-        radial-gradient(circle at top left,  rgba(38,28,148,0.35), transparent 32%),
-        radial-gradient(circle at top right, rgba(227,82,118,0.20), transparent 28%),
-        linear-gradient(180deg, #050507 0%, #000000 100%);
+        radial-gradient(circle at top left,  rgba(124,94,255,0.25), transparent 32%),
+        radial-gradient(circle at top right, rgba(255,107,122,0.15), transparent 28%),
+        linear-gradient(180deg, #0A0E27 0%, #050814 100%);
     color: var(--text-primary);
 }
 
@@ -83,6 +101,16 @@ p, li, label, .stMarkdown, .stCaption { color: var(--text-secondary); }
     border: 1px solid var(--border-color) !important;
     color: var(--text-primary) !important;
     border-radius: 14px !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTextInput input:focus,
+.stTextArea textarea:focus,
+.stSelectbox [data-baseweb="select"] > div:focus,
+.stNumberInput input:focus {
+    background: var(--bg-hover) !important;
+    border-color: var(--status-purple) !important;
+    box-shadow: 0 0 0 2px var(--accent-subtle) !important;
 }
 
 /* Primary button: purple→coral gradient, pill */
@@ -119,6 +147,11 @@ p, li, label, .stMarkdown, .stCaption { color: var(--text-secondary); }
     box-shadow: none !important;
     border-radius: 20px !important;
     padding: 6px 16px !important;
+    transition: all 0.2s ease !important;
+}
+.stButton > button[kind="tertiary"]:hover {
+    background: var(--accent-subtle) !important;
+    border-color: rgba(255,255,255,0.15) !important;
 }
 
 /* Download button — match secondary glassmorphism */
@@ -152,15 +185,56 @@ div[data-testid="stButton"] button:has(span[data-testid="stIconMaterial"]:contai
     color: #f87171 !important;
 }
 
+/* Glass/Elevation layer for cards */
+.kr-card, .objective-card, .status-card {
+    background: linear-gradient(
+        180deg,
+        rgba(255,255,255,0.02),
+        rgba(255,255,255,0)
+    ), var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
 /* Metrics */
 div[data-testid="stMetric"] {
-    background: rgba(6,6,9,0.82);
-    border: 1px solid var(--border-color);
+    background: linear-gradient(
+        180deg,
+        rgba(255,255,255,0.02),
+        rgba(255,255,255,0)
+    ), var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.04);
     border-radius: 18px;
     padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
-[data-testid="stMetricValue"] { color: #E35276 !important; }
+[data-testid="stMetricValue"] { color: var(--ontop-coral) !important; }
 [data-testid="stMetricLabel"] { color: var(--text-muted) !important; }
+
+/* Status badges — integrated color system */
+.status-success {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    color: var(--status-green);
+}
+
+.status-warning {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    color: var(--status-yellow);
+}
+
+.status-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: var(--status-red);
+}
+
+.status-info {
+    background: rgba(167, 139, 250, 0.1);
+    border: 1px solid rgba(167, 139, 250, 0.2);
+    color: var(--status-purple);
+}
 
 /* Alerts */
 .stAlert { border-radius: 16px; border: 1px solid var(--border-color); }

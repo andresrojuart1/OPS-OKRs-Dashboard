@@ -28,14 +28,14 @@ from sheets import (
 from observability import handle_error, track_action
 
 # ---------------------------------------------------------------------------
-# Visual tokens
+# Visual tokens — integrated with CSS design system
 # ---------------------------------------------------------------------------
 
 MUTED = "rgba(255,255,255,0.4)"
-PURPLE = "#7A50F7"
-GREEN = "#2DD4BF"
-YELLOW = "#f8c56a"
-RED = "#ff4b4b"
+PURPLE = "#A78BFA"  # status-purple from CSS
+GREEN = "#10B981"   # status-green from CSS
+YELLOW = "#FBBF24"  # status-yellow from CSS
+RED = "#EF4444"     # status-red from CSS
 
 
 def _pct_color(pct: float) -> str:
