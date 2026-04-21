@@ -273,18 +273,20 @@ hr { border-color: var(--border-color) !important; }
 
 .ontop-sidebar-user {
     padding: .85rem; border-radius: 18px;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255,255,255,0.08);
     background:
-        radial-gradient(circle at top right, rgba(227,82,118,0.14), transparent 36%),
-        linear-gradient(180deg, rgba(26,26,36,.96), rgba(6,6,9,.96));
+        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+        var(--bg-card);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     margin-top: .75rem; margin-bottom: .5rem;
     display: grid; grid-template-columns: 2.5rem 1fr; gap: .75rem; align-items: center;
 }
 .ontop-sidebar-avatar {
     width:2.5rem; height:2.5rem; border-radius:999px;
     display:flex; align-items:center; justify-content:center;
-    background: linear-gradient(135deg,rgba(38,28,148,.95),rgba(227,82,118,.8));
+    background: linear-gradient(135deg, var(--ontop-purple), var(--ontop-coral));
     color:#fff; font-size:.9rem; font-weight:800;
+    box-shadow: 0 2px 8px rgba(124,94,255,0.3);
 }
 .ontop-sidebar-user strong { display:block; color:#fff; font-size:.95rem; margin-bottom:.15rem; }
 .ontop-sidebar-user span   { color:var(--text-secondary); font-size:.82rem; word-break:break-word; }

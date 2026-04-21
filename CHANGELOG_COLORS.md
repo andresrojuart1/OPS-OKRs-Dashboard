@@ -42,7 +42,33 @@ ar_kpi_color = _get_status_color(ar_ratio, inverse=True)
 
 ---
 
-### 3. **Header Buttons — Visual Consistency** 🔘
+### 3. **Sidebar User Card — Updated to New Palette** 👤
+
+```css
+.ontop-sidebar-user {
+    /* Changed from old bg (rgba(26,26,36,.96), rgba(6,6,9,.96)) */
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+        var(--bg-card);  /* Now uses #111633 */
+    border: 1px solid rgba(255,255,255,0.08);  /* Subtle border */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);    /* Elevation added */
+}
+
+.ontop-sidebar-avatar {
+    /* Changed from old brand colors */
+    background: linear-gradient(135deg, var(--ontop-purple), var(--ontop-coral));
+    box-shadow: 0 2px 8px rgba(124,94,255,0.3);  /* Glow effect */
+}
+```
+
+**Result**: 
+- User card now matches design system (glass/elevation)
+- Avatar uses new brand colors with subtle glow
+- Cohesive with sidebar background
+
+---
+
+### 4. **Header Buttons — Visual Consistency** 🔘
 
 #### Before:
 ```css
@@ -75,7 +101,9 @@ ar_kpi_color = _get_status_color(ar_ratio, inverse=True)
 
 | Issue | Before | After |
 |-------|--------|-------|
-| **Sidebar** | Old palette, dissonant colors | New palette, consistent with dashboard |
+| **Sidebar Background** | Old palette (#060609) | New palette (#111633) |
+| **Sidebar User Card** | Flat, old brand colors | Glass/elevation, new brand colors |
+| **User Avatar** | Old purple/coral gradient | New brand gradient + glow |
 | **KRs On Track** | Yellow (wrong semantic meaning) | Green (correct: on-track is good) |
 | **KRs At Risk** | Yellow (all the same) | Scales GREEN→RED (proportional severity) |
 | **Header Buttons** | Too subtle, inconsistent | Consistent weight, better feedback |

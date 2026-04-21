@@ -64,7 +64,48 @@
 
 ---
 
-## 3️⃣ Header Buttons — Visual Consistency
+## 3️⃣ Sidebar User Card — Updated to New Palette
+
+### Before
+```css
+.ontop-sidebar-user {
+    background:
+        radial-gradient(circle at top right, rgba(227,82,118,0.14), transparent 36%),  /* Old coral */
+        linear-gradient(180deg, rgba(26,26,36,.96), rgba(6,6,9,.96));                   /* Old bg */
+    border: 1px solid var(--border-color);
+    /* No shadow, flat appearance */
+}
+
+.ontop-sidebar-avatar {
+    background: linear-gradient(135deg, rgba(38,28,148,.95), rgba(227,82,118,.8));  /* Old brand */
+    /* No elevation */
+}
+```
+
+### After
+```css
+.ontop-sidebar-user {
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),  /* Glass effect */
+        var(--bg-card);                                                          /* New bg-card */
+    border: 1px solid rgba(255,255,255,0.08);                                    /* Subtle border */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);                                       /* Elevation */
+}
+
+.ontop-sidebar-avatar {
+    background: linear-gradient(135deg, var(--ontop-purple), var(--ontop-coral));  /* New brand */
+    box-shadow: 0 2px 8px rgba(124,94,255,0.3);                                    /* Glow effect */
+}
+```
+
+**Result**: 
+- User card now has glass/elevation effect (matches other cards)
+- Avatar uses new brand colors with subtle glow
+- Cohesive with entire design system
+
+---
+
+## 4️⃣ Header Buttons — Visual Consistency
 
 ### Before ❌
 ```
