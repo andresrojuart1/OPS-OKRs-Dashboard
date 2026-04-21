@@ -737,11 +737,12 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
         with cols[1]:
             excel_bytes = _generate_template_excel(selected_quarter, krs_info_for_export, objectives_df, updates_df)
+            selected_week = st.session_state.get("selected_week", get_week_number())
             st.download_button(
                 label="Excel",
                 icon=":material/download:",
                 data=excel_bytes,
-                file_name=f"Operations-OKR-Template-{selected_quarter}.xlsx",
+                file_name=f"OKRs_{selected_quarter}_W{selected_week}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="hdr_tmpl",
                 use_container_width=True,
@@ -758,6 +759,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
             # Generate beautiful interactive HTML report with charts
             notes_df = load_weekly_notes_cached()
             charts_df = load_weekly_charts_cached()
+            selected_week = st.session_state.get("selected_week", get_week_number())
             html_content = generate_html_report(
                 objectives_df=objectives_df,
                 krs_df=krs_df,
@@ -770,7 +772,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 label="Report",
                 icon=":material/file_download:",
                 data=html_content.encode('utf-8'),
-                file_name=f"OKRs_{selected_quarter}.html",
+                file_name=f"OKRs_{selected_quarter}_W{selected_week}.html",
                 mime="text/html",
                 key="hdr_report",
                 use_container_width=True,
