@@ -212,7 +212,7 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
         if not is_read_only:
             with h_right:
                 # Two icon buttons: edit (✏️) and settings (⚙️) - identical to objective
-                edit_col, settings_col = st.columns([0.5, 0.5], gap="small")
+                edit_col, settings_col = st.columns([0.08, 0.08], gap="small")
                 button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
                 button_help = "Cancel update" if active_kr == kr_id else "Update KR"
                 with edit_col:
