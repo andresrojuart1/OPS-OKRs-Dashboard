@@ -413,7 +413,7 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
-from pdf_export_weasyprint import generate_weasyprint_pdf
+from pdf_export_professional import generate_professional_pdf
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -754,9 +754,9 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
         with cols[3]:
             # PDF Download button (available for all teams)
-            # Generate professional multi-page PDF with WeasyPrint
+            # Generate professional multi-page PDF
             notes_df = load_weekly_notes_cached()
-            pdf_bytes = generate_weasyprint_pdf(
+            pdf_bytes = generate_professional_pdf(
                 objectives_df=objectives_df,
                 krs_df=krs_df,
                 updates_df=updates_df,
