@@ -714,59 +714,50 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
     with col_r:
         st.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
-        
-        # Determine columns based on view
-        # Buttons: Sync | Excel | AI | [PDF Import if subteam] | PDF Export
+
+        # Compact header buttons: Sync • AI • Excel • Report • ⬆ PDF • Presentation Mode
+        selected_week = st.session_state.get("selected_week", get_week_number())
         show_pdf_import = selected_team != "All"
-        num_cols = 5 if show_pdf_import else 4
+
+        # Calculate columns: Sync | AI | Excel | Report | PDF | [Presentation if subteam]
+        num_cols = 6 if show_pdf_import else 5
         cols = st.columns(num_cols)
-        
+
+        # 1. Sync
         with cols[0]:
-            if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", width="stretch", type="secondary"):
+            if st.button("Sync", icon=":material/refresh:", key="hdr_sync", width="stretch", type="secondary", help="Refresh data from Sheets"):
                 clear_sheets_cache()
                 st.session_state["last_sync_time"] = datetime.now()
                 track_action("Synced data")
                 st.toast("Data synchronized", icon="✅")
                 st.rerun()
-            
-            # Last sync indicator
-            last_sync = st.session_state.get("last_sync_time")
-            if last_sync:
-                diff = datetime.now() - last_sync
-                minutes = int(diff.total_seconds() / 60)
-                if minutes == 0:
-                    sync_label = "Just now"
-                elif minutes < 60:
-                    sync_label = f"{minutes}m ago"
-                else:
-                    sync_label = f"{minutes//60}h ago"
-                st.markdown(f"<div style='font-size:0.65rem; color:#6B6B7E; text-align:center; margin-top:-10px;'>Last sync: {sync_label}</div>", unsafe_allow_html=True)
 
+        # 2. AI
         with cols[1]:
+            if st.button("AI", icon=":material/smart_toy:", key="hdr_ai", width="stretch", type="secondary", help="AI summary"):
+                st.session_state["ai_dialog_stale"] = True
+                track_action("Opened AI summary")
+                _ai_update_dialog()
+
+        # 3. Excel
+        with cols[2]:
             excel_bytes = _generate_template_excel(selected_quarter, krs_info_for_export, objectives_df, updates_df)
-            selected_week = st.session_state.get("selected_week", get_week_number())
             st.download_button(
                 label="Excel",
                 icon=":material/download:",
                 data=excel_bytes,
                 file_name=f"OKRs_{selected_quarter}_W{selected_week}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="hdr_tmpl",
+                key="hdr_excel",
                 width="stretch",
+                type="secondary",
+                help="Download as Excel"
             )
-            
-        with cols[2]:
-            if st.button("AI", icon=":material/smart_toy:", key="hdr_ai", width="stretch", type="secondary"):
-                st.session_state["ai_dialog_stale"] = True
-                track_action("Opened AI summary")
-                _ai_update_dialog()
 
+        # 4. Report
         with cols[3]:
-            # HTML Report Download button (available for all teams)
-            # Generate beautiful interactive HTML report with charts
             notes_df = load_weekly_notes_cached()
             charts_df = load_weekly_charts_cached()
-            selected_week = st.session_state.get("selected_week", get_week_number())
             html_content = generate_html_report(
                 objectives_df=objectives_df,
                 krs_df=krs_df,
@@ -784,12 +775,25 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 key="hdr_report",
                 width="stretch",
                 type="secondary",
+                help="Download HTML report"
             )
 
+        # 5. PDF (Upload)
+        with cols[4]:
+            if st.button("PDF", icon=":material/upload:", key="pdf_import_btn_hdr", width="stretch", type="secondary", help="Upload from PDF"):
+                st.session_state["show_pdf_import"] = True
+
+        # 6. Presentation Mode (only for subteams)
         if show_pdf_import:
-            with cols[4]:
-                if st.button("from PDF", icon=":material/description:", width="stretch", key="pdf_import_btn_hdr", type="secondary"):
-                    st.session_state["show_pdf_import"] = True
+            with cols[5]:
+                presentation_key = f"presentation_mode_{selected_team}"
+                is_presentation = st.session_state.get(presentation_key, False)
+                button_icon = ":material/fullscreen_exit:" if is_presentation else ":material/present_to_all:"
+                button_help = "Exit Presentation" if is_presentation else "Enter Presentation Mode"
+
+                if st.button("", icon=button_icon, key="hdr_presentation", width="stretch", type="secondary", help=button_help):
+                    st.session_state[presentation_key] = not st.session_state.get(presentation_key, False)
+                    st.rerun()
 
     # Metrics from krs_info
     num_objs = len(objectives_df[objectives_df["quarter"] == selected_quarter]) if not objectives_df.empty else 0
@@ -1116,24 +1120,11 @@ def render_dashboard() -> None:
             "Please create one or import from PDF."
         )
     else:
-        # Presentation mode toggle (only for subteams, not for "All")
+        # Presentation mode toggle (only for subteams, not for "All") - now in header
         presentation_key = f"presentation_mode_{team_label}"
-
-        if team_label != "All":
-            col_pres, col_spacer = st.columns([0.8, 4.2])
-            with col_pres:
-                is_presentation = st.session_state.get(presentation_key, False)
-                button_label = "📊 Exit Presentation" if is_presentation else "📊 Presentation Mode"
-                button_type = "secondary" if is_presentation else "primary"
-
-                def toggle_presentation():
-                    st.session_state[presentation_key] = not st.session_state.get(presentation_key, False)
-
-                st.button(button_label, key=f"pres_toggle_{team_label}", width="stretch", type=button_type, on_click=toggle_presentation)
-            st.divider()
+        is_presentation_mode = st.session_state.get(presentation_key, False)
 
         # Render objectives
-        is_presentation_mode = st.session_state.get(presentation_key, False)
 
         for i, (_, obj_row) in enumerate(display_objs.iterrows()):
             render_objective_card(

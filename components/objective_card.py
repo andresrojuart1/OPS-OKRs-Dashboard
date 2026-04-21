@@ -147,7 +147,7 @@ def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_pr
             with c_opts:
                 # Only show objective menu button when not in presentation mode
                 if not is_read_only:
-                    if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
+                    if st.button("", icon=":material/settings:", key=f"opt_{obj_id}", type="tertiary", help="Objective settings"):
                         # Clear any active KR update when opening objective settings
                         st.session_state["updating_kr"] = None
                         st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
@@ -204,15 +204,16 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
 
         if not is_read_only:
             with h_right:
-                act_col, gear_col = st.columns([0.75, 0.25])
-                u_label = "Cancel" if active_kr == kr_id else "Update"
-                if act_col.button(u_label, key=f"upd_{kr_id}", type="secondary", width="stretch"):
+                act_col, gear_col = st.columns([0.5, 0.5])
+                button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
+                button_help = "Cancel update" if active_kr == kr_id else "Update KR"
+                if act_col.button("", icon=button_icon, key=f"upd_{kr_id}", type="secondary", width="stretch", help=button_help):
                     # Ensure we clear objective settings when updating a KR
                     st.session_state.pop("active_obj_settings", None)
                     st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                     st.session_state["editing_id"] = None
                     st.rerun()
-                if gear_col.button(" ", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary"):
+                if gear_col.button("", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary", width="stretch", help="KR settings"):
                     # Also clear KR update state when opening metadata dialog
                     st.session_state["updating_kr"] = None
                     _edit_kr_metadata_dialog(kr)
@@ -240,8 +241,8 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
             
             # Action Row (Edit/Deps)
             if not is_read_only:
-                col_edit, col_empty = st.columns([0.15, 0.85])
-                if col_edit.button("Edit", key=f"edit_btn_{narrative.get('id')}", type="tertiary"):
+                col_edit, col_empty = st.columns([0.08, 0.92])
+                if col_edit.button("", icon=":material/edit:", key=f"edit_btn_{narrative.get('id')}", type="tertiary", width="stretch", help="Edit update"):
                     st.session_state["updating_kr"] = kr_id
                     st.session_state["editing_id"] = narrative.get("id")
                     st.rerun()
