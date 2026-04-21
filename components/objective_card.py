@@ -108,7 +108,8 @@ def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_pr
     sub_team = obj_row.get("sub_team", "")
     selected_week = st.session_state.get("selected_week", 1)
     active_kr = st.session_state.get("updating_kr") or ""
-    is_read_only = st.session_state.get("selected_team", "All") == "All"
+    # Use read_only parameter if provided (presentation mode), otherwise check if viewing "All" team
+    is_read_only = read_only or st.session_state.get("selected_team", "All") == "All"
 
     # Logic: Use precomputed historical/average progress passed from app.py
     obj_krs = krs_df[krs_df["objective_id"].astype(str) == obj_id] if not krs_df.empty else pd.DataFrame()
@@ -142,7 +143,7 @@ def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_pr
         with c_title:
             st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
         
-        if st.session_state.get("selected_team", "All") != "All":
+        if st.session_state.get("selected_team", "All") != "All" and not is_read_only:
             with c_opts:
                 if st.button(" ", icon=":material/more_horiz:", key=f"opt_{obj_id}", type="tertiary"):
                     # Clear any active KR update when opening objective settings

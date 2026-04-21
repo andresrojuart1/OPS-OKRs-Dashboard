@@ -429,6 +429,13 @@ for key, default in [
     if key not in st.session_state:
         st.session_state[key] = default
 
+# Initialize presentation mode for each team
+TEAMS = ["All", "New Initiatives", "FinOps", "AI Experience", "AI Monetization", "Security & Compliance Ops"]
+for team in TEAMS:
+    key = f"presentation_mode_{team}"
+    if key not in st.session_state:
+        st.session_state[key] = False
+
 QUARTERS = ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026"]
 
 # ---------------------------------------------------------------------------
@@ -1109,13 +1116,43 @@ def render_dashboard() -> None:
             "Please create one or import from PDF."
         )
     else:
+        # Presentation mode toggle (only for subteams, not for "All")
+        if team_label != "All":
+            col_pres, col_spacer = st.columns([1, 4])
+            with col_pres:
+                presentation_key = f"presentation_mode_{team_label}"
+                is_presentation = st.session_state.get(presentation_key, False)
+                button_label = "📊 Exit Presentation" if is_presentation else "📊 Presentation Mode"
+                button_type = "secondary" if is_presentation else "primary"
+
+                if st.button(button_label, key=f"pres_toggle_{team_label}", use_container_width=True, type=button_type):
+                    st.session_state[presentation_key] = not st.session_state[presentation_key]
+                    st.rerun()
+            st.divider()
+
+        # Render objectives
+        presentation_key = f"presentation_mode_{team_label}"
+        is_presentation_mode = st.session_state.get(presentation_key, False)
+
         for i, (_, obj_row) in enumerate(display_objs.iterrows()):
-            render_objective_card(obj_row, krs_df, updates_df, krs_info_all, is_primary=(i == 0))
+            render_objective_card(
+                obj_row,
+                krs_df,
+                updates_df,
+                krs_info_all,
+                is_primary=(i == 0),
+                read_only=is_presentation_mode  # Pass read_only flag based on presentation mode
+            )
 
 
     if team_label != "All":
-        if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
-            add_objective_dialog(team_label, selected_quarter)
+        presentation_key = f"presentation_mode_{team_label}"
+        is_presentation_mode = st.session_state.get(presentation_key, False)
+
+        # Only show "Add Objective" button in edit mode
+        if not is_presentation_mode:
+            if st.button("Add Objective", icon=":material/add:", key=f"add_obj_{team_label}", type="secondary"):
+                add_objective_dialog(team_label, selected_quarter)
 
     # Activity log for "All" view (sub-team views have it at the bottom)
     if team_label == "All":
