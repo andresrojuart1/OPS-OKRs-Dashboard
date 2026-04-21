@@ -867,91 +867,92 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
     st.markdown("<hr style='margin:10px 0 16px;'>", unsafe_allow_html=True)
 
+    # TODO: AI Weekly Summary - Disabled for now, activate when ready
     # Generate "What Changed This Week" with AI (hybrid: once per session + refresh button)
-    ai_summary_key = f"ai_summary_{selected_team}_{selected_quarter}_{selected_week}"
-
-    # Check if we already have a summary cached in session
-    if ai_summary_key not in st.session_state:
-        st.session_state[ai_summary_key] = None
-
-    col_title, col_refresh = st.columns([0.95, 0.05])
-    with col_title:
-        st.markdown('<div style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:8px; margin-bottom:12px;">📝 What Changed This Week</div>', unsafe_allow_html=True)
-
-    with col_refresh:
-        if st.button("🔄", key=f"refresh_ai_{selected_team}_{selected_week}", help="Refresh summary"):
-            st.session_state[ai_summary_key] = None
-            st.rerun()
-
-    # Generate or use cached summary
-    if st.session_state[ai_summary_key] is None:
-        with st.spinner("Generating summary..."):
-            try:
-                # Collect narratives + dependencies from current week AND last week (for trends)
-                current_week_updates = updates_df[updates_df["week_number"] == selected_week] if not updates_df.empty else pd.DataFrame()
-                last_week_updates = updates_df[updates_df["week_number"] == selected_week - 1] if not updates_df.empty else pd.DataFrame()
-
-                narratives = []
-                dependencies = []
-
-                # Current week narratives
-                if not current_week_updates.empty:
-                    narratives = current_week_updates["week_notes"].dropna().tolist()
-
-                # Get dependencies from current week
-                for _, kr_row in krs_df.iterrows():
-                    kr_id = str(kr_row["id"])
-                    kr_updates = current_week_updates[current_week_updates["kr_id"].astype(str) == kr_id]
-                    if not kr_updates.empty:
-                        deps = kr_updates["blockers"].dropna().unique().tolist()
-                        if deps:
-                            dependencies.extend(deps)
-
-                # Calculate week-over-week changes
-                current_avg_pct = current_week_updates["new_value"].astype(float).mean() if not current_week_updates.empty else 0
-                last_avg_pct = last_week_updates["new_value"].astype(float).mean() if not last_week_updates.empty else 0
-                pct_change = current_avg_pct - last_avg_pct
-
-                # Build prompt for AI
-                prompt = f"""Summarize what changed this week in the Operations team OKRs in a brief, executive-friendly paragraph (2-3 sentences max).
-
-Current Week: Week {selected_week}
-Team: {selected_team}
-Quarter: {selected_quarter}
-
-Trend: {'↑ Up' if pct_change > 0 else '↓ Down' if pct_change < 0 else '→ Stable'} {abs(pct_change):.1f}pp from last week
-
-Key Updates This Week:
-{chr(10).join([f"- {n}" for n in narratives[:5]]) if narratives else "No updates recorded"}
-
-Dependencies/Blockers:
-{chr(10).join([f"- {d}" for d in dependencies[:3]]) if dependencies else "None"}
-
-Generate a concise executive summary like:
-"Aura CSAT dropped 1.1pp due to Quick spike (8→30). Troubleshooting being added. Card fraud up 4x, coaching sessions scheduled."
-
-If no updates, say: "No updates recorded for {selected_team} this week."""
-
-                client = openai.OpenAI()
-                response = client.chat.completions.create(
-                    model="gpt-4",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7,
-                    max_tokens=150
-                )
-
-                summary_text = response.choices[0].message.content.strip()
-                st.session_state[ai_summary_key] = summary_text
-            except Exception as e:
-                st.session_state[ai_summary_key] = f"Could not generate summary: {str(e)}"
-                track_action("AI summary generation failed", detail=str(e))
-
-    # Display the summary
-    summary_text = st.session_state[ai_summary_key]
-    if summary_text:
-        st.markdown(f'<div style="background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:8px; border-left:3px solid #7A50F7; color:rgba(255,255,255,0.8); font-size:14px; line-height:1.5;">{summary_text}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div style="color:rgba(255,255,255,0.4); font-size:13px; font-style:italic;">No updates recorded for {selected_team} this week.</div>', unsafe_allow_html=True)
+    # ai_summary_key = f"ai_summary_{selected_team}_{selected_quarter}_{selected_week}"
+    #
+    # # Check if we already have a summary cached in session
+    # if ai_summary_key not in st.session_state:
+    #     st.session_state[ai_summary_key] = None
+    #
+    # col_title, col_refresh = st.columns([0.95, 0.05])
+    # with col_title:
+    #     st.markdown('<div style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.1em; padding-bottom:8px; margin-bottom:12px;">📝 What Changed This Week</div>', unsafe_allow_html=True)
+    #
+    # with col_refresh:
+    #     if st.button("🔄", key=f"refresh_ai_{selected_team}_{selected_week}", help="Refresh summary"):
+    #         st.session_state[ai_summary_key] = None
+    #         st.rerun()
+    #
+    # # Generate or use cached summary
+    # if st.session_state[ai_summary_key] is None:
+    #     with st.spinner("Generating summary..."):
+    #         try:
+    #             # Collect narratives + dependencies from current week AND last week (for trends)
+    #             current_week_updates = updates_df[updates_df["week_number"] == selected_week] if not updates_df.empty else pd.DataFrame()
+    #             last_week_updates = updates_df[updates_df["week_number"] == selected_week - 1] if not updates_df.empty else pd.DataFrame()
+    #
+    #             narratives = []
+    #             dependencies = []
+    #
+    #             # Current week narratives
+    #             if not current_week_updates.empty:
+    #                 narratives = current_week_updates["week_notes"].dropna().tolist()
+    #
+    #             # Get dependencies from current week
+    #             for _, kr_row in krs_df.iterrows():
+    #                 kr_id = str(kr_row["id"])
+    #                 kr_updates = current_week_updates[current_week_updates["kr_id"].astype(str) == kr_id]
+    #                 if not kr_updates.empty:
+    #                     deps = kr_updates["blockers"].dropna().unique().tolist()
+    #                     if deps:
+    #                         dependencies.extend(deps)
+    #
+    #             # Calculate week-over-week changes
+    #             current_avg_pct = current_week_updates["new_value"].astype(float).mean() if not current_week_updates.empty else 0
+    #             last_avg_pct = last_week_updates["new_value"].astype(float).mean() if not last_week_updates.empty else 0
+    #             pct_change = current_avg_pct - last_avg_pct
+    #
+    #             # Build prompt for AI
+    #             prompt = f"""Summarize what changed this week in the Operations team OKRs in a brief, executive-friendly paragraph (2-3 sentences max).
+    #
+    # Current Week: Week {selected_week}
+    # Team: {selected_team}
+    # Quarter: {selected_quarter}
+    #
+    # Trend: {'↑ Up' if pct_change > 0 else '↓ Down' if pct_change < 0 else '→ Stable'} {abs(pct_change):.1f}pp from last week
+    #
+    # Key Updates This Week:
+    # {chr(10).join([f"- {n}" for n in narratives[:5]]) if narratives else "No updates recorded"}
+    #
+    # Dependencies/Blockers:
+    # {chr(10).join([f"- {d}" for d in dependencies[:3]]) if dependencies else "None"}
+    #
+    # Generate a concise executive summary like:
+    # "Aura CSAT dropped 1.1pp due to Quick spike (8→30). Troubleshooting being added. Card fraud up 4x, coaching sessions scheduled."
+    #
+    # If no updates, say: "No updates recorded for {selected_team} this week."""
+    #
+    #             client = openai.OpenAI()
+    #             response = client.chat.completions.create(
+    #                 model="gpt-4",
+    #                 messages=[{"role": "user", "content": prompt}],
+    #                 temperature=0.7,
+    #                 max_tokens=150
+    #             )
+    #
+    #             summary_text = response.choices[0].message.content.strip()
+    #             st.session_state[ai_summary_key] = summary_text
+    #         except Exception as e:
+    #             st.session_state[ai_summary_key] = f"Could not generate summary: {str(e)}"
+    #             track_action("AI summary generation failed", detail=str(e))
+    #
+    #     # Display the summary
+    #     summary_text = st.session_state[ai_summary_key]
+    #     if summary_text:
+    #         st.markdown(f'<div style="background:rgba(255,255,255,0.03); padding:12px 16px; border-radius:8px; border-left:3px solid #7A50F7; color:rgba(255,255,255,0.8); font-size:14px; line-height:1.5;">{summary_text}</div>', unsafe_allow_html=True)
+    #     else:
+    #         st.markdown(f'<div style="color:rgba(255,255,255,0.4); font-size:13px; font-style:italic;">No updates recorded for {selected_team} this week.</div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
