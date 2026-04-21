@@ -44,9 +44,9 @@ def html_report_to_pdf(html_content: str) -> bytes:
 
     styles = getSampleStyleSheet()
 
-    # Add custom styles
+    # Add custom styles with unique names to avoid conflicts
     styles.add(ParagraphStyle(
-        name='CustomTitle',
+        name='OKRTitle',
         fontSize=28,
         textColor=colors.HexColor("#FFFFFF"),
         fontName='Helvetica-Bold',
@@ -55,7 +55,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
     ))
 
     styles.add(ParagraphStyle(
-        name='CustomSubtitle',
+        name='OKRSubtitle',
         fontSize=11,
         textColor=colors.HexColor("#B8B8C8"),
         fontName='Helvetica',
@@ -64,7 +64,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
     ))
 
     styles.add(ParagraphStyle(
-        name='TeamTitle',
+        name='OKRTeamTitle',
         fontSize=18,
         textColor=colors.HexColor("#7A50F7"),
         fontName='Helvetica-Bold',
@@ -73,7 +73,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
     ))
 
     styles.add(ParagraphStyle(
-        name='ObjectiveTitle',
+        name='OKRObjectiveTitle',
         fontSize=12,
         textColor=colors.HexColor("#FFFFFF"),
         fontName='Helvetica-Bold',
@@ -81,7 +81,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
     ))
 
     styles.add(ParagraphStyle(
-        name='BodyText',
+        name='OKRBodyText',
         fontSize=9,
         textColor=colors.HexColor("#B8B8C8"),
         fontName='Helvetica',
@@ -95,13 +95,13 @@ def html_report_to_pdf(html_content: str) -> bytes:
     title_match = re.search(r'<h1[^>]*>([^<]+)<\/h1>', html_content)
     title = title_match.group(1) if title_match else "OKR Progress Dashboard"
 
-    story.append(Paragraph(title, styles['CustomTitle']))
+    story.append(Paragraph(title, styles['OKRTitle']))
     story.append(Spacer(1, 0.1*inch))
-    story.append(Paragraph("Operations Team", styles['CustomSubtitle']))
+    story.append(Paragraph("Operations Team", styles['OKRSubtitle']))
 
     # Add generation date
     gen_date = datetime.now().strftime('%B %d, %Y at %I:%M %p')
-    story.append(Paragraph(f"Generated {gen_date}", styles['CustomSubtitle']))
+    story.append(Paragraph(f"Generated {gen_date}", styles['OKRSubtitle']))
     story.append(Spacer(1, 0.3*inch))
 
     # Extract team sections from HTML
@@ -116,7 +116,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
         team_name_match = re.search(r'<h2[^>]*>([^<]+)<\/h2>', team_section)
         if team_name_match:
             team_name = strip_html_tags(team_name_match.group(1))
-            story.append(Paragraph(team_name, styles['TeamTitle']))
+            story.append(Paragraph(team_name, styles['OKRTeamTitle']))
             story.append(Spacer(1, 0.15*inch))
 
         # Extract objectives blocks
@@ -130,7 +130,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
             obj_title_match = re.search(r'<div class="objective-title">([^<]+)<\/div>', obj_block)
             if obj_title_match:
                 obj_title = obj_title_match.group(1).strip()
-                story.append(Paragraph(obj_title, styles['ObjectiveTitle']))
+                story.append(Paragraph(obj_title, styles['OKRObjectiveTitle']))
 
             # Extract table data
             table_pattern = r'<table class="kr-table">.*?<tbody>(.*?)<\/tbody>.*?<\/table>'
@@ -191,7 +191,7 @@ def html_report_to_pdf(html_content: str) -> bytes:
                 if narrative_text and "Context & Updates" in narrative_text:
                     narrative_text = narrative_text.replace("Context & Updates", "").strip()
                     if narrative_text and "No notes" not in narrative_text:
-                        story.append(Paragraph(f"<i>{narrative_text}</i>", styles['BodyText']))
+                        story.append(Paragraph(f"<i>{narrative_text}</i>", styles['OKRBodyText']))
                         story.append(Spacer(1, 0.1*inch))
 
         # Page break between teams
