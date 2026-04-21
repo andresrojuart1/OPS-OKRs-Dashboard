@@ -62,6 +62,35 @@ st.markdown("""
     --accent-subtle: rgba(167, 139, 250, 0.08);
 }
 
+/* BOTONES HEADER — Direct override (baseweb) */
+button[kind="secondary"],
+button[data-baseweb="button"] {
+    background: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important;
+    transition: all 0.2s ease !important;
+}
+
+button[kind="secondary"]:hover,
+button[data-baseweb="button"]:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--ontop-purple) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+
+/* Primary button */
+button[kind="primary"] {
+    background: linear-gradient(135deg, var(--ontop-purple), var(--ontop-coral)) !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 8px !important;
+}
+
+button[kind="primary"]:hover {
+    filter: brightness(1.1) !important;
+}
+
 .stApp {
     background:
         radial-gradient(circle at top left,  rgba(124,94,255,0.25), transparent 32%),
@@ -113,50 +142,6 @@ p, li, label, .stMarkdown, .stCaption { color: var(--text-secondary); }
     box-shadow: 0 0 0 2px var(--accent-subtle) !important;
 }
 
-/* Buttons — strong override */
-.stButton > button {
-    background: var(--bg-card) !important;
-    color: var(--text-primary) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: 10px !important;
-    font-weight: 500 !important;
-    transition: all 0.2s ease !important;
-}
-
-.stButton > button:hover {
-    background: var(--bg-hover) !important;
-    border-color: var(--ontop-purple) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
-}
-
-/* Primary button: purple→coral gradient, pill */
-.stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, var(--ontop-purple), var(--ontop-coral)) !important;
-    color: var(--text-primary) !important;
-    border: 0 !important;
-    border-radius: 999px !important;
-    font-weight: 600 !important;
-    box-shadow: 0 10px 24px rgba(124,94,255,0.3) !important;
-}
-.stButton > button[kind="primary"]:hover {
-    filter: brightness(1.07) !important;
-}
-
-/* Secondary button — glassmorphism */
-.stButton > button[kind="secondary"] {
-    background: rgba(255, 255, 255, 0.10) !important;
-    border: 1px solid rgba(255, 255, 255, 0.20) !important;
-    color: #FFFFFF !important;
-    border-radius: 10px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
-    transition: all 0.2s ease !important;
-    font-weight: 500 !important;
-}
-.stButton > button[kind="secondary"]:hover {
-    background: rgba(255, 255, 255, 0.18) !important;
-    border-color: rgba(255, 255, 255, 0.35) !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-}
 
 /* Tertiary — pill style */
 .stButton > button[kind="tertiary"] {
@@ -298,19 +283,23 @@ hr { border-color: var(--border-color) !important; }
     margin-top: .75rem; margin-bottom: .5rem;
     display: grid; grid-template-columns: 2.5rem 1fr; gap: .75rem; align-items: center;
 }
-.ontop-sidebar-user .ontop-sidebar-avatar,
+/* Avatar — Strong override */
+div[class*="ontop-sidebar-avatar"],
 .ontop-sidebar-avatar {
     width: 2.5rem !important;
     height: 2.5rem !important;
-    border-radius: 999px !important;
+    min-width: 2.5rem !important;
+    min-height: 2.5rem !important;
+    border-radius: 50% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: linear-gradient(135deg, var(--ontop-purple), #4F47A8) !important;
+    background: linear-gradient(135deg, #6B5FD8, #4F47A8) !important;
     color: #fff !important;
     font-size: .9rem !important;
     font-weight: 800 !important;
-    box-shadow: 0 2px 8px rgba(124,94,255,0.25) !important;
+    box-shadow: 0 2px 8px rgba(107,95,216,0.3) !important;
+    flex-shrink: 0 !important;
 }
 .ontop-sidebar-user strong { display:block; color:#fff; font-size:.95rem; margin-bottom:.15rem; }
 .ontop-sidebar-user span   { color:var(--text-secondary); font-size:.82rem; word-break:break-word; }
