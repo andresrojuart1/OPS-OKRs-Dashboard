@@ -202,33 +202,52 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
     st.markdown("<!-- OKR-V1.1 -->", unsafe_allow_html=True)
 
     with st.container():
-        st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
+        st.markdown("""
+        <style>
+        .kr-header {
+            position: relative;
+            margin-bottom: 12px;
+        }
+        .kr-title-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.2;
+            padding-right: 80px;
+        }
+        .kr-icons-container {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        </style>
+        <div class="kr-header">
+            <div class="kr-title-text">{title}</div>
+            <div class="kr-icons-container" id="kr-icons-{kr_id}"></div>
+        </div>
+        """.replace("{title}", title).replace("{kr_id}", kr_id), unsafe_allow_html=True)
 
-        # Use the is_read_only parameter passed from render_objective_card (includes presentation mode)
-        h_left_width = 0.62 if not is_read_only else 1.0
-        h_left, h_right = st.columns([h_left_width, 0.38 if not is_read_only else 0.01])
-        h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
-
+        # Add buttons in a row below the title
         if not is_read_only:
-            with h_right:
-                # Two icon buttons: edit (✏️) and settings (⚙️) - identical to objective
-                edit_col, settings_col = st.columns([0.08, 0.08], gap="small")
-                button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
-                button_help = "Cancel update" if active_kr == kr_id else "Update KR"
-                with edit_col:
-                    if st.button("", icon=button_icon, key=f"upd_{kr_id}", type="tertiary", help=button_help):
-                        # Ensure we clear objective settings when updating a KR
-                        st.session_state.pop("active_obj_settings", None)
-                        st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
-                        st.session_state["editing_id"] = None
-                        st.rerun()
-                with settings_col:
-                    if st.button("", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary", help="KR settings"):
-                        # Also clear KR update state when opening metadata dialog
-                        st.session_state["updating_kr"] = None
-                        _edit_kr_metadata_dialog(kr)
+            button_col1, button_col2, spacer = st.columns([0.08, 0.08, 0.84])
+            button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
+            button_help = "Cancel update" if active_kr == kr_id else "Update KR"
+            with button_col1:
+                if st.button("", icon=button_icon, key=f"upd_{kr_id}", type="tertiary", help=button_help):
+                    # Ensure we clear objective settings when updating a KR
+                    st.session_state.pop("active_obj_settings", None)
+                    st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
+                    st.session_state["editing_id"] = None
+                    st.rerun()
+            with button_col2:
+                if st.button("", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary", help="KR settings"):
+                    # Also clear KR update state when opening metadata dialog
+                    st.session_state["updating_kr"] = None
+                    _edit_kr_metadata_dialog(kr)
 
-            
         # --- VALUE ROW ---
         v_left, v_right = st.columns([0.7, 0.3])
         cur_fmt = latest.get("value_format", "number") if latest is not None else "number"
