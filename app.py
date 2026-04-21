@@ -401,6 +401,7 @@ from sheets_cached import (
     load_updates_cached as load_updates,
     clear_sheets_cache,
     load_weekly_notes_cached,
+    load_weekly_charts_cached,
 )
 from sheets import (
     seed_if_empty,
@@ -754,14 +755,16 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
 
         with cols[3]:
             # HTML Report Download button (available for all teams)
-            # Generate beautiful interactive HTML report
+            # Generate beautiful interactive HTML report with charts
             notes_df = load_weekly_notes_cached()
+            charts_df = load_weekly_charts_cached()
             html_content = generate_html_report(
                 objectives_df=objectives_df,
                 krs_df=krs_df,
                 updates_df=updates_df,
                 notes_df=notes_df,
                 quarter=selected_quarter,
+                charts_df=charts_df,
             )
             st.download_button(
                 label="Report",

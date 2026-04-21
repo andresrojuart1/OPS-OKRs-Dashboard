@@ -14,6 +14,7 @@ def generate_html_report(
     updates_df: pd.DataFrame,
     notes_df: pd.DataFrame,
     quarter: str = "Q2 2026",
+    charts_df: pd.DataFrame = None,
 ) -> str:
     """
     Generate professional HTML report grouped by team.
@@ -24,10 +25,13 @@ def generate_html_report(
         updates_df: Updates DataFrame
         notes_df: Weekly notes DataFrame
         quarter: Quarter string
+        charts_df: Weekly charts DataFrame (optional)
 
     Returns:
         HTML string
     """
+    if charts_df is None:
+        charts_df = pd.DataFrame()
 
     # Start building HTML
     html = f"""<!DOCTYPE html>
@@ -287,6 +291,37 @@ def generate_html_report(
             font-size: 12px;
         }}
 
+        .charts-section {{
+            margin-top: 30px;
+            border-top: 2px solid #2A2A3E;
+            padding-top: 20px;
+        }}
+
+        .charts-title {{
+            font-size: 14px;
+            font-weight: 700;
+            color: #7A50F7;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }}
+
+        .charts-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 16px;
+        }}
+
+        .chart-image {{
+            width: 100%;
+            max-width: 500px;
+            border-radius: 8px;
+            border: 1px solid #2A2A3E;
+            background: #111118;
+            padding: 8px;
+        }}
+
         .footer {{
             margin-top: 60px;
             padding-top: 30px;
@@ -514,6 +549,36 @@ def generate_html_report(
 
         html += """
         </div>
+"""
+
+        # Add charts for this team
+        team_charts = charts_df[
+            (charts_df["sub_team"] == team) &
+            (charts_df["quarter"] == quarter)
+        ] if not charts_df.empty else pd.DataFrame()
+
+        if not team_charts.empty:
+            html += """
+        <div class="charts-section">
+            <div class="charts-title">📊 Weekly Charts</div>
+            <div class="charts-grid">
+"""
+            for _, chart in team_charts.iterrows():
+                drive_url = str(chart.get("drive_url", "")).strip()
+                filename = str(chart.get("filename", "Chart")).strip()
+                if drive_url and drive_url.lower() != "nan":
+                    html += f"""
+                <div>
+                    <img src="{drive_url}" alt="{filename}" class="chart-image">
+                    <p style="font-size: 12px; color: #B8B8C8; margin-top: 8px; text-align: center;">{filename}</p>
+                </div>
+"""
+            html += """
+            </div>
+        </div>
+"""
+
+        html += """
     </div>
 """
 

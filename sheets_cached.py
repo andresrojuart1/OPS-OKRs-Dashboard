@@ -178,6 +178,13 @@ def load_weekly_notes_cached() -> pd.DataFrame:
     return load_weekly_notes()
 
 
+@st.cache_data(ttl=300)
+def load_weekly_charts_cached() -> pd.DataFrame:
+    """Load weekly charts with 5-minute cache."""
+    from sheets import load_weekly_charts
+    return load_weekly_charts()
+
+
 # ─────────────────────────────────────────────────────────
 # 🔄 Cache invalidation (called by "Sync Data" button)
 # ─────────────────────────────────────────────────────────
