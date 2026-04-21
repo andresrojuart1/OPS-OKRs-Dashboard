@@ -2,10 +2,18 @@
 Professional HTML export for OPS OKRs Dashboard.
 Generates a beautiful, interactive HTML report that can be opened in any browser.
 Styled with Ontop brand colors and responsive design.
+Also converts to PDF internally using pdfkit.
 """
 
 from datetime import datetime
+import io
 import pandas as pd
+
+try:
+    import pdfkit
+    PDFKIT_AVAILABLE = True
+except ImportError:
+    PDFKIT_AVAILABLE = False
 
 
 def generate_html_report(
@@ -529,3 +537,38 @@ def generate_html_report(
 """
 
     return html
+
+
+def html_to_pdf(html_content: str) -> bytes:
+    """
+    Convert HTML string to PDF bytes using pdfkit.
+
+    Args:
+        html_content: HTML string
+
+    Returns:
+        PDF bytes
+    """
+    if not PDFKIT_AVAILABLE:
+        raise ImportError("pdfkit is not installed. Install with: pip install pdfkit")
+
+    try:
+        # Convert HTML string to PDF bytes
+        pdf_bytes = pdfkit.from_string(
+            html_content,
+            False,
+            options={
+                'page-size': 'Letter',
+                'margin-top': '0.5in',
+                'margin-right': '0.5in',
+                'margin-bottom': '0.5in',
+                'margin-left': '0.5in',
+                'encoding': 'UTF-8',
+                'no-outline': None,
+                'enable-local-file-access': None,
+            }
+        )
+        return pdf_bytes
+    except Exception as e:
+        print(f"[ERROR] Failed to convert HTML to PDF: {e}")
+        raise
