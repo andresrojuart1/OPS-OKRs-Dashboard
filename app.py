@@ -894,7 +894,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 dependencies = []
 
                 if not current_week_updates.empty:
-                    narratives = current_week_updates["notes"].dropna().tolist()
+                    narratives = current_week_updates["week_notes"].dropna().tolist()
 
                 # Get dependencies from objectives/KRs
                 for _, kr_row in krs_df.iterrows():
