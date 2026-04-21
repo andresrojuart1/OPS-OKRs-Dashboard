@@ -414,7 +414,6 @@ from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
 from html_export import generate_html_report
-from html_to_pdf_converter import html_report_to_pdf
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -754,8 +753,8 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 _ai_update_dialog()
 
         with cols[3]:
-            # PDF Report Download button (available for all teams)
-            # Generate beautiful HTML report and convert to PDF
+            # HTML Report Download button (available for all teams)
+            # Generate beautiful interactive HTML report
             notes_df = load_weekly_notes_cached()
             html_content = generate_html_report(
                 objectives_df=objectives_df,
@@ -764,31 +763,16 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 notes_df=notes_df,
                 quarter=selected_quarter,
             )
-            try:
-                pdf_bytes = html_report_to_pdf(html_content)
-                st.download_button(
-                    label="PDF",
-                    icon=":material/file_download:",
-                    data=pdf_bytes,
-                    file_name=f"OKRs_{selected_quarter}.pdf",
-                    mime="application/pdf",
-                    key="hdr_report",
-                    use_container_width=True,
-                    type="secondary",
-                )
-            except Exception as e:
-                st.error(f"Error generating PDF: {e}")
-                # Fallback to HTML if PDF conversion fails
-                st.download_button(
-                    label="Report (HTML)",
-                    icon=":material/file_download:",
-                    data=html_content.encode('utf-8'),
-                    file_name=f"OKRs_{selected_quarter}.html",
-                    mime="text/html",
-                    key="hdr_report_fallback",
-                    use_container_width=True,
-                    type="secondary",
-                )
+            st.download_button(
+                label="Report",
+                icon=":material/file_download:",
+                data=html_content.encode('utf-8'),
+                file_name=f"OKRs_{selected_quarter}.html",
+                mime="text/html",
+                key="hdr_report",
+                use_container_width=True,
+                type="secondary",
+            )
 
         if show_pdf_import:
             with cols[4]:
