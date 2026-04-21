@@ -6,6 +6,51 @@ Styled with Ontop brand colors and responsive design.
 
 from datetime import datetime
 import pandas as pd
+import base64
+import re
+import requests
+from io import BytesIO
+
+
+def get_image_data_url(drive_url: str, drive_file_id: str) -> str:
+    """
+    Convert Google Drive image URL to data URL (base64 embedded).
+    This allows images to be embedded in the HTML without CORS issues.
+
+    Args:
+        drive_url: Google Drive share URL
+        drive_file_id: Google Drive file ID
+
+    Returns:
+        Data URL string for embedding in HTML, or empty string if failed
+    """
+    try:
+        # Construct direct download URL
+        if drive_file_id and drive_file_id.lower() != "nan":
+            file_id = drive_file_id
+        elif drive_url and "drive.google.com" in str(drive_url):
+            match = re.search(r'/d/([a-zA-Z0-9-_]+)', str(drive_url))
+            if match:
+                file_id = match.group(1)
+            else:
+                return ""
+        else:
+            return ""
+
+        # Download image from Google Drive
+        img_url = f"https://drive.google.com/uc?export=download&id={file_id}"
+        response = requests.get(img_url, timeout=10)
+
+        if response.status_code == 200:
+            # Convert to base64
+            img_data = base64.b64encode(response.content).decode('utf-8')
+            # Determine MIME type
+            content_type = response.headers.get('content-type', 'image/png')
+            return f"data:{content_type};base64,{img_data}"
+    except Exception as e:
+        print(f"[WARNING] Failed to download image: {e}")
+
+    return ""
 
 
 def generate_html_report(
@@ -568,26 +613,13 @@ def generate_html_report(
                 drive_file_id = str(chart.get("drive_file_id", "")).strip()
                 filename = str(chart.get("filename", "Chart")).strip()
 
-                # Convert Google Drive URL to direct image URL if we have file ID
-                if drive_file_id and drive_file_id.lower() != "nan":
-                    # Google Drive direct image URL format
-                    img_url = f"https://drive.google.com/uc?export=view&id={drive_file_id}"
-                elif drive_url and drive_url.lower() != "nan" and "drive.google.com" in drive_url:
-                    # Extract file ID from URL and convert to direct URL
-                    import re
-                    match = re.search(r'/d/([a-zA-Z0-9-_]+)', drive_url)
-                    if match:
-                        file_id = match.group(1)
-                        img_url = f"https://drive.google.com/uc?export=view&id={file_id}"
-                    else:
-                        img_url = drive_url
-                else:
-                    img_url = drive_url
+                # Convert Google Drive URL to embedded data URL
+                img_data_url = get_image_data_url(drive_url, drive_file_id)
 
-                if img_url and img_url.lower() != "nan":
+                if img_data_url:
                     html += f"""
                 <div>
-                    <img src="{img_url}" alt="{filename}" class="chart-image" loading="lazy">
+                    <img src="{img_data_url}" alt="{filename}" class="chart-image">
                     <p style="font-size: 12px; color: #B8B8C8; margin-top: 8px; text-align: center;">{filename}</p>
                 </div>
 """
