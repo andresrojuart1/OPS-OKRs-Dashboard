@@ -330,6 +330,22 @@ def _migrate_updates_schema(spreadsheet) -> None:
 # Read helpers (cached 30 s)
 # ---------------------------------------------------------------------------
 
+
+def normalize_kr_id(v) -> str:
+    """Canonical key_result id for joins between key_results, kr_updates, and the UI."""
+    if v is None:
+        return ""
+    try:
+        if pd.isna(v):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    s = str(v).strip()
+    if not s or s.lower() in ("nan", "none"):
+        return ""
+    return s
+
+
 @gspread_retry()
 def update_objective(obj_id: str, new_title: str) -> None:
     ws = get_worksheet("objectives")
@@ -406,6 +422,12 @@ def load_key_results() -> pd.DataFrame:
     df = pd.DataFrame(records)
     for col in ["target", "current_value"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
+
+    if not df.empty:
+        if "id" in df.columns:
+            df["id"] = df["id"].astype(str).str.strip()
+        if "objective_id" in df.columns:
+            df["objective_id"] = df["objective_id"].astype(str).str.strip()
     
     # Strict filtering: remove any row with empty ID or Title
     if not df.empty:
@@ -441,10 +463,10 @@ def load_updates() -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
             
-    # Ensure IDs are strings for reliable mapping
+    # Ensure IDs are strings for reliable mapping (strip avoids lookup misses vs key_results)
     for col in ["id", "kr_id"]:
         if col in df.columns:
-            df[col] = df[col].astype(str)
+            df[col] = df[col].astype(str).str.strip()
             
     # Filter out empty updates
     if not df.empty:

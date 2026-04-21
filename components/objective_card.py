@@ -8,6 +8,7 @@ Design Focus:
 - Distinct value badges
 """
 
+import html
 import pandas as pd
 import streamlit as st
 from datetime import datetime, timezone
@@ -20,6 +21,7 @@ from sheets import (
     edit_kr_update,
     format_value,
     load_updates_for_kr,
+    normalize_kr_id,
     update_kr_fields,
     update_kr_value,
     update_objective,
@@ -116,7 +118,7 @@ def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_pr
     effective_data = []
     
     for _, kr in obj_krs.iterrows():
-        kr_id = str(kr["id"])
+        kr_id = normalize_kr_id(kr["id"])
         info = krs_info_all.get(kr_id, {
             "kr": kr, "pct": 0.0, "val": float(kr.get("current_value", 0)), 
             "latest": None, "narrative": None, "prev_pct": None
@@ -186,7 +188,7 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
     kr, pct, val, latest = data["kr"], data["pct"], data["val"], data["latest"]
     narrative = data.get("narrative") # Specifically for current week display
     prev_pct = data.get("prev_pct")
-    kr_id, title = str(kr["id"]), kr["title"]
+    kr_id, title = normalize_kr_id(kr["id"]), kr["title"]
     target, unit = float(kr.get("target", 0)), str(kr.get("unit", ""))
 
 
@@ -202,12 +204,14 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
     st.markdown("<!-- OKR-V1.1 -->", unsafe_allow_html=True)
 
     with st.container():
-        st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
-
         # Use the is_read_only parameter passed from render_objective_card (includes presentation mode)
         h_left_width = 5 if not is_read_only else 5.5
         h_left, h_right = st.columns([h_left_width, 0.5])
-        h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
+        title_safe = html.escape(str(title), quote=False)
+        h_left.markdown(
+            f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2; margin-bottom:12px;">{title_safe}</div>',
+            unsafe_allow_html=True,
+        )
 
         if not is_read_only:
             with h_right:
@@ -241,10 +245,11 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
         if narrative is not None:
             badge_color = _pct_color(pct)
             fmt_override = narrative.get("value_format", "number")
+            notes_safe = html.escape(str(narrative.get("week_notes", "") or ""), quote=False)
             st.markdown(f"""
             <div style="display:flex; align-items:center; gap:12px; margin-top:14px; background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; border-left:4px solid {badge_color};">
                 <div style="background:{badge_color}1a; color:{badge_color}; padding:4px 10px; border-radius:6px; font-size:16px; font-weight:700; white-space:nowrap;">{_format_badge(val, unit, fmt_override)}</div>
-                <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.55;">{narrative.get('week_notes', '')}</div>
+                <div style="flex:1; font-size:16px; color:rgba(255,255,255,0.8); line-height:1.55;">{notes_safe}</div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -258,12 +263,17 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
 
             deps = narrative.get("blockers", "")
             if deps:
-                st.markdown(f'<div style="padding-left:12px; margin-top:4px; font-size:13px; color:#f87171; font-weight:500;">⚠ Dependencies: {deps}</div>', unsafe_allow_html=True)
+                deps_safe = html.escape(str(deps), quote=False)
+                st.markdown(
+                    f'<div style="padding-left:12px; margin-top:4px; font-size:13px; color:#f87171; font-weight:500;">'
+                    f"⚠ Dependencies: {deps_safe}</div>",
+                    unsafe_allow_html=True,
+                )
         else:
-            st.markdown(f'<div style="font-size:14px; color:{MUTED}; font-style:italic; margin-top:10px; opacity:0.6; margin-bottom:12px;">No updates recorded for this week.</div>', unsafe_allow_html=True)
-
-
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div style="font-size:14px; color:{MUTED}; font-style:italic; margin-top:10px; opacity:0.6; margin-bottom:12px;">No updates recorded for this week.</div>',
+                unsafe_allow_html=True,
+            )
 
     if not is_read_only and active_kr == kr_id: _render_update_form(data)
 
@@ -274,7 +284,7 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
 
 def _render_update_form(data):
     kr, latest = data["kr"], data["latest"]
-    kr_id = str(kr["id"])
+    kr_id = normalize_kr_id(kr["id"])
     edit_id = st.session_state.get("editing_id")
     
     # Pre-populate if editing
@@ -384,7 +394,7 @@ def _obj_actions_dialog(id, title):
 
 @st.dialog("Edit Key Result")
 def _edit_kr_metadata_dialog(kr):
-    kr_id = str(kr["id"])
+    kr_id = normalize_kr_id(kr["id"])
     t_val = st.text_input("Title", value=kr["title"])
     tgt_val = st.number_input("Target Value", value=float(kr["target"]))
     

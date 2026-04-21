@@ -488,6 +488,7 @@ from sheets import (
     undo_last_import,
     get_weekly_charts, upload_charts_to_drive, delete_chart_from_drive,
     download_drive_file,
+    normalize_kr_id,
 )
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
@@ -1077,11 +1078,13 @@ def render_dashboard() -> None:
         
     # 3. Filter Updates (Must have active KR)
     if not updates_df.empty and not krs_df.empty:
-        valid_kr_ids = set(krs_df["id"].astype(str).unique())
+        valid_kr_ids = {normalize_kr_id(x) for x in krs_df["id"] if normalize_kr_id(x)}
         updates_df = updates_df[
             (updates_df["id"].astype(str).replace("nan", "").str.strip().str.len() > 0) & 
-            (updates_df["kr_id"].astype(str).isin(valid_kr_ids))
+            (updates_df["kr_id"].map(normalize_kr_id).isin(valid_kr_ids))
         ].copy()
+        if "kr_id" in updates_df.columns:
+            updates_df["kr_id"] = updates_df["kr_id"].map(normalize_kr_id)
 
 
 
@@ -1127,20 +1130,38 @@ def render_dashboard() -> None:
 
     def _get_latest_map(df, week_limit):
         if df.empty: return {}
-        rev = df[df["week_number"] <= week_limit].sort_values(["kr_id", "updated_at"], ascending=[True, False])
+        wn = pd.to_numeric(df["week_number"], errors="coerce").fillna(0)
+        try:
+            wlim = int(week_limit)
+        except (TypeError, ValueError):
+            wlim = 0
+        rev = df[wn <= wlim].sort_values(["kr_id", "updated_at"], ascending=[True, False])
         return rev.drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
 
-    latest_map = _get_latest_map(updates_df, selected_week)
-    prev_latest_map = _get_latest_map(updates_df, selected_week - 1)
+    try:
+        sel_wk = int(selected_week)
+    except (TypeError, ValueError):
+        sel_wk = int(float(selected_week or 0))
+
+    latest_map = _get_latest_map(updates_df, sel_wk)
+    prev_latest_map = _get_latest_map(updates_df, sel_wk - 1)
 
     # Get all-time latest values (for Excel export) - use max week_number, not selected_week
     all_time_latest_map = _get_latest_map(updates_df, 999999) if not updates_df.empty else {}
 
-    # ✅ FIX: Handle empty updates_df gracefully
+    # Per-KR week narrative: numeric week match; kr_id already normalized on updates_df above
     if not updates_df.empty and "week_number" in updates_df.columns:
-        narrative_map = updates_df[updates_df["week_number"] == selected_week].sort_values(
-            ["kr_id", "updated_at"], ascending=[True, False]
-        ).drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
+        wn = pd.to_numeric(updates_df["week_number"], errors="coerce")
+        in_week = updates_df[wn == sel_wk]
+        if not in_week.empty:
+            narrative_map = (
+                in_week.sort_values(["kr_id", "updated_at"], ascending=[True, False])
+                .drop_duplicates(subset=["kr_id"], keep="first")
+                .set_index("kr_id")
+                .to_dict("index")
+            )
+        else:
+            narrative_map = {}
     else:
         narrative_map = {}
 
@@ -1148,9 +1169,12 @@ def render_dashboard() -> None:
     krs_info_all_for_export = {}  # Separate structure with all-time latest values
     if not krs_df.empty:
         for _, kr in krs_df.iterrows():
-            kid = str(kr["id"])
+            kid = normalize_kr_id(kr["id"])
+            if not kid:
+                continue
             latest = latest_map.get(kid)
-            narrative = narrative_map.get(kid)
+            raw_narrative = narrative_map.get(kid)
+            narrative = {**raw_narrative} if isinstance(raw_narrative, dict) else raw_narrative
             prev_latest = prev_latest_map.get(kid)
             all_time_latest = all_time_latest_map.get(kid)  # Get all-time latest
 
@@ -1160,14 +1184,15 @@ def render_dashboard() -> None:
             pct = compute_progress(calc_kr)
 
             prev_pct = None
-            if selected_week > 1:
+            if sel_wk > 1:
                 pv = float(prev_latest["new_value"]) if prev_latest else float(kr.get("current_value", 0))
                 p_kr = kr.copy(); p_kr["current_value"] = pv
                 prev_pct = compute_progress(p_kr)
 
             krs_info_all[kid] = {
                 "kr": kr, "val": eff_val, "pct": pct,
-                "latest": latest, "narrative": narrative, "prev_pct": prev_pct,
+                "latest": {**latest} if isinstance(latest, dict) else latest,
+                "narrative": narrative, "prev_pct": prev_pct,
                 "has_updates": latest is not None,
                 "title": str(kr["title"]), "target": float(kr["target"]), "unit": str(kr["unit"]), # compatibility
             }
@@ -1181,7 +1206,7 @@ def render_dashboard() -> None:
 
     # Filter for Header and AI summaries based on the current team/quarter selection
     if not ai_krs.empty:
-        ai_krs_ids = set(ai_krs["id"].astype(str).tolist())
+        ai_krs_ids = {normalize_kr_id(x) for x in ai_krs["id"] if normalize_kr_id(x)}
         krs_info_list = [krs_info_all[kid] for kid in ai_krs_ids if kid in krs_info_all]
     else:
         krs_info_list = []
