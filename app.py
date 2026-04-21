@@ -413,7 +413,8 @@ from sheets import (
 from components.sidebar import render_sidebar, SUB_TEAMS
 from components.objective_card import render_objective_card
 from pdf_parser import parse_okr_pdf_with_ai, render_pdf_preview_and_confirm
-from html_export import generate_html_report, html_to_pdf
+from html_export import generate_html_report
+from html_to_pdf_converter import html_report_to_pdf
 from observability import logger, track_action, handle_error, render_last_action, render_activity_log
 
 # ---------------------------------------------------------------------------
@@ -764,7 +765,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 quarter=selected_quarter,
             )
             try:
-                pdf_bytes = html_to_pdf(html_content)
+                pdf_bytes = html_report_to_pdf(html_content)
                 st.download_button(
                     label="PDF",
                     icon=":material/file_download:",
