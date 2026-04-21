@@ -630,10 +630,10 @@ def add_objective_dialog(sub_team: str, quarter: str) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("Cancel", use_container_width=True, key="add_obj_cancel"):
+        if st.button("Cancel", width="stretch", key="add_obj_cancel"):
             st.rerun()
     with c2:
-        if st.button("Create", use_container_width=True, type="primary"):
+        if st.button("Create", width="stretch", type="primary"):
             if title.strip():
                 create_objective(title.strip(), actual_team, quarter)
                 st.rerun()
@@ -665,7 +665,7 @@ def render_login_page() -> None:
 
         if DEV_MODE:
             st.warning("DEV MODE — OAuth bypassed")
-            if st.button("Enter as mrojas@getontop.com", use_container_width=True):
+            if st.button("Enter as mrojas@getontop.com", width="stretch"):
                 st.session_state["dev_authenticated"] = True
                 st.session_state["user"] = {
                     "email": "mrojas@getontop.com", "name": "Andrés Rojas",
@@ -674,7 +674,7 @@ def render_login_page() -> None:
                 st.rerun()
             return
 
-        if st.button("Sign in with Google", use_container_width=True):
+        if st.button("Sign in with Google", width="stretch"):
             st.login("google")
 
 
@@ -722,7 +722,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
         cols = st.columns(num_cols)
         
         with cols[0]:
-            if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", use_container_width=True, type="secondary"):
+            if st.button("Sync Data", icon=":material/refresh:", key="hdr_sync", width="stretch", type="secondary"):
                 clear_sheets_cache()
                 st.session_state["last_sync_time"] = datetime.now()
                 track_action("Synced data")
@@ -752,11 +752,11 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 file_name=f"OKRs_{selected_quarter}_W{selected_week}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="hdr_tmpl",
-                use_container_width=True,
+                width="stretch",
             )
             
         with cols[2]:
-            if st.button("AI", icon=":material/smart_toy:", key="hdr_ai", use_container_width=True, type="secondary"):
+            if st.button("AI", icon=":material/smart_toy:", key="hdr_ai", width="stretch", type="secondary"):
                 st.session_state["ai_dialog_stale"] = True
                 track_action("Opened AI summary")
                 _ai_update_dialog()
@@ -782,13 +782,13 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 file_name=f"OKRs_{selected_quarter}_W{selected_week}.html",
                 mime="text/html",
                 key="hdr_report",
-                use_container_width=True,
+                width="stretch",
                 type="secondary",
             )
 
         if show_pdf_import:
             with cols[4]:
-                if st.button("from PDF", icon=":material/description:", use_container_width=True, key="pdf_import_btn_hdr", type="secondary"):
+                if st.button("from PDF", icon=":material/description:", width="stretch", key="pdf_import_btn_hdr", type="secondary"):
                     st.session_state["show_pdf_import"] = True
 
     # Metrics from krs_info
@@ -1035,7 +1035,7 @@ def render_dashboard() -> None:
                 with col_title:
                     st.markdown("### 📄 Import OKR Update from PDF")
                 with col_exit:
-                    if st.button("Back to Dashboard", icon=":material/arrow_back:", use_container_width=True):
+                    if st.button("Back to Dashboard", icon=":material/arrow_back:", width="stretch"):
                         st.session_state["show_pdf_import"] = False
                         st.session_state.pop("parsed_pdf_data", None)
                         st.rerun()
@@ -1075,12 +1075,12 @@ def render_dashboard() -> None:
                 st.warning("⏪ Recent import detected. You can revert it if needed.")
                 c1, c2 = st.columns([1, 4])
                 with c1:
-                    if st.button("Undo", icon=":material/undo:", use_container_width=True, help="Revert the last PDF import changes"):
+                    if st.button("Undo", icon=":material/undo:", width="stretch", help="Revert the last PDF import changes"):
                         undo_last_import(import_summary)
                         st.session_state.pop("last_import_summary", None)
                         st.rerun()
                 with c2:
-                    if st.button("Dismiss", icon=":material/check:", use_container_width=True, help="Keep changes and hide this message"):
+                    if st.button("Dismiss", icon=":material/check:", width="stretch", help="Keep changes and hide this message"):
                         st.session_state.pop("last_import_summary", None)
                         st.rerun()
             else:
@@ -1129,7 +1129,7 @@ def render_dashboard() -> None:
                 def toggle_presentation():
                     st.session_state[presentation_key] = not st.session_state.get(presentation_key, False)
 
-                st.button(button_label, key=f"pres_toggle_{team_label}", use_container_width=True, type=button_type, on_click=toggle_presentation)
+                st.button(button_label, key=f"pres_toggle_{team_label}", width="stretch", type=button_type, on_click=toggle_presentation)
             st.divider()
 
         # Render objectives
@@ -1205,7 +1205,7 @@ def render_dashboard() -> None:
             )
             col1, col2 = st.columns([4, 1])
             with col2:
-                if st.button("Save Changes", use_container_width=True, type="primary", key=f"btn_save_{team_label}_{week_number}"):
+                if st.button("Save Changes", width="stretch", type="primary", key=f"btn_save_{team_label}_{week_number}"):
                     email = st.session_state.get("user", {}).get("email", "unknown")
                     with st.spinner("Saving..."):
                         save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
@@ -1241,7 +1241,7 @@ def render_dashboard() -> None:
                 with chart_cols[i % 2]:
                     try:
                         img_bytes = download_drive_file(chart["drive_file_id"])
-                        st.image(img_bytes, caption=chart["filename"], use_container_width=True)
+                        st.image(img_bytes, caption=chart["filename"], width="stretch")
                     except Exception as e:
                         st.error(f"Error loading image: {e}")
                     

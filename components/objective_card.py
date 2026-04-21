@@ -204,7 +204,7 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
             with h_right:
                 act_col, gear_col = st.columns([0.75, 0.25])
                 u_label = "Cancel" if active_kr == kr_id else "Update"
-                if act_col.button(u_label, key=f"upd_{kr_id}", type="secondary", use_container_width=True):
+                if act_col.button(u_label, key=f"upd_{kr_id}", type="secondary", width="stretch"):
                     # Ensure we clear objective settings when updating a KR
                     st.session_state.pop("active_obj_settings", None)
                     st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
@@ -291,7 +291,7 @@ def _render_update_form(data):
         deps = st.text_input("Dependencies / Blockers", value=init_deps)
         
         btn_label = "Update Log" if edit_id else "Save New Update"
-        if st.form_submit_button(btn_label, use_container_width=True):
+        if st.form_submit_button(btn_label, width="stretch"):
             curr_edit_id = st.session_state.get("editing_id")
             try:
                 if curr_edit_id:
@@ -327,10 +327,10 @@ def _obj_actions_dialog(id, title):
         st.markdown("### Edit Objective Title")
         nt = st.text_input("Title", value=title)
         c1, c2 = st.columns(2)
-        if c1.button("Save", type="primary", use_container_width=True):
+        if c1.button("Save", type="primary", width="stretch"):
             update_objective(id, nt)
             _close()
-        if c2.button("Back", use_container_width=True):
+        if c2.button("Back", width="stretch"):
             st.session_state.pop(f"obj_view_{id}", None)
             st.rerun()
             
@@ -340,37 +340,37 @@ def _obj_actions_dialog(id, title):
         tgt = st.number_input("Target", value=100.0)
         fmt = st.selectbox("Format", ["number", "percentage", "currency"])
         c1, c2 = st.columns(2)
-        if c1.button("Create", type="primary", use_container_width=True):
+        if c1.button("Create", type="primary", width="stretch"):
             create_kr(id, t, tgt, fmt)
             _close()
-        if c2.button("Back", use_container_width=True):
+        if c2.button("Back", width="stretch"):
             st.session_state.pop(f"obj_view_{id}", None)
             st.rerun()
 
     elif view == "delete_confirm":
         st.error("⚠️ **Delete Objective?** This will also delete all associated Key Results and cannot be undone.")
         c1, c2 = st.columns(2)
-        if c1.button("Yes, delete", type="primary", use_container_width=True):
+        if c1.button("Yes, delete", type="primary", width="stretch"):
             delete_objective(id)
             _close()
-        if c2.button("No, cancel", use_container_width=True):
+        if c2.button("No, cancel", width="stretch"):
             st.session_state[f"obj_view_{id}"] = "menu"
             st.rerun()
             
     else:
         st.write(f"Objective: **{title}**")
-        if st.button("Edit Title", use_container_width=True):
+        if st.button("Edit Title", width="stretch"):
             st.session_state[f"obj_view_{id}"] = "edit_title"
             st.rerun()
-        if st.button("Add Key Result", use_container_width=True):
+        if st.button("Add Key Result", width="stretch"):
             st.session_state[f"obj_view_{id}"] = "add_kr"
             st.rerun()
         st.divider()
-        if st.button("Delete Objective", type="secondary", use_container_width=True):
+        if st.button("Delete Objective", type="secondary", width="stretch"):
             st.session_state[f"obj_view_{id}"] = "delete_confirm"
             st.rerun()
 
-        if st.button("Close Settings", use_container_width=True, type="tertiary"):
+        if st.button("Close Settings", width="stretch", type="tertiary"):
             _close()
 
 @st.dialog("Edit Key Result")
@@ -389,7 +389,7 @@ def _edit_kr_metadata_dialog(kr):
     
     f_val = st.selectbox("Display Format", options=fmt_options, index=idx)
     
-    if st.button("Save Metadata", use_container_width=True):
+    if st.button("Save Metadata", width="stretch"):
         try:
             update_kr_fields(kr_id, t_val, tgt_val, f_val)
             st.rerun()
@@ -397,7 +397,7 @@ def _edit_kr_metadata_dialog(kr):
             handle_error(e, "Failed to update KR metadata", "KR")
             
     st.divider()
-    if st.button("Delete Key Result", type="secondary", use_container_width=True):
+    if st.button("Delete Key Result", type="secondary", width="stretch"):
         try:
             delete_kr_by_id(kr_id)
             track_action("Deleted KR", detail=kr_id)
