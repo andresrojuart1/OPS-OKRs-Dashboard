@@ -142,16 +142,23 @@ def render_objective_card(obj_row, krs_df, updates_df, krs_info_all: dict, is_pr
         c_title, c_opts = st.columns([c_title_width, 0.5])
         with c_title:
             st.markdown(f'<div style="font-size:20px; font-weight:700; color:#fff; line-height:1.3; margin-bottom:8px;">{obj_title}</div>', unsafe_allow_html=True)
-        
+
         if st.session_state.get("selected_team", "All") != "All":
             with c_opts:
-                # Only show objective menu button when not in presentation mode
+                # Only show objective buttons when not in presentation mode
                 if not is_read_only:
-                    if st.button("", icon=":material/settings:", key=f"opt_{obj_id}", type="tertiary", help="Objective settings"):
-                        # Clear any active KR update when opening objective settings
-                        st.session_state["updating_kr"] = None
-                        st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
-                        st.rerun()
+                    edit_col, settings_col = st.columns([0.08, 0.08], gap="small")
+                    with edit_col:
+                        if st.button("", icon=":material/edit:", key=f"edit_title_{obj_id}", type="tertiary", help="Edit title"):
+                            st.session_state["updating_kr"] = None
+                            st.session_state[f"obj_view_{obj_id}"] = "edit_title"
+                            st.rerun()
+                    with settings_col:
+                        if st.button("", icon=":material/settings:", key=f"opt_{obj_id}", type="tertiary", help="Objective settings"):
+                            # Clear any active KR update when opening objective settings
+                            st.session_state["updating_kr"] = None
+                            st.session_state["active_obj_settings"] = {"id": obj_id, "title": obj_title}
+                            st.rerun()
         
         # Dialog is now triggered globally in app.py for persistence
 
@@ -198,18 +205,18 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
         st.markdown('<div style="margin-bottom:12px;">', unsafe_allow_html=True)
 
         # Use the is_read_only parameter passed from render_objective_card (includes presentation mode)
-        h_left_width = 0.65 if not is_read_only else 1.0
-        h_left, h_right = st.columns([h_left_width, 0.35 if not is_read_only else 0.01])
+        h_left_width = 0.62 if not is_read_only else 1.0
+        h_left, h_right = st.columns([h_left_width, 0.38 if not is_read_only else 0.01])
         h_left.markdown(f'<div style="font-size:18px; font-weight:600; color:#fff; line-height:1.2;">{title}</div>', unsafe_allow_html=True)
 
         if not is_read_only:
             with h_right:
-                # Two icon buttons: edit (✏️) and settings (⚙️)
+                # Two icon buttons: edit (✏️) and settings (⚙️) - no container styling
                 col1, col2 = st.columns([0.08, 0.08], gap="small")
                 button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
                 button_help = "Cancel update" if active_kr == kr_id else "Update KR"
                 with col1:
-                    if st.button("", icon=button_icon, key=f"upd_{kr_id}", type="secondary", help=button_help):
+                    if st.button("", icon=button_icon, key=f"upd_{kr_id}", type="tertiary", help=button_help):
                         # Ensure we clear objective settings when updating a KR
                         st.session_state.pop("active_obj_settings", None)
                         st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
@@ -365,9 +372,6 @@ def _obj_actions_dialog(id, title):
             
     else:
         st.write(f"Objective: **{title}**")
-        if st.button("Edit Title", width="stretch"):
-            st.session_state[f"obj_view_{id}"] = "edit_title"
-            st.rerun()
         if st.button("Add Key Result", width="stretch"):
             st.session_state[f"obj_view_{id}"] = "add_kr"
             st.rerun()
