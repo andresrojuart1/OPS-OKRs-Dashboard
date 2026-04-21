@@ -923,14 +923,15 @@ Generate a concise executive summary like:
 
 If no updates, say: "No updates recorded for {selected_team} this week."""
 
-                response = openai.ChatCompletion.create(
+                client = openai.OpenAI()
+                response = client.chat.completions.create(
                     model="gpt-4",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.7,
                     max_tokens=150
                 )
 
-                summary_text = response["choices"][0]["message"]["content"].strip()
+                summary_text = response.choices[0].message.content.strip()
                 st.session_state[ai_summary_key] = summary_text
             except Exception as e:
                 st.session_state[ai_summary_key] = f"Could not generate summary: {str(e)}"
