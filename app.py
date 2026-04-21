@@ -284,9 +284,9 @@ hr { border-color: var(--border-color) !important; }
 .ontop-sidebar-avatar {
     width:2.5rem; height:2.5rem; border-radius:999px;
     display:flex; align-items:center; justify-content:center;
-    background: linear-gradient(135deg, var(--ontop-purple), var(--ontop-coral));
+    background: linear-gradient(135deg, var(--ontop-purple), #5B4F9D);
     color:#fff; font-size:.9rem; font-weight:800;
-    box-shadow: 0 2px 8px rgba(124,94,255,0.3);
+    box-shadow: 0 2px 8px rgba(124,94,255,0.2);
 }
 .ontop-sidebar-user strong { display:block; color:#fff; font-size:.95rem; margin-bottom:.15rem; }
 .ontop-sidebar-user span   { color:var(--text-secondary); font-size:.82rem; word-break:break-word; }
