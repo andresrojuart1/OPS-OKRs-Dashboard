@@ -211,18 +211,18 @@ def _render_kr_block(data, active_kr: str, is_read_only: bool) -> None:
 
         if not is_read_only:
             with h_right:
-                # Two icon buttons: edit (✏️) and settings (⚙️) - no container styling
-                col1, col2 = st.columns([0.08, 0.08], gap="small")
+                # Two icon buttons: edit (✏️) and settings (⚙️) - same as objective
+                edit_col, settings_col = st.columns([0.08, 0.08], gap="small")
                 button_icon = ":material/close:" if active_kr == kr_id else ":material/edit:"
                 button_help = "Cancel update" if active_kr == kr_id else "Update KR"
-                with col1:
+                with edit_col:
                     if st.button("", icon=button_icon, key=f"upd_{kr_id}", type="tertiary", help=button_help):
                         # Ensure we clear objective settings when updating a KR
                         st.session_state.pop("active_obj_settings", None)
                         st.session_state["updating_kr"] = None if active_kr == kr_id else kr_id
                         st.session_state["editing_id"] = None
                         st.rerun()
-                with col2:
+                with settings_col:
                     if st.button("", icon=":material/settings:", key=f"edit_meta_{kr_id}", type="tertiary", help="KR settings"):
                         # Also clear KR update state when opening metadata dialog
                         st.session_state["updating_kr"] = None
