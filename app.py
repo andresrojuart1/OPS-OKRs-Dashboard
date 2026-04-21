@@ -1162,95 +1162,107 @@ def render_dashboard() -> None:
 
     # Weekly Notes + Charts section (sub-team views only)
     if team_label != "All":
-        # Section Header
-        st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:24px;">📝 Additional Weekly Notes</div>', unsafe_allow_html=True)
-        st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Important context and decisions for this period</div>', unsafe_allow_html=True)
-
         week_number   = st.session_state.get("selected_week", get_week_number())
         is_past_week = week_number < get_week_number()
-        
-        if is_past_week:
-            st.markdown(f"""
-            <div style="background:rgba(255,255,255,0.03); padding:10px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:16px;">
-                💡 Viewing history for <b>Week {week_number}</b>. Updates made now will be recorded for <b>Week {get_week_number()}</b>.
-            </div>
-            """, unsafe_allow_html=True)
-            
+
         existing_note = get_weekly_note(team_label, selected_quarter, week_number)
         note_content  = existing_note.get("content", "")
-
-        # Display Mode (Card)
-        if note_content:
-            formatted_note = note_content.replace('\n', '<br>')
-            st.markdown(f"""
-            <div style="background-color: rgba(255,255,255,0.03); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem; color: rgba(255,255,255,0.85); font-size: 0.95rem; line-height:1.6;">
-                {formatted_note}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div style="padding: 24px; text-align:center; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.06); color:rgba(255,255,255,0.3); font-size:14px; margin-bottom:16px;">
-                No narrative notes recorded for Week {week_number}.
-            </div>
-            """, unsafe_allow_html=True)
-
-        # Edit Section
-        with st.expander("✏️ Edit Weekly Note"):
-            note_text = st.text_area(
-                "Note Content",
-                value=note_content,
-                height=200,
-                key=f"editor_{team_label}_{week_number}",
-                label_visibility="collapsed"
-            )
-            col1, col2 = st.columns([4, 1])
-            with col2:
-                if st.button("Save Changes", width="stretch", type="primary", key=f"btn_save_{team_label}_{week_number}"):
-                    email = st.session_state.get("user", {}).get("email", "unknown")
-                    with st.spinner("Saving..."):
-                        save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
-                        st.cache_data.clear()
-                        track_action("Saved weekly note", detail=f"{team_label} W{week_number}")
-                        st.toast("Changes saved!", icon="✅")
-                        st.rerun()
-
-        # Charts Section
-        st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:32px;">📊 Charts & Screenshots</div>', unsafe_allow_html=True)
-        st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Evidence and visual data for the weekly sync</div>', unsafe_allow_html=True)
-        uploaded_files = st.file_uploader(
-            "Upload charts",
-            type=["png", "jpg", "jpeg"],
-            accept_multiple_files=True,
-            label_visibility="collapsed",
-            key=f"chart_uploader_{team_label}_{week_number}",
-        )
-        if uploaded_files:
-            if st.button("Upload to Drive", type="primary", key=f"upload_charts_{team_label}_{week_number}"):
-                with st.spinner("Uploading images to Google Drive..."):
-                    email = st.session_state.get("user", {}).get("email", "unknown")
-                    upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
-                    track_action("Uploaded charts", detail=f"{len(uploaded_files)} file(s)")
-                    st.toast("✅ Images uploaded successfully", icon="📊")
-                st.rerun()
-
         current_charts = get_weekly_charts(team_label, selected_quarter, week_number)
-        if current_charts:
-            st.markdown("**This week's charts:**")
-            chart_cols = st.columns(min(len(current_charts), 2))
-            for i, chart in enumerate(current_charts):
-                with chart_cols[i % 2]:
-                    try:
-                        img_bytes = download_drive_file(chart["drive_file_id"])
-                        st.image(img_bytes, caption=chart["filename"], width="stretch")
-                    except Exception as e:
-                        st.error(f"Error loading image: {e}")
-                    
-                    if st.button("Remove", icon=":material/delete:", key=f"del_chart_{chart['id']}", type="secondary"):
-                        with st.spinner("Deleting image..."):
-                            delete_chart_from_drive(str(chart["id"]))
-                            track_action("Deleted chart", detail=chart.get("filename", ""))
-                            st.toast("Image deleted", icon="🗑️")
+
+        # Only show sections if they have content (in presentation mode)
+        is_presentation = st.session_state.get(f"presentation_mode_{team_label}", False)
+
+        # Show Weekly Notes section only if there's content (or not in presentation mode)
+        if note_content or not is_presentation:
+            # Section Header
+            st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:24px;">📝 Additional Weekly Notes</div>', unsafe_allow_html=True)
+            st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Important context and decisions for this period</div>', unsafe_allow_html=True)
+
+            if is_past_week:
+                st.markdown(f"""
+                <div style="background:rgba(255,255,255,0.03); padding:10px 16px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:16px;">
+                    💡 Viewing history for <b>Week {week_number}</b>. Updates made now will be recorded for <b>Week {get_week_number()}</b>.
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Display Mode (Card)
+            if note_content:
+                formatted_note = note_content.replace('\n', '<br>')
+                st.markdown(f"""
+                <div style="background-color: rgba(255,255,255,0.03); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1rem; color: rgba(255,255,255,0.85); font-size: 0.95rem; line-height:1.6;">
+                    {formatted_note}
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div style="padding: 24px; text-align:center; background:rgba(255,255,255,0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.06); color:rgba(255,255,255,0.3); font-size:14px; margin-bottom:16px;">
+                    No narrative notes recorded for Week {week_number}.
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Edit Section (hide in presentation mode)
+            if not is_presentation:
+                with st.expander("✏️ Edit Weekly Note"):
+                    note_text = st.text_area(
+                        "Note Content",
+                        value=note_content,
+                        height=200,
+                        key=f"editor_{team_label}_{week_number}",
+                        label_visibility="collapsed"
+                    )
+                    col1, col2 = st.columns([4, 1])
+                    with col2:
+                        if st.button("Save Changes", width="stretch", type="primary", key=f"btn_save_{team_label}_{week_number}"):
+                            email = st.session_state.get("user", {}).get("email", "unknown")
+                            with st.spinner("Saving..."):
+                                save_weekly_note(team_label, selected_quarter, week_number, note_text, email)
+                                st.cache_data.clear()
+                                track_action("Saved weekly note", detail=f"{team_label} W{week_number}")
+                                st.toast("Changes saved!", icon="✅")
+                                st.rerun()
+
+        # Charts Section - only show if there are charts (or not in presentation mode)
+        if current_charts or not is_presentation:
+            st.markdown('<div style="font-size:18px; font-weight:700; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:4px; margin-top:32px;">📊 Charts & Screenshots</div>', unsafe_allow_html=True)
+            st.markdown('<div style="font-size:13px; color:rgba(255,255,255,0.4); margin-bottom:16px;">Evidence and visual data for the weekly sync</div>', unsafe_allow_html=True)
+
+            # File uploader (hide in presentation mode)
+            if not is_presentation:
+                uploaded_files = st.file_uploader(
+                    "Upload charts",
+                    type=["png", "jpg", "jpeg"],
+                    accept_multiple_files=True,
+                    label_visibility="collapsed",
+                    key=f"chart_uploader_{team_label}_{week_number}",
+                )
+                if uploaded_files:
+                    if st.button("Upload to Drive", type="primary", key=f"upload_charts_{team_label}_{week_number}"):
+                        with st.spinner("Uploading images to Google Drive..."):
+                            email = st.session_state.get("user", {}).get("email", "unknown")
+                            upload_charts_to_drive(uploaded_files, team_label, selected_quarter, week_number, email)
+                            track_action("Uploaded charts", detail=f"{len(uploaded_files)} file(s)")
+                            st.toast("✅ Images uploaded successfully", icon="📊")
                         st.rerun()
+
+            if current_charts:
+                st.markdown("**This week's charts:**")
+                chart_cols = st.columns(min(len(current_charts), 2))
+                for i, chart in enumerate(current_charts):
+                    with chart_cols[i % 2]:
+                        try:
+                            img_bytes = download_drive_file(chart["drive_file_id"])
+                            st.image(img_bytes, caption=chart["filename"], width="stretch")
+                        except Exception as e:
+                            st.error(f"Error loading image: {e}")
+
+                        # Delete button (hide in presentation mode)
+                        if not is_presentation:
+                            if st.button("Remove", icon=":material/delete:", key=f"del_chart_{chart['id']}", type="secondary"):
+                                with st.spinner("Deleting image..."):
+                                    delete_chart_from_drive(str(chart["id"]))
+                                    track_action("Deleted chart", detail=chart.get("filename", ""))
+                                    st.toast("Image deleted", icon="🗑️")
+                                st.rerun()
 
         # Activity log at the bottom of sub-team views
         st.divider()
