@@ -83,7 +83,7 @@ def render_login_button() -> None:
     Use inside render_login_page() instead of st.login("google").
     """
     auth = _build_authenticator()
-    auth.check_authentification()
+    # auth.check_authentification()  # Removed: only called in require_login()
 
     if not st.session_state.get("connected", False):
         authorization_url = auth.get_authorization_url()
