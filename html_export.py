@@ -44,6 +44,22 @@ def _team_narrative_block_html(notes_df: pd.DataFrame, team: str, quarter: str) 
 """
 
 
+def _get_latest_map(df: pd.DataFrame, week_limit: int) -> dict:
+    """
+    Get latest update for each KR up to a given week.
+    This matches the logic in app.py's _get_latest_map() to ensure consistency.
+    """
+    if df.empty:
+        return {}
+    wn = pd.to_numeric(df["week_number"], errors="coerce").fillna(0)
+    try:
+        wlim = int(week_limit)
+    except (TypeError, ValueError):
+        wlim = 0
+    rev = df[wn <= wlim].sort_values(["kr_id", "updated_at"], ascending=[True, False])
+    return rev.drop_duplicates(subset=["kr_id"]).set_index("kr_id").to_dict("index")
+
+
 def _compute_progress(row: dict) -> float:
     """
     Compute progress percentage same way as dashboard.
@@ -123,12 +139,12 @@ def generate_html_report(
     if charts_df is None:
         charts_df = pd.DataFrame()
 
-    # Filter updates by selected week if provided
-    # Use updates from selected week OR earlier (most recent available)
-    if selected_week is not None and not updates_df.empty:
-        if "week_number" in updates_df.columns:
-            wn = pd.to_numeric(updates_df["week_number"], errors="coerce").fillna(0)
-            updates_df = updates_df[wn <= selected_week].copy()
+    # Build latest_map using same logic as dashboard
+    # This ensures HTML metrics match dashboard exactly
+    if selected_week is None:
+        selected_week = 999999  # Get all-time latest if no week specified
+
+    latest_map = _get_latest_map(updates_df, selected_week) if not updates_df.empty else {}
 
     # Start building HTML
     html = f"""<!DOCTYPE html>
@@ -514,12 +530,8 @@ def generate_html_report(
 
         for _, kr in team_krs.iterrows():
             kr_id = str(kr["id"])
-            kr_updates = updates_df[updates_df["kr_id"] == kr_id]
-            if not kr_updates.empty:
-                latest = kr_updates.sort_values("updated_at", ascending=False).iloc[0]
-                current = float(latest.get("new_value", 0))
-            else:
-                current = float(kr.get("current_value", 0))
+            latest = latest_map.get(kr_id)
+            current = float(latest.get("new_value", 0)) if latest else float(kr.get("current_value", 0))
 
             target = float(kr.get("target", 0))
             kr_for_calc = kr.copy()
@@ -590,10 +602,9 @@ def generate_html_report(
                 kr_id = str(kr["id"])
                 kr_title = str(kr["title"])
 
-                # Get latest update
-                kr_updates = updates_df[updates_df["kr_id"] == kr_id]
-                if not kr_updates.empty:
-                    latest = kr_updates.sort_values("updated_at", ascending=False).iloc[0]
+                # Get latest update using latest_map (same as metrics calculation)
+                latest = latest_map.get(kr_id)
+                if latest:
                     current = float(latest.get("new_value", 0))
                     kr_narrative = str(latest.get("week_notes", "")).strip()
                     kr_blockers = str(latest.get("blockers", "")).strip()
