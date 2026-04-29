@@ -132,6 +132,7 @@ def generate_html_report(
         notes_df: Weekly notes DataFrame
         quarter: Quarter string
         charts_df: Weekly charts DataFrame (optional)
+        selected_week: Selected week number (for dynamic threshold calculation)
 
     Returns:
         HTML string
@@ -145,6 +146,17 @@ def generate_html_report(
         selected_week = 999999  # Get all-time latest if no week specified
 
     latest_map = _get_latest_map(updates_df, selected_week) if not updates_df.empty else {}
+
+    # Calculate dynamic progress threshold (same as dashboard)
+    # This threshold changes based on weeks elapsed in the quarter
+    q_starts = {"Q1 2026": 1, "Q2 2026": 14, "Q3 2026": 27, "Q4 2026": 40}
+    start_wk = q_starts.get(quarter, 1)
+    try:
+        sw = int(selected_week)
+    except (TypeError, ValueError):
+        sw = start_wk
+    weeks_elapsed = max(1, sw - start_wk + 1)
+    expected_pct = (weeks_elapsed / 13.0) * 100  # Dynamic threshold for this week
 
     # Start building HTML
     html = f"""<!DOCTYPE html>
@@ -522,7 +534,7 @@ def generate_html_report(
         if team_objs.empty or team_krs.empty:
             continue
 
-        # Calculate metrics
+        # Calculate metrics (same as dashboard logic)
         total_objs = len(team_objs)
         total_krs = len(team_krs)
         on_track = 0
@@ -531,16 +543,21 @@ def generate_html_report(
         for _, kr in team_krs.iterrows():
             kr_id = str(kr["id"])
             latest = latest_map.get(kr_id)
-            current = float(latest.get("new_value", 0)) if latest else float(kr.get("current_value", 0))
 
+            # ONLY count KRs that have at least one update (same as dashboard)
+            if not latest:
+                continue
+
+            current = float(latest.get("new_value", 0))
             target = float(kr.get("target", 0))
             kr_for_calc = kr.copy()
             kr_for_calc["current_value"] = current
             pct = _compute_progress(kr_for_calc)
 
-            if pct >= 75:
+            # Use dynamic threshold (same as dashboard)
+            if pct >= expected_pct:
                 on_track += 1
-            elif pct < 50:
+            elif pct < expected_pct:
                 at_risk += 1
 
         html += f"""
