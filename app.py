@@ -758,8 +758,13 @@ def render_login_page() -> None:
                 st.rerun()
             return
 
-        if st.button("Sign in with Google", width="stretch"):
-            st.login("google")
+        try:
+            if st.button("Sign in with Google", width="stretch"):
+                st.login("google")
+        except Exception as e:
+            st.error(f"Login error: {e}")
+            import traceback
+            st.code(traceback.format_exc())
 
 
 # ---------------------------------------------------------------------------
