@@ -44,6 +44,18 @@ def _team_narrative_block_html(notes_df: pd.DataFrame, team: str, quarter: str) 
 """
 
 
+def _compute_progress(row: dict) -> float:
+    """
+    Compute progress percentage same way as dashboard.
+    Clamps value between 0-100 to match dashboard behavior.
+    """
+    target = float(row.get("target", 0) or 0)
+    current = float(row.get("current_value", 0) or 0)
+    if target == 0:
+        return 100.0 if current > 0 else 0.0
+    return max(0.0, min(100.0, current / target * 100))
+
+
 def get_image_data_url(drive_url: str, drive_file_id: str) -> str:
     """
     Convert Google Drive image URL to data URL (base64 embedded).
@@ -112,11 +124,11 @@ def generate_html_report(
         charts_df = pd.DataFrame()
 
     # Filter updates by selected week if provided
+    # Use updates from selected week OR earlier (most recent available)
     if selected_week is not None and not updates_df.empty:
         if "week_number" in updates_df.columns:
-            updates_df = updates_df[
-                pd.to_numeric(updates_df["week_number"], errors="coerce") == selected_week
-            ].copy()
+            wn = pd.to_numeric(updates_df["week_number"], errors="coerce").fillna(0)
+            updates_df = updates_df[wn <= selected_week].copy()
 
     # Start building HTML
     html = f"""<!DOCTYPE html>
@@ -510,7 +522,9 @@ def generate_html_report(
                 current = float(kr.get("current_value", 0))
 
             target = float(kr.get("target", 0))
-            pct = (current / target * 100) if target > 0 else 0
+            kr_for_calc = kr.copy()
+            kr_for_calc["current_value"] = current
+            pct = _compute_progress(kr_for_calc)
 
             if pct >= 75:
                 on_track += 1
@@ -591,7 +605,9 @@ def generate_html_report(
                     kr_confidence = ""
 
                 target = float(kr.get("target", 0))
-                pct = (current / target * 100) if target > 0 else 0
+                kr_for_calc = kr.copy()
+                kr_for_calc["current_value"] = current
+                pct = _compute_progress(kr_for_calc)
 
                 # Determine status
                 if pct >= 75:
