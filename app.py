@@ -725,6 +725,10 @@ def add_objective_dialog(sub_team: str, quarter: str) -> None:
 # ---------------------------------------------------------------------------
 
 def render_login_page() -> None:
+    # DEBUG TEMPORAL — eliminar después
+    st.write("DEBUG st.user:", dict(st.user))
+    st.write("is_logged_in:", st.user.is_logged_in)
+    # FIN DEBUG
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("""
