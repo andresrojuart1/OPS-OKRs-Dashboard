@@ -637,13 +637,10 @@ def generate_html_report(
                 kr_for_calc["current_value"] = current
                 pct = _compute_progress(kr_for_calc)
 
-                # Determine status
-                if pct >= 75:
+                # Determine status using dynamic threshold (same as dashboard)
+                if pct >= expected_pct:
                     status = "ON TRACK"
                     status_class = "status-on-track"
-                elif pct >= 50:
-                    status = "IN PROGRESS"
-                    status_class = "status-in-progress"
                 elif pct > 0:
                     status = "AT RISK"
                     status_class = "status-at-risk"
