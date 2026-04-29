@@ -728,6 +728,7 @@ def render_login_page() -> None:
     # DEBUG TEMPORAL — eliminar después
     st.write("DEBUG st.user:", dict(st.user))
     st.write("is_logged_in:", st.user.is_logged_in)
+    st.write("DEBUG auth secrets:", st.secrets.get("auth", "NO AUTH KEY FOUND"))
     # FIN DEBUG
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
