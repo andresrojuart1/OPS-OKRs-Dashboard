@@ -348,6 +348,23 @@ def generate_html_report(
             line-height: 1.7;
         }}
 
+        .kr-narrative {{
+            background: rgba(122, 80, 247, 0.08);
+            border-left: 3px solid #7A50F7;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 8px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #B8B8C8;
+        }}
+
+        .kr-narrative-empty {{
+            color: #6B7280;
+            font-style: italic;
+            font-size: 11px;
+        }}
+
         .narrative-title {{
             font-size: 12px;
             font-weight: 700;
@@ -556,8 +573,14 @@ def generate_html_report(
                 if not kr_updates.empty:
                     latest = kr_updates.sort_values("updated_at", ascending=False).iloc[0]
                     current = float(latest.get("new_value", 0))
+                    kr_narrative = str(latest.get("week_notes", "")).strip()
+                    kr_blockers = str(latest.get("blockers", "")).strip()
+                    kr_confidence = str(latest.get("confidence", "")).strip()
                 else:
                     current = float(kr.get("current_value", 0))
+                    kr_narrative = ""
+                    kr_blockers = ""
+                    kr_confidence = ""
 
                 target = float(kr.get("target", 0))
                 pct = (current / target * 100) if target > 0 else 0
@@ -590,6 +613,34 @@ def generate_html_report(
                                 </div>
                             </td>
                             <td class="target-cell">{target_str}</td>
+                        </tr>
+"""
+
+                # Add per-KR narrative block below the row
+                if kr_narrative or kr_blockers or kr_confidence:
+                    narrative_parts = []
+                    if kr_narrative:
+                        narrative_parts.append(f"<strong>Update:</strong> {html.escape(kr_narrative).replace(chr(10), '<br>')}")
+                    if kr_confidence:
+                        narrative_parts.append(f"<strong>Confidence:</strong> {html.escape(kr_confidence)}")
+                    if kr_blockers:
+                        narrative_parts.append(f"<strong>Blockers:</strong> {html.escape(kr_blockers).replace(chr(10), '<br>')}")
+
+                    html += f"""
+                        <tr style="background: rgba(122, 80, 247, 0.03);">
+                            <td colspan="4">
+                                <div class="kr-narrative">
+                                    {chr(10).join(narrative_parts)}
+                                </div>
+                            </td>
+                        </tr>
+"""
+                else:
+                    html += f"""
+                        <tr style="background: rgba(122, 80, 247, 0.03);">
+                            <td colspan="4">
+                                <div class="kr-narrative kr-narrative-empty">No updates recorded</div>
+                            </td>
                         </tr>
 """
 
