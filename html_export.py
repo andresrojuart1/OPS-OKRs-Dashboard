@@ -5,7 +5,7 @@ Styled with Ontop brand colors and responsive design.
 """
 
 from datetime import datetime
-import html
+import html as html_module
 import pandas as pd
 import base64
 import re
@@ -29,7 +29,7 @@ def _team_narrative_block_html(notes_df: pd.DataFrame, team: str, quarter: str) 
     latest_note = quarter_notes.sort_values("week_number", ascending=False).iloc[0]
     note_content = str(latest_note.get("content", "")).strip()
     if note_content:
-        body = html.escape(note_content).replace("\n", "<br>\n")
+        body = html_module.escape(note_content).replace("\n", "<br>\n")
         return f"""
         <div class="narrative" style="margin-top: 20px;">
             <div class="narrative-title">Context & Updates</div>
@@ -620,11 +620,11 @@ def generate_html_report(
                 if kr_narrative or kr_blockers or kr_confidence:
                     narrative_parts = []
                     if kr_narrative:
-                        narrative_parts.append(f"<strong>Update:</strong> {html.escape(kr_narrative).replace(chr(10), '<br>')}")
+                        narrative_parts.append(f"<strong>Update:</strong> {html_module.escape(kr_narrative).replace(chr(10), '<br>')}")
                     if kr_confidence:
-                        narrative_parts.append(f"<strong>Confidence:</strong> {html.escape(kr_confidence)}")
+                        narrative_parts.append(f"<strong>Confidence:</strong> {html_module.escape(kr_confidence)}")
                     if kr_blockers:
-                        narrative_parts.append(f"<strong>Blockers:</strong> {html.escape(kr_blockers).replace(chr(10), '<br>')}")
+                        narrative_parts.append(f"<strong>Blockers:</strong> {html_module.escape(kr_blockers).replace(chr(10), '<br>')}")
 
                     html += f"""
                         <tr style="background: rgba(122, 80, 247, 0.03);">
