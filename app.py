@@ -836,6 +836,7 @@ def render_header(objectives_df, krs_df, updates_df, selected_team, krs_info, kr
                 notes_df=notes_df,
                 quarter=selected_quarter,
                 charts_df=charts_df,
+                selected_week=selected_week,
             )
             st.download_button(
                 label="Report",

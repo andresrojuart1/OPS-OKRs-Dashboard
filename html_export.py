@@ -92,6 +92,7 @@ def generate_html_report(
     notes_df: pd.DataFrame,
     quarter: str = "Q2 2026",
     charts_df: pd.DataFrame = None,
+    selected_week: int = None,
 ) -> str:
     """
     Generate professional HTML report grouped by team.
@@ -109,6 +110,13 @@ def generate_html_report(
     """
     if charts_df is None:
         charts_df = pd.DataFrame()
+
+    # Filter updates by selected week if provided
+    if selected_week is not None and not updates_df.empty:
+        if "week_number" in updates_df.columns:
+            updates_df = updates_df[
+                pd.to_numeric(updates_df["week_number"], errors="coerce") == selected_week
+            ].copy()
 
     # Start building HTML
     html = f"""<!DOCTYPE html>
