@@ -472,7 +472,7 @@ div[data-testid="stExpander"] summary {
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
-from auth import require_login, get_user, logout
+from auth import require_login, get_user, logout, render_login_button
 from sheets_cached import (
     load_objectives_cached as load_objectives,
     load_key_results_cached as load_key_results,
@@ -753,8 +753,7 @@ def render_login_page() -> None:
                 st.rerun()
             return
 
-        if st.button("Sign in with Google", width="stretch"):
-            st.login("google")
+        render_login_button()
 
 
 # ---------------------------------------------------------------------------
